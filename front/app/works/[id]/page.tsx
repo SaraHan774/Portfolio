@@ -15,6 +15,7 @@ import {
   getSentenceByKeywordId,
   mockTextCategories,
 } from '@/lib/mockData';
+import FloatingWorkWindow from '@/app/components/work/FloatingWorkWindow';
 import type { Work, KeywordCategory } from '@/types';
 
 export default function WorkDetailPage() {
@@ -34,6 +35,94 @@ export default function WorkDetailPage() {
   const [showRightArrow, setShowRightArrow] = useState(false);
   const [showLeftFade, setShowLeftFade] = useState(false);
   const [showRightFade, setShowRightFade] = useState(false);
+  const [hoveredWorkId, setHoveredWorkId] = useState<string | null>(null);
+  const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
+  const hoverPositionRef = useRef({ x: 0, y: 0 }); // 최신 위치 값을 참조하기 위한 ref
+  const observerRef = useRef<MutationObserver | null>(null); // MutationObserver 참조 저장
+  const floatingWindowTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Floating Window 사라짐 타이머
+  const hoverLinkTimeoutRef = useRef<NodeJS.Timeout | null>(null); // 링크 hover 지연 타이머
+  
+  // hoverPosition이 변경될 때마다 ref 업데이트
+  useEffect(() => {
+    hoverPositionRef.current = hoverPosition;
+  }, [hoverPosition]);
+
+  // 위키피디아 스타일: 스크롤 시 Floating Window 숨김
+  useEffect(() => {
+    if (!hoveredWorkId) return;
+
+    const handleScroll = () => {
+      setHoveredWorkId(null);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [hoveredWorkId]);
+
+  // 위키피디아 스타일: 마우스가 Floating Window나 링크의 안전 마진 밖으로 너무 멀리 이동하면 사라짐
+  useEffect(() => {
+    if (!hoveredWorkId) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const mouseX = e.clientX;
+      const mouseY = e.clientY;
+      const SAFE_MARGIN = 50; // 안전 마진: 50px
+      
+      // 현재 hover된 링크 찾기
+      const links = document.querySelectorAll(`a[data-work-id="${hoveredWorkId}"]`);
+      let isWithinSafeZone = false;
+      
+      // 링크들의 안전 마진 영역 확인
+      links.forEach((link) => {
+        const rect = link.getBoundingClientRect();
+        // 링크 영역 + 50px 마진
+        const safeLeft = rect.left - SAFE_MARGIN;
+        const safeRight = rect.right + SAFE_MARGIN;
+        const safeTop = rect.top - SAFE_MARGIN;
+        const safeBottom = rect.bottom + SAFE_MARGIN;
+        
+        if (mouseX >= safeLeft && mouseX <= safeRight && 
+            mouseY >= safeTop && mouseY <= safeBottom) {
+          isWithinSafeZone = true;
+        }
+      });
+      
+      // Floating Window의 안전 마진 영역 확인
+      // 실제 Floating Window 요소 찾기 (data-floating-window 속성 사용)
+      const actualFloatingWindow = document.querySelector('[data-floating-window="true"]');
+      if (actualFloatingWindow) {
+        const rect = actualFloatingWindow.getBoundingClientRect();
+        // Floating Window 영역 + 50px 마진
+        const safeLeft = rect.left - SAFE_MARGIN;
+        const safeRight = rect.right + SAFE_MARGIN;
+        const safeTop = rect.top - SAFE_MARGIN;
+        const safeBottom = rect.bottom + SAFE_MARGIN;
+        
+        if (mouseX >= safeLeft && mouseX <= safeRight && 
+            mouseY >= safeTop && mouseY <= safeBottom) {
+          isWithinSafeZone = true;
+        }
+      }
+      
+      // 안전 마진 밖으로 나갔을 때만 프리뷰 닫기
+      if (!isWithinSafeZone) {
+        // 기존 타이머 취소
+        if (linkLeaveTimeoutRef.current) {
+          clearTimeout(linkLeaveTimeoutRef.current);
+          linkLeaveTimeoutRef.current = null;
+        }
+        setHoveredWorkId(null);
+      }
+    };
+
+    // 마우스 이동을 실시간으로 추적
+    document.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [hoveredWorkId]);
 
   useEffect(() => {
     const workData = getWorkById(workId);
@@ -205,12 +294,224 @@ export default function WorkDetailPage() {
     };
   }, [selectedWorkId, work, relatedWorks, workId]);
 
+  // hover 상태를 ref로 관리하여 최신 값을 항상 참조
+  const hoveredWorkIdRef = useRef<string | null>(null);
+  
+  // hoveredWorkId가 변경될 때마다 ref 업데이트
+  useEffect(() => {
+    hoveredWorkIdRef.current = hoveredWorkId;
+  }, [hoveredWorkId]);
+
+  // 링크에서 벗어날 때의 타이머를 위한 ref
+  const linkLeaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 캡션 내 링크에 호버 이벤트 추가 (useEffect로 DOM 조작)
+  // 주의: 모든 hook은 조건부 렌더링 전에 호출되어야 함
+  useEffect(() => {
+    if (!work) return; // work가 없으면 early return
+    
+    const eventHandlers = new Map<HTMLElement, { enter: (e: Event) => void; leave: () => void; move: (e: Event) => void }>();
+    
+    const handleLinkMouseEnter = (e: Event) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest('a[data-work-id]') as HTMLElement;
+      if (link) {
+        const workId = link.getAttribute('data-work-id');
+        if (workId) {
+          // 기존 타이머 취소
+          if (hoverLinkTimeoutRef.current) {
+            clearTimeout(hoverLinkTimeoutRef.current);
+            hoverLinkTimeoutRef.current = null;
+          }
+          
+          // 링크에서 벗어날 때의 타이머도 취소 (ref 사용)
+          if (linkLeaveTimeoutRef.current) {
+            clearTimeout(linkLeaveTimeoutRef.current);
+            linkLeaveTimeoutRef.current = null;
+          }
+          
+          // 위키피디아 스타일: 약간의 지연 후 프리뷰 표시 (500ms)
+          hoverLinkTimeoutRef.current = setTimeout(() => {
+            // 다른 링크의 프리뷰가 이미 표시되어 있다면 즉시 닫기
+            if (hoveredWorkIdRef.current && hoveredWorkIdRef.current !== workId) {
+              setHoveredWorkId(null);
+            }
+            
+            // 링크 요소의 실제 위치를 가져와서 고정 위치로 배치
+            const rect = link.getBoundingClientRect();
+            
+            // 링크의 아래쪽 중앙에 고정 배치 (위키피디아 스타일)
+            // FloatingWorkWindow에서 이 위치를 기준으로 오프셋을 적용함
+            const x = rect.left + rect.width / 2;
+            const y = rect.bottom; // 링크 바로 아래
+            
+            setHoveredWorkId(workId);
+            setHoverPosition({ x, y });
+            hoverLinkTimeoutRef.current = null;
+          }, 500); // 위키피디아 스타일: 500ms 지연 (더 자연스러운 UX)
+        }
+      }
+    };
+
+    const handleLinkMouseLeave = () => {
+      // 기존 hover 타임아웃 취소 (아직 나타나지 않았다면)
+      if (hoverLinkTimeoutRef.current) {
+        clearTimeout(hoverLinkTimeoutRef.current);
+        hoverLinkTimeoutRef.current = null;
+      }
+      
+      // 기존 leave 타임아웃 취소 (ref 사용)
+      if (linkLeaveTimeoutRef.current) {
+        clearTimeout(linkLeaveTimeoutRef.current);
+        linkLeaveTimeoutRef.current = null;
+      }
+      
+      // 위키피디아 스타일: 링크에서 벗어나도 약간의 지연 후 사라짐
+      // (Floating Window로 이동할 시간을 주기 위해)
+      // 실제 사라지는 것은 mousemove 핸들러의 안전 마진 체크로 처리됨
+      linkLeaveTimeoutRef.current = setTimeout(() => {
+        // mousemove 핸들러가 안전 마진을 체크하므로 여기서는 추가 체크만 수행
+        // (mousemove 핸들러가 이미 안전 마진 밖으로 나갔는지 체크함)
+        linkLeaveTimeoutRef.current = null;
+      }, 200); // 위키피디아 스타일: 200ms 지연 (실제 사라짐은 mousemove 핸들러가 처리)
+    };
+
+    const handleLinkMouseMove = (e: Event) => {
+      // 마우스 이동에 따라 Floating Window 위치를 업데이트하지 않음
+      // 위치는 처음 hover 시 한 번만 설정되고 고정됨 (위키피디아 스타일)
+      // 이 핸들러는 이벤트 리스너 등록을 위한 것이므로 비워둠
+    };
+    
+    const attachEventListeners = (container: Element) => {
+      const links = container.querySelectorAll('a[data-work-id]');
+      links.forEach((link) => {
+        const linkElement = link as HTMLElement;
+        
+        // 이미 등록된 이벤트가 있으면 제거 (중복 방지)
+        const existingHandlers = eventHandlers.get(linkElement);
+        if (existingHandlers) {
+          linkElement.removeEventListener('mouseenter', existingHandlers.enter);
+          linkElement.removeEventListener('mouseleave', existingHandlers.leave);
+          linkElement.removeEventListener('mousemove', existingHandlers.move);
+        }
+        
+        // 새 이벤트 핸들러 저장 및 등록
+        const handlers = {
+          enter: handleLinkMouseEnter,
+          leave: handleLinkMouseLeave,
+          move: handleLinkMouseMove,
+        };
+        eventHandlers.set(linkElement, handlers);
+        
+        linkElement.addEventListener('mouseenter', handlers.enter);
+        linkElement.addEventListener('mouseleave', handlers.leave);
+        linkElement.addEventListener('mousemove', handlers.move);
+      });
+    };
+    
+    const setupEventListeners = () => {
+      // 모든 기존 이벤트 리스너 제거 후 재등록
+      eventHandlers.forEach((handlers, link) => {
+        link.removeEventListener('mouseenter', handlers.enter);
+        link.removeEventListener('mouseleave', handlers.leave);
+        link.removeEventListener('mousemove', handlers.move);
+      });
+      eventHandlers.clear();
+      
+      // 모든 캡션 컨테이너에서 이벤트 리스너 재등록
+      const captionContainers = document.querySelectorAll('[data-caption-container-id]');
+      captionContainers.forEach(attachEventListeners);
+      
+      // MutationObserver로 새로운 캡션이 추가될 때 감지
+      const observer = new MutationObserver(() => {
+        // 새로운 링크가 추가되면 이벤트 리스너 등록
+        const allContainers = document.querySelectorAll('[data-caption-container-id]');
+        allContainers.forEach((container) => {
+          const links = container.querySelectorAll('a[data-work-id]');
+          links.forEach((link) => {
+            const linkElement = link as HTMLElement;
+            // 이미 등록된 링크가 아니면 등록
+            if (!eventHandlers.has(linkElement)) {
+              const handlers = {
+                enter: handleLinkMouseEnter,
+                leave: handleLinkMouseLeave,
+                move: handleLinkMouseMove,
+              };
+              eventHandlers.set(linkElement, handlers);
+              linkElement.addEventListener('mouseenter', handlers.enter);
+              linkElement.addEventListener('mouseleave', handlers.leave);
+              linkElement.addEventListener('mousemove', handlers.move);
+            }
+          });
+        });
+      });
+      
+      // main 요소를 관찰 (캡션들이 렌더링되는 곳)
+      const mainElement = document.querySelector('main');
+      if (mainElement) {
+        observer.observe(mainElement, {
+          childList: true,
+          subtree: true,
+        });
+      }
+      
+      return observer;
+    };
+    
+    // 약간의 지연 후 설정 (DOM이 준비될 시간)
+    const timeoutId = setTimeout(() => {
+      const observer = setupEventListeners();
+      observerRef.current = observer; // ref에 저장
+    }, 100);
+    
+    // work나 selectedWorkId가 변경될 때마다 재설정 (캡션이 다시 렌더링될 수 있음)
+    const recheckTimeoutId = setTimeout(() => {
+      // 재확인 및 재등록
+      const captionContainers = document.querySelectorAll('[data-caption-container-id]');
+      captionContainers.forEach(attachEventListeners);
+    }, 300); // DOM이 완전히 렌더링된 후
+
+    return () => {
+      // 타임아웃 정리
+      clearTimeout(timeoutId);
+      clearTimeout(recheckTimeoutId);
+      
+      // MutationObserver 정리
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
+      }
+      
+      // 모든 이벤트 리스너 제거
+      eventHandlers.forEach((handlers, link) => {
+        link.removeEventListener('mouseenter', handlers.enter);
+        link.removeEventListener('mouseleave', handlers.leave);
+        link.removeEventListener('mousemove', handlers.move);
+      });
+      eventHandlers.clear();
+      
+      // 모든 타이머 정리
+      if (hoverLinkTimeoutRef.current) {
+        clearTimeout(hoverLinkTimeoutRef.current);
+        hoverLinkTimeoutRef.current = null;
+      }
+      if (linkLeaveTimeoutRef.current) {
+        clearTimeout(linkLeaveTimeoutRef.current);
+        linkLeaveTimeoutRef.current = null;
+      }
+      if (floatingWindowTimeoutRef.current) {
+        clearTimeout(floatingWindowTimeoutRef.current);
+        floatingWindowTimeoutRef.current = null;
+      }
+    };
+  }, [work, selectedWorkId]); // work와 selectedWorkId를 의존성으로 추가
+
   if (!work) {
     return null;
   }
 
   // 이미지와 캡션 렌더링
-  const renderCaption = (caption: string | undefined) => {
+  const renderCaption = (caption: string | undefined, captionId: string) => {
     if (!caption) return null;
     
     // HTML 파싱하여 링크 처리
@@ -221,16 +522,19 @@ export default function WorkDetailPage() {
     links.forEach((linkElement) => {
       const link = linkElement as HTMLElement;
       const workId = link.getAttribute('data-work-id');
-      const workTitle = link.getAttribute('data-work-title');
       if (workId) {
         link.setAttribute('href', `/works/${workId}`);
         link.style.color = 'var(--color-text-primary)';
         link.style.textDecoration = 'underline';
+        link.style.cursor = 'pointer';
+        link.setAttribute('data-caption-id', captionId);
       }
     });
 
     return (
       <div
+        key={captionId}
+        data-caption-container-id={captionId}
         dangerouslySetInnerHTML={{ __html: doc.body.innerHTML }}
         style={{
           fontSize: 'var(--font-size-xs)',
@@ -489,7 +793,7 @@ export default function WorkDetailPage() {
                               marginBottom: 'var(--space-2)', // 이미지 하단과 약간의 간격
                     }}
                   >
-                    {renderCaption(image.caption)}
+                    {renderCaption(image.caption, image.id)}
                   </div>
                 )}
               </div>
@@ -501,6 +805,38 @@ export default function WorkDetailPage() {
         })()}
       </main>
       </div>
+      
+      {/* Floating Work Window - 위키피디아 스타일 */}
+      {hoveredWorkId && (
+        <div 
+          className="floating-work-window-container"
+          onMouseEnter={(e) => {
+            // Floating Window 위에 마우스가 있을 때는 유지 (위키피디아 스타일)
+            e.stopPropagation();
+          }}
+          style={{
+            position: 'fixed',
+            left: 0,
+            top: 0,
+            width: '100vw',
+            height: '100vh',
+            pointerEvents: 'none',
+            zIndex: 999,
+          }}
+        >
+          <div
+            style={{
+              pointerEvents: 'auto',
+            }}
+          >
+            <FloatingWorkWindow 
+              workId={hoveredWorkId} 
+              position={hoverPosition}
+            />
+          </div>
+        </div>
+      )}
+      
       <Footer />
     </div>
   );
