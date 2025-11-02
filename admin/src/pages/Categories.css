@@ -1,0 +1,20 @@
+.categories {
+  padding: 0;
+}
+
+/* 모바일 반응형 - 키워드 목록 레이아웃 */
+@media (max-width: 768px) {
+  .categories .ant-collapse-item {
+    margin-bottom: 8px;
+  }
+
+  .categories .ant-collapse-content-box {
+    padding: 12px !important;
+  }
+
+  /* 키워드 항목 간격 조정 */
+  .categories .ant-space-vertical {
+    width: 100%;
+  }
+}
+

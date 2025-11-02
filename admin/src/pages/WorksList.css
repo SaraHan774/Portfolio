@@ -1,0 +1,77 @@
+.works-list {
+  padding: 0;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .works-list {
+    padding-bottom: 80px; /* 하단 Drawer를 위한 공간 */
+  }
+
+  /* 모바일 목록 카드 스타일 */
+  .works-list .ant-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  /* 체크박스 클릭 영역 확대 */
+  .works-list input[type="checkbox"] {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+  }
+
+  /* 버튼 터치 영역 확대 */
+  .works-list .ant-btn {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  /* Switch 크기 조정 - thumb와 박스 radius 일치, 아이콘 표시 */
+  .works-list .ant-switch {
+    min-width: 44px;
+    height: 22px;
+    line-height: 22px;
+    border-radius: 11px;
+  }
+
+  .works-list .ant-switch-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0;
+    margin: 0;
+    padding: 0 4px;
+  }
+
+  .works-list .ant-switch-checked .ant-switch-inner {
+    padding: 0 4px;
+  }
+
+  .works-list .ant-switch-handle {
+    width: 18px;
+    height: 18px;
+    top: 2px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .works-list .ant-switch-checked .ant-switch-handle {
+    left: calc(100% - 18px - 2px);
+  }
+
+  .works-list .ant-switch::before {
+    border-radius: 11px;
+  }
+
+  /* 아이콘 스타일 */
+  .works-list .ant-switch-inner .anticon {
+    font-size: 12px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+

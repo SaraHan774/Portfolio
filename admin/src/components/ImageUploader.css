@@ -1,0 +1,64 @@
+.image-uploader {
+  width: 100%;
+}
+
+.image-count {
+  color: #1890ff;
+  font-size: 14px;
+}
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.image-card {
+  position: relative;
+  padding: 12px;
+  transition: all 0.2s;
+}
+
+.image-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.image-card:active {
+  transform: translateY(0);
+}
+
+.image-number {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 1;
+}
+
+.image-preview {
+  margin-bottom: 12px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.image-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .image-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
