@@ -1,5 +1,4 @@
 // 설정 페이지 컴포넌트
-import { useState } from 'react';
 import {
   Typography,
   Card,
@@ -34,7 +33,8 @@ const Settings = () => {
   // 프로필 수정
   const handleProfileSave = async () => {
     try {
-      const values = await profileForm.validateFields();
+      await profileForm.validateFields();
+      // 실제 구현 시 values를 사용하여 서버에 전송
       message.success('프로필이 수정되었습니다.');
     } catch (error) {
       console.error('저장 실패:', error);
@@ -44,7 +44,8 @@ const Settings = () => {
   // 사이트 설정 저장
   const handleSiteSave = async () => {
     try {
-      const values = await siteForm.validateFields();
+      await siteForm.validateFields();
+      // 실제 구현 시 values를 사용하여 서버에 전송
       message.success('사이트 설정이 저장되었습니다.');
     } catch (error) {
       console.error('저장 실패:', error);
