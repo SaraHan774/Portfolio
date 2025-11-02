@@ -25,53 +25,78 @@ export default function Sidebar({
   const [hoveredKeywordId, setHoveredKeywordId] = useState<string | null>(null);
   const [hoveredTextCategoryId, setHoveredTextCategoryId] = useState<string | null>(null);
 
+  // 문장형 카테고리만 필터링 및 정렬
+  const sortedSentenceCategories = sentenceCategories
+    .filter((cat) => cat.isActive)
+    .sort((a, b) => a.displayOrder - b.displayOrder);
+
+  // 텍스트형 카테고리만 필터링 및 정렬
+  const sortedTextCategories = textCategories
+    .filter((cat) => cat.isActive)
+    .sort((a, b) => a.displayOrder - b.displayOrder);
+
   return (
     <>
-      {/* 좌측 사이드바 (문장형 카테고리) */}
-      <aside
-        className="hidden lg:block fixed left-0 top-[60px] h-[calc(100vh-60px)] overflow-y-auto bg-white border-r border-gray-200"
+      {/* 좌측 문장형 카테고리 영역 (세로로 나열) */}
+      <div
+        className="hidden lg:block absolute"
         style={{
-          width: 'var(--sidebar-width)',
-          padding: 'var(--space-6) var(--space-3)',
+          left: 'var(--category-margin-left)', // 48px
+          top: 'var(--space-16)', // 헤더 아래 여백
+          maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-left))', // 중앙 영역과 겹치지 않도록 간격 확보
         }}
       >
-        {sentenceCategories
-          .filter((cat) => cat.isActive)
-          .sort((a, b) => a.displayOrder - b.displayOrder)
-          .map((category) => (
-            <SentenceCategory
+        {sortedSentenceCategories.map((category, index) => {
+          const isLast = index === sortedSentenceCategories.length - 1;
+          return (
+            <div
               key={category.id}
-              category={category}
-              selectedKeywordId={selectedKeywordId}
-              onKeywordSelect={onKeywordSelect}
-              hoveredKeywordId={hoveredKeywordId}
-              onKeywordHover={setHoveredKeywordId}
-            />
-          ))}
-      </aside>
+              style={{
+                marginBottom: isLast ? 0 : 'var(--category-spacing)', // 카테고리 간 간격
+              }}
+            >
+              <SentenceCategory
+                category={category}
+                selectedKeywordId={selectedKeywordId}
+                onKeywordSelect={onKeywordSelect}
+                hoveredKeywordId={hoveredKeywordId}
+                onKeywordHover={setHoveredKeywordId}
+              />
+            </div>
+          );
+        })}
+      </div>
 
-      {/* 우측 사이드바 (텍스트형 카테고리) */}
-      <aside
-        className="hidden lg:block fixed right-0 top-[60px] h-[calc(100vh-60px)] overflow-y-auto bg-white border-l border-gray-200"
+      {/* 우측 텍스트형 카테고리 영역 (세로로 나열) */}
+      <div
+        className="hidden lg:block absolute"
         style={{
-          width: 'var(--sidebar-width)',
-          padding: 'var(--space-6) var(--space-3)',
+          right: 'var(--category-margin-right)', // 48px
+          top: 'var(--space-16)', // 헤더 아래 여백
+          textAlign: 'right',
+          maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-right))', // 중앙 영역과 겹치지 않도록 간격 확보
         }}
       >
-        {textCategories
-          .filter((cat) => cat.isActive)
-          .sort((a, b) => a.displayOrder - b.displayOrder)
-          .map((category) => (
-            <TextCategory
+        {sortedTextCategories.map((category, index) => {
+          const isLast = index === sortedTextCategories.length - 1;
+          return (
+            <div
               key={category.id}
+              style={{
+                marginBottom: isLast ? 0 : 'var(--category-spacing)', // 카테고리 간 간격
+              }}
+            >
+              <TextCategory
               category={category}
               isSelected={selectedTextCategoryId === category.id}
               onSelect={() => onTextCategorySelect(category.id)}
               hoveredCategoryId={hoveredTextCategoryId}
               onHover={setHoveredTextCategoryId}
             />
-          ))}
-      </aside>
+            </div>
+          );
+        })}
+      </div>
     </>
   );
 }

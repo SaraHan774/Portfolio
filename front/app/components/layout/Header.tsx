@@ -9,7 +9,7 @@ interface HeaderProps {
 export default function Header({ onMenuClick }: HeaderProps) {
   return (
     <header
-      className="sticky top-0 z-50 bg-white border-b border-gray-200"
+      className="sticky top-0 z-50 bg-white"
       style={{
         height: '60px',
         display: 'flex',

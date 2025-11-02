@@ -15,6 +15,8 @@ export default function SelectedCategory({ sentence, keyword }: SelectedCategory
         style={{
           height: 'var(--category-display-height)',
           padding: 'var(--category-display-padding)',
+          paddingTop: 'var(--space-6)', // 상단 여백 추가
+          paddingBottom: 'var(--space-4)', // 하단 여백 조정
         }}
       />
     );
@@ -73,21 +75,15 @@ export default function SelectedCategory({ sentence, keyword }: SelectedCategory
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: 'easeOut', delay: 0.2 }}
-      className="border-b border-gray-200 bg-white"
+    <div
       style={{
-        padding: 'var(--category-display-padding)',
-        minHeight: 'var(--category-display-height)',
-        fontSize: 'var(--category-font-size)',
+        fontSize: 'var(--category-font-size)', // 홈 화면과 동일한 폰트 사이즈
         lineHeight: 'var(--category-line-height)',
         color: 'var(--color-text-primary)',
       }}
     >
       {renderSentence()}
-    </motion.div>
+    </div>
   );
 }
 

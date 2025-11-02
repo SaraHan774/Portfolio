@@ -1,7 +1,6 @@
 export default function Footer() {
   return (
     <footer
-      className="border-t border-gray-200"
       style={{
         height: '60px',
         display: 'flex',

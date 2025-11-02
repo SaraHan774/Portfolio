@@ -15,23 +15,22 @@ export default function WorkCard({ work, index }: WorkCardProps) {
 
   return (
     <Link href={`/works/${work.id}`}>
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: 'easeOut' }}
-        whileHover={{ scale: 1.05 }}
+      <div
         className="group cursor-pointer"
         style={{
-          transition: 'transform 0.3s ease',
+          transition: 'transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1)', // Apple 스타일: 부드러운 transform
         }}
       >
         <div
+          className="group-hover:scale-[1.02] transition-transform duration-200 ease-out"
           style={{
             aspectRatio: '1 / 1',
             position: 'relative',
             overflow: 'hidden',
-            borderRadius: '4px',
-            marginBottom: 'var(--space-2)',
+            borderRadius: '2px', // 4px의 50%
+            marginBottom: 'var(--space-1)', // 16px의 50%
+            width: '100%',
+            height: '100%',
           }}
         >
           <Image
@@ -45,17 +44,18 @@ export default function WorkCard({ work, index }: WorkCardProps) {
           />
         </div>
         <h3
-          className="group-hover:font-bold transition-all"
+          className="group-hover:font-bold transition-all duration-200 ease-out"
           style={{
-            fontSize: 'var(--font-size-sm)',
+            fontSize: '10px', // 14px의 약 70% (너무 작아서 약간 조정)
             color: 'var(--color-text-primary)',
             textAlign: 'center',
-            marginTop: 'var(--space-2)',
+            marginTop: 'var(--space-1)', // 16px의 50%
+            lineHeight: '1.2',
           }}
         >
           {work.title}
         </h3>
-      </motion.div>
+      </div>
     </Link>
   );
 }

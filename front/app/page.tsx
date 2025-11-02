@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import Header from '@/app/components/layout/Header';
 import Footer from '@/app/components/layout/Footer';
 import Sidebar from '@/app/components/layout/Sidebar';
-import SelectedCategory from '@/app/components/layout/SelectedCategory';
 import MobileCategoryMenu from '@/app/components/layout/MobileCategoryMenu';
 import WorkGrid from '@/app/components/work/WorkGrid';
 import {
@@ -12,15 +11,13 @@ import {
   mockTextCategories,
   getWorksByKeywordId,
   getWorksByTextCategoryId,
-  getSentenceByKeywordId,
 } from '@/lib/mockData';
-import type { Work, KeywordCategory } from '@/types';
+import type { Work } from '@/types';
 
 export default function HomePage() {
   const [selectedKeywordId, setSelectedKeywordId] = useState<string | null>(null);
   const [selectedTextCategoryId, setSelectedTextCategoryId] = useState<string | null>(null);
   const [works, setWorks] = useState<Work[]>([]);
-  const [selectedSentence, setSelectedSentence] = useState<{ sentence: any; keyword: KeywordCategory | null } | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // 키워드 선택 시 작품 필터링
@@ -29,15 +26,6 @@ export default function HomePage() {
       const filteredWorks = getWorksByKeywordId(selectedKeywordId);
       setWorks(filteredWorks);
       setSelectedTextCategoryId(null); // 텍스트 카테고리 선택 해제
-      
-      // 선택된 문장 정보 설정
-      const sentence = getSentenceByKeywordId(selectedKeywordId);
-      const keyword = sentence?.keywords.find((kw) => kw.id === selectedKeywordId);
-      if (sentence && keyword) {
-        setSelectedSentence({ sentence, keyword });
-      }
-    } else {
-      setSelectedSentence(null);
     }
   }, [selectedKeywordId]);
 
@@ -47,7 +35,6 @@ export default function HomePage() {
       const filteredWorks = getWorksByTextCategoryId(selectedTextCategoryId);
       setWorks(filteredWorks);
       setSelectedKeywordId(null); // 키워드 선택 해제
-      setSelectedSentence(null);
     }
   }, [selectedTextCategoryId]);
 
@@ -55,7 +42,6 @@ export default function HomePage() {
   useEffect(() => {
     if (!selectedKeywordId && !selectedTextCategoryId) {
       setWorks([]);
-      setSelectedSentence(null);
     }
   }, [selectedKeywordId, selectedTextCategoryId]);
 
@@ -80,11 +66,9 @@ export default function HomePage() {
         onKeywordSelect={handleKeywordSelect}
         onTextCategorySelect={handleTextCategorySelect}
       />
-      <SelectedCategory
-        sentence={selectedSentence?.sentence || null}
-        keyword={selectedSentence?.keyword || null}
-      />
-      <div className="flex-1" style={{ position: 'relative' }}>
+      {/* 상단 영역 없음 - PRD 기준 */}
+      <div className="flex-1 relative" style={{ paddingTop: '60px' }}>
+        {/* 좌우 카테고리 영역 (absolute로 자유롭게 배치) */}
         <Sidebar
           sentenceCategories={mockSentenceCategories}
           textCategories={mockTextCategories}
@@ -93,11 +77,11 @@ export default function HomePage() {
           onKeywordSelect={handleKeywordSelect}
           onTextCategorySelect={handleTextCategorySelect}
         />
+        {/* 중앙 컨텐츠 영역 - 카테고리와 자연스럽게 공존 */}
         <main
-          className="lg:ml-[var(--sidebar-width)] lg:mr-[var(--sidebar-width)]"
           style={{
-            minHeight: 'calc(100vh - 60px)',
-            paddingTop: 'var(--space-6)',
+            minHeight: 'calc(100vh - 120px)', // 헤더와 푸터 제외
+            paddingTop: 'var(--space-6)', // 헤더 아래 여백 조정
           }}
         >
           <WorkGrid works={works} />
