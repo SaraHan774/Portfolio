@@ -14,11 +14,12 @@ import {
   Checkbox,
   Modal,
 } from 'antd';
-import { SaveOutlined, EyeOutlined, CloseOutlined, FileTextOutlined } from '@ant-design/icons';
+import { SaveOutlined, EyeOutlined, CloseOutlined, FileTextOutlined, EditOutlined, PlusOutlined, PictureOutlined, HighlightOutlined, FolderOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { mockWorks, mockSentenceCategories, mockTextCategories } from '../services/mockData';
 import type { WorkImage } from '../types';
 import ImageUploader from '../components/ImageUploader';
+import CaptionEditor from '../components/CaptionEditor';
 import './WorkForm.css';
 
 const { Title } = Typography;
@@ -69,7 +70,11 @@ const WorkForm = () => {
       
       const hasImageChanges =
         images.length !== work.images.length ||
-        thumbnailImageId !== work.thumbnailImageId;
+        thumbnailImageId !== work.thumbnailImageId ||
+        images.some((img, idx) => {
+          const originalImg = work.images[idx];
+          return !originalImg || img.caption !== originalImg.caption;
+        });
       
       const hasCategoryChanges =
         JSON.stringify(selectedSentenceCategoryIds.sort()) !== JSON.stringify(work.sentenceCategoryIds.sort()) ||
@@ -220,7 +225,11 @@ const WorkForm = () => {
   const collapseItems = [
     {
       key: '1',
-      label: '📝 기본 정보',
+      label: (
+        <>
+          <FileTextOutlined /> 기본 정보
+        </>
+      ),
       children: (
         <Form.Item
           name="title"
@@ -236,7 +245,11 @@ const WorkForm = () => {
     },
     {
       key: '2',
-      label: '🖼️ 이미지 관리',
+      label: (
+        <>
+          <PictureOutlined /> 이미지 관리
+        </>
+      ),
       children: (
         <>
           <Form.Item
@@ -287,14 +300,57 @@ const WorkForm = () => {
     },
     {
       key: '3',
-      label: '✍️ 이미지 캡션',
+      label: (
+        <>
+          <HighlightOutlined /> 이미지 캡션
+        </>
+      ),
       children: (
-        <p style={{ color: '#8c8c8c' }}>이미지 캡션 기능은 다음 단계에서 구현됩니다.</p>
+        <>
+          {images.length === 0 ? (
+            <p style={{ color: '#8c8c8c' }}>먼저 이미지를 업로드해주세요.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              {images.map((image, index) => (
+                <Card key={image.id} title={`이미지 ${index + 1}`} size="small">
+                  <div style={{ marginBottom: '12px' }}>
+                    <img
+                      src={image.thumbnailUrl || image.url}
+                      alt={`이미지 ${index + 1}`}
+                      style={{
+                        width: '100%',
+                        maxWidth: '300px',
+                        height: 'auto',
+                        borderRadius: '4px',
+                        objectFit: 'cover',
+                      }}
+                    />
+                  </div>
+                  <CaptionEditor
+                    value={image.caption || ''}
+                    onChange={(html) => {
+                      const updatedImages = images.map((img) =>
+                        img.id === image.id ? { ...img, caption: html } : img
+                      );
+                      setImages(updatedImages);
+                    }}
+                    imageIndex={index}
+                    imageId={image.id}
+                  />
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
       ),
     },
     {
       key: '4',
-      label: '📁 카테고리 선택',
+      label: (
+        <>
+          <FolderOutlined /> 카테고리 선택
+        </>
+      ),
       children: (
         <>
           <div style={{ marginBottom: '24px' }}>
@@ -350,7 +406,7 @@ const WorkForm = () => {
 
   // 기본 정보는 별도로 표시 (Collapse 밖에서)
   const basicInfoSection = (
-    <Card title="📝 기본 정보" style={{ marginBottom: '24px' }}>
+    <Card title={<><FileTextOutlined /> 기본 정보</>} style={{ marginBottom: '24px' }}>
       <Form.Item
         name="title"
         label="제목"
@@ -401,7 +457,7 @@ const WorkForm = () => {
 
   // 이미지 관리 섹션
   const imageSection = (
-    <Card title="🖼️ 이미지 관리" style={{ marginBottom: '24px' }}>
+    <Card title={<><PictureOutlined /> 이미지 관리</>} style={{ marginBottom: '24px' }}>
       <Form.Item
         rules={[
           {
@@ -451,7 +507,7 @@ const WorkForm = () => {
 
   // 카테고리 선택 섹션
   const categorySection = (
-    <Card title="📁 카테고리 선택" style={{ marginBottom: '24px' }}>
+    <Card title={<><FolderOutlined /> 카테고리 선택</>} style={{ marginBottom: '24px' }}>
       <div style={{ marginBottom: '24px' }}>
         <div style={{ marginBottom: '12px', fontWeight: 500 }}>문장형 카테고리</div>
         <div style={{ marginLeft: '16px' }}>
@@ -506,7 +562,15 @@ const WorkForm = () => {
     <div className="work-form">
       <div className="work-form-header">
         <Title level={2}>
-          {isEditMode ? '✏️ 작업 수정' : '➕ 새 작업 추가'}
+          {isEditMode ? (
+            <>
+              <EditOutlined /> 작업 수정
+            </>
+          ) : (
+            <>
+              <PlusOutlined /> 새 작업 추가
+            </>
+          )}
           {isEditMode && work && `: ${work.title}`}
         </Title>
       </div>
@@ -523,8 +587,41 @@ const WorkForm = () => {
         <div className="desktop-sections">
           {basicInfoSection}
           {imageSection}
-          <Card title="✍️ 이미지 캡션" style={{ marginBottom: '24px' }}>
-            <p style={{ color: '#8c8c8c' }}>이미지 캡션 기능은 다음 단계에서 구현됩니다.</p>
+          <Card title={<><HighlightOutlined /> 이미지 캡션</>} style={{ marginBottom: '24px' }}>
+            {images.length === 0 ? (
+              <p style={{ color: '#8c8c8c' }}>먼저 이미지를 업로드해주세요.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {images.map((image, index) => (
+                  <Card key={image.id} title={`이미지 ${index + 1}`} size="small" style={{ marginBottom: '16px' }}>
+                    <div style={{ marginBottom: '12px' }}>
+                      <img
+                        src={image.thumbnailUrl || image.url}
+                        alt={`이미지 ${index + 1}`}
+                        style={{
+                          width: '100%',
+                          maxWidth: '300px',
+                          height: 'auto',
+                          borderRadius: '4px',
+                          objectFit: 'cover',
+                        }}
+                      />
+                    </div>
+                    <CaptionEditor
+                      value={image.caption || ''}
+                      onChange={(html) => {
+                        const updatedImages = images.map((img) =>
+                          img.id === image.id ? { ...img, caption: html } : img
+                        );
+                        setImages(updatedImages);
+                      }}
+                      imageIndex={index}
+                      imageId={image.id}
+                    />
+                  </Card>
+                ))}
+              </div>
+            )}
           </Card>
           {categorySection}
         </div>

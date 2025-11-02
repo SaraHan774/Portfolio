@@ -20,8 +20,10 @@ import {
   ArrowUpOutlined,
   ArrowDownOutlined,
   DragOutlined,
+  FolderOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   mockSentenceCategories,
   mockTextCategories,
@@ -40,6 +42,7 @@ const Categories = () => {
   const [form] = Form.useForm();
   const [textForm] = Form.useForm();
   const [isMobile, setIsMobile] = useState(false);
+  const queryClient = useQueryClient();
 
   // 모바일 여부 확인
   useEffect(() => {
@@ -51,16 +54,22 @@ const Categories = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // 문장형 카테고리 조회
+  // 문장형 카테고리 조회 (displayOrder로 정렬)
   const { data: sentenceCategories = [], refetch: refetchSentences } = useQuery({
     queryKey: ['sentenceCategories'],
-    queryFn: async () => mockSentenceCategories,
+    queryFn: async () => {
+      // displayOrder로 정렬하여 반환
+      return [...mockSentenceCategories].sort((a, b) => a.displayOrder - b.displayOrder);
+    },
   });
 
-  // 텍스트형 카테고리 조회
+  // 텍스트형 카테고리 조회 (displayOrder로 정렬)
   const { data: textCategories = [], refetch: refetchTexts } = useQuery({
     queryKey: ['textCategories'],
-    queryFn: async () => mockTextCategories,
+    queryFn: async () => {
+      // displayOrder로 정렬하여 반환
+      return [...mockTextCategories].sort((a, b) => a.displayOrder - b.displayOrder);
+    },
   });
 
   // 작업 개수 계산 (키워드별)
@@ -74,15 +83,55 @@ const Categories = () => {
   };
 
   // 문장형 카테고리 순서 변경
-  const handleMoveSentence = (_index: number, _direction: 'up' | 'down') => {
-    message.success('순서가 변경되었습니다. (실제 구현 시 서버에 저장)');
-    refetchSentences();
+  const handleMoveSentence = (index: number, direction: 'up' | 'down') => {
+    const currentCategories = queryClient.getQueryData<SentenceCategory[]>(['sentenceCategories']) || sentenceCategories;
+    
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === currentCategories.length - 1) return;
+
+    // 배열 복사 및 위치 교환
+    const newCategories = [...currentCategories];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    // 배열에서 두 요소의 위치 교환
+    [newCategories[index], newCategories[targetIndex]] = [newCategories[targetIndex], newCategories[index]];
+    
+    // displayOrder 업데이트 (새 객체 생성하여 불변성 유지)
+    const updatedCategories = newCategories.map((cat, idx) => ({
+      ...cat,
+      displayOrder: idx + 1,
+      updatedAt: new Date(),
+    }));
+
+    // 캐시 업데이트
+    queryClient.setQueryData(['sentenceCategories'], updatedCategories);
+    message.success('순서가 변경되었습니다.');
   };
 
   // 텍스트형 카테고리 순서 변경
-  const handleMoveText = (_index: number, _direction: 'up' | 'down') => {
-    message.success('순서가 변경되었습니다. (실제 구현 시 서버에 저장)');
-    refetchTexts();
+  const handleMoveText = (index: number, direction: 'up' | 'down') => {
+    const currentCategories = queryClient.getQueryData<TextCategory[]>(['textCategories']) || textCategories;
+    
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === currentCategories.length - 1) return;
+
+    // 배열 복사 및 위치 교환
+    const newCategories = [...currentCategories];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    // 배열에서 두 요소의 위치 교환
+    [newCategories[index], newCategories[targetIndex]] = [newCategories[targetIndex], newCategories[index]];
+    
+    // displayOrder 업데이트 (새 객체 생성하여 불변성 유지)
+    const updatedCategories = newCategories.map((cat, idx) => ({
+      ...cat,
+      displayOrder: idx + 1,
+      updatedAt: new Date(),
+    }));
+
+    // 캐시 업데이트
+    queryClient.setQueryData(['textCategories'], updatedCategories);
+    message.success('순서가 변경되었습니다.');
   };
 
   // 문장형 카테고리 삭제
@@ -161,9 +210,50 @@ const Categories = () => {
     }
   };
 
-  // 작업 순서 변경 모달 (간단 구현)
-  const handleWorkOrderChange = (_categoryType: 'sentence' | 'text', _categoryId: string) => {
-    message.info('작업 순서 변경 기능은 향후 구현 예정입니다.');
+  // 작업 순서 변경 (키워드 또는 텍스트 카테고리 내 작업 순서 변경)
+  const handleWorkOrderChange = (categoryType: 'sentence' | 'text', categoryId: string) => {
+    if (categoryType === 'sentence') {
+      // 문장형 카테고리의 키워드 찾기
+      const currentCategories = queryClient.getQueryData<SentenceCategory[]>(['sentenceCategories']) || sentenceCategories;
+      const category = currentCategories.find((cat) => cat.keywords.some((kw) => kw.id === categoryId));
+      const keyword = category?.keywords.find((kw) => kw.id === categoryId);
+      
+      if (!keyword || !keyword.workOrders || keyword.workOrders.length === 0) {
+        message.warning('순서를 변경할 작업이 없습니다.');
+        return;
+      }
+
+      // 작업 순서 변경 모달 표시
+      Modal.confirm({
+        title: `"${keyword.name}" 작업 순서 변경`,
+        content: '작업 순서 변경 기능은 드래그 앤 드롭으로 구현할 예정입니다. 현재는 수동으로 작업 ID와 순서를 지정해야 합니다.',
+        okText: '확인',
+        cancelText: '취소',
+        onOk: () => {
+          message.info('작업 순서 변경 UI는 향후 구현 예정입니다.');
+        },
+      });
+    } else {
+      // 텍스트형 카테고리 찾기
+      const currentCategories = queryClient.getQueryData<TextCategory[]>(['textCategories']) || textCategories;
+      const category = currentCategories.find((cat) => cat.id === categoryId);
+      
+      if (!category || !category.workOrders || category.workOrders.length === 0) {
+        message.warning('순서를 변경할 작업이 없습니다.');
+        return;
+      }
+
+      // 작업 순서 변경 모달 표시
+      Modal.confirm({
+        title: `"${category.name}" 작업 순서 변경`,
+        content: '작업 순서 변경 기능은 드래그 앤 드롭으로 구현할 예정입니다. 현재는 수동으로 작업 ID와 순서를 지정해야 합니다.',
+        okText: '확인',
+        cancelText: '취소',
+        onOk: () => {
+          message.info('작업 순서 변경 UI는 향후 구현 예정입니다.');
+        },
+      });
+    }
   };
 
   // 문장형 카테고리 Collapse 아이템 생성 (모바일용)
@@ -303,13 +393,13 @@ const Categories = () => {
 
   return (
     <div className="categories">
-      <Title level={2}>📁 카테고리 관리</Title>
+      <Title level={2}><FolderOutlined /> 카테고리 관리</Title>
 
       {/* 데스크탑: Card 형식, 모바일: Collapse 형식 */}
       {/* 문장형 카테고리 섹션 - 데스크탑 */}
       {!isMobile && (
         <Card
-          title="📝 문장형 카테고리"
+          title={<><FileTextOutlined /> 문장형 카테고리</>}
           extra={
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAddSentence}>
               새 문장 추가
@@ -399,7 +489,7 @@ const Categories = () => {
       {/* 텍스트형 카테고리 섹션 - 데스크탑 */}
       {!isMobile && (
         <Card
-          title="📁 텍스트형 카테고리"
+          title={<><FolderOutlined /> 텍스트형 카테고리</>}
           extra={
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAddText}>
               새 카테고리 추가
@@ -458,7 +548,7 @@ const Categories = () => {
       {isMobile && (
         <>
           <Card
-            title="📝 문장형 카테고리"
+            title={<><FileTextOutlined /> 문장형 카테고리</>}
             extra={
               <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleAddSentence}>
                 추가
@@ -470,7 +560,7 @@ const Categories = () => {
           </Card>
 
           <Card
-            title="📁 텍스트형 카테고리"
+            title={<><FolderOutlined /> 텍스트형 카테고리</>}
             extra={
               <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleAddText}>
                 추가

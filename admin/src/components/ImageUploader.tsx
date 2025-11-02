@@ -1,5 +1,5 @@
 // 이미지 업로드 및 관리 컴포넌트
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Upload, Image, Button, Space, Card, message } from 'antd';
 import { DragOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
@@ -9,6 +9,7 @@ import {
   RotateRightOutlined,
   UpOutlined,
   DownOutlined,
+  BulbOutlined,
 } from '@ant-design/icons';
 import type { WorkImage } from '../types';
 import './ImageUploader.css';
@@ -300,8 +301,8 @@ const ImageUploader = ({ value = [], onChange, maxCount = 50 }: ImageUploaderPro
 
       {/* 드래그하여 순서 변경 안내 */}
       {images.length > 1 && (
-        <div className="drag-hint" style={{ marginTop: '16px', padding: '12px', background: '#f0f8ff', borderRadius: '4px', fontSize: '14px' }}>
-          💡 위/아래 버튼으로 순서를 변경할 수 있습니다
+        <div className="drag-hint" style={{ marginTop: '16px', padding: '12px', background: '#f0f8ff', borderRadius: '4px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <BulbOutlined /> 위/아래 버튼으로 순서를 변경할 수 있습니다
         </div>
       )}
     </div>

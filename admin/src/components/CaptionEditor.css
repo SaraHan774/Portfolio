@@ -1,0 +1,98 @@
+.caption-editor {
+  width: 100%;
+}
+
+.caption-toolbar {
+  padding: 8px;
+  background: #fafafa;
+  border: 1px solid #d9d9d9;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+}
+
+.caption-editor-wrapper {
+  border: 1px solid #d9d9d9;
+  border-radius: 0 0 4px 4px;
+  min-height: 120px;
+  padding: 12px;
+}
+
+.caption-editor-content {
+  outline: none;
+  min-height: 96px;
+}
+
+.caption-editor-content p {
+  margin: 0;
+  padding: 0;
+}
+
+.caption-editor-content p.is-editor-empty:first-child::before {
+  content: '이미지에 대한 설명을 입력하세요...';
+  float: left;
+  color: #bfbfbf;
+  pointer-events: none;
+  height: 0;
+}
+
+.caption-editor-content a.caption-link {
+  color: #1890ff;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.caption-editor-content a.caption-link:hover {
+  color: #40a9ff;
+}
+
+.caption-editor-content strong {
+  font-weight: bold;
+}
+
+.caption-editor-content em {
+  font-style: italic;
+}
+
+.caption-editor-content u {
+  text-decoration: underline;
+}
+
+.caption-char-count {
+  margin-top: 4px;
+  text-align: right;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .caption-toolbar {
+    padding: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .caption-editor-wrapper {
+    padding: 12px;
+    min-height: 120px;
+  }
+
+  .caption-editor-content {
+    min-height: 96px;
+    font-size: 16px; /* 모바일에서 자동 줌 방지 */
+  }
+
+  .caption-toolbar .ant-space {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .caption-toolbar button {
+    font-size: 14px;
+    min-height: 36px;
+    flex: 1;
+    min-width: 0;
+  }
+}
+

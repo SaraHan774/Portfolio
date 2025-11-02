@@ -1,5 +1,6 @@
 // 대시보드 페이지 컴포넌트
 import { Card, Row, Col, Typography, Space, Button, List, Avatar } from 'antd';
+import { DashboardOutlined, FileTextOutlined, CheckCircleOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { mockWorks } from '../services/mockData';
@@ -42,14 +43,14 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard">
-      <Title level={2}>📊 대시보드</Title>
+      <Title level={2}><DashboardOutlined /> 대시보드</Title>
 
       {/* 통계 카드 */}
       <Row gutter={16} style={{ marginBottom: '24px' }}>
         <Col xs={24} sm={8}>
           <Card>
             <div className="stat-card">
-              <div className="stat-label">📝 전체 작업</div>
+              <div className="stat-label"><FileTextOutlined /> 전체 작업</div>
               <div className="stat-number">{totalWorks}</div>
             </div>
           </Card>
@@ -57,7 +58,7 @@ const Dashboard = () => {
         <Col xs={24} sm={8}>
           <Card>
             <div className="stat-card">
-              <div className="stat-label">✅ 공개</div>
+              <div className="stat-label"><CheckCircleOutlined /> 공개</div>
               <div className="stat-number">{publishedWorks}</div>
             </div>
           </Card>
@@ -65,7 +66,7 @@ const Dashboard = () => {
         <Col xs={24} sm={8}>
           <Card>
             <div className="stat-card">
-              <div className="stat-label">🔒 비공개</div>
+              <div className="stat-label"><LockOutlined /> 비공개</div>
               <div className="stat-number">{draftWorks}</div>
             </div>
           </Card>

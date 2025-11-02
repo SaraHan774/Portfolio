@@ -18,6 +18,7 @@ import {
   UploadOutlined,
   DeleteOutlined,
   SaveOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../stores/authStore';
 import './Settings.css';
@@ -70,7 +71,7 @@ const Settings = () => {
 
   return (
     <div className="settings">
-      <Title level={2}>⚙️ 설정</Title>
+      <Title level={2}><SettingOutlined /> 설정</Title>
 
       {/* 프로필 섹션 */}
       <Card title="프로필" style={{ marginBottom: '24px' }}>
@@ -139,7 +140,7 @@ const Settings = () => {
             onClick={handleExportData}
             style={{ textAlign: 'left' }}
           >
-            📥 데이터 내보내기 (JSON)
+            데이터 내보내기 (JSON)
           </Button>
           <Button
             block
@@ -147,7 +148,7 @@ const Settings = () => {
             onClick={handleImportData}
             style={{ textAlign: 'left' }}
           >
-            📤 데이터 가져오기
+            데이터 가져오기
           </Button>
           <Divider />
           <Popconfirm
@@ -164,7 +165,7 @@ const Settings = () => {
               icon={<DeleteOutlined />}
               style={{ textAlign: 'left' }}
             >
-              🗑️ 모든 데이터 삭제 (위험)
+              모든 데이터 삭제 (위험)
             </Button>
           </Popconfirm>
         </Space>

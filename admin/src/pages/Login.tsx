@@ -1,6 +1,6 @@
 // 로그인 페이지 컴포넌트
 import { Card, Button, Space, Typography, message } from 'antd';
-import { GoogleOutlined } from '@ant-design/icons';
+import { GoogleOutlined, FolderOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { mockLogin } from '../stores/authStore';
@@ -31,7 +31,7 @@ const Login = () => {
       <Card className="login-card">
         <Space direction="vertical" size="large" align="center" style={{ width: '100%' }}>
           <div className="login-logo">
-            <span style={{ fontSize: '48px' }}>📁</span>
+            <FolderOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
             <Title level={2} style={{ margin: '16px 0 8px' }}>
               Portfolio Admin
             </Title>

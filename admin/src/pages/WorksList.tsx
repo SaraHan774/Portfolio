@@ -26,6 +26,7 @@ import {
   SearchOutlined,
   LockOutlined,
   UnlockOutlined,
+  AppstoreOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -319,7 +320,7 @@ const WorksList = () => {
 
   return (
     <div className="works-list">
-      <Title level={2}>🎨 작업 관리</Title>
+      <Title level={2}><AppstoreOutlined /> 작업 관리</Title>
 
       {/* 툴바 */}
       <Card style={{ marginBottom: '16px' }}>
@@ -503,7 +504,7 @@ const WorksList = () => {
               <Card
                 key={work.id}
                 style={{ marginBottom: '12px', borderRadius: '8px' }}
-                bodyStyle={{ padding: '12px' }}
+                styles={{ body: { padding: '12px' } }}
               >
                 {/* 체크박스 */}
                 <div style={{ marginBottom: '12px' }}>

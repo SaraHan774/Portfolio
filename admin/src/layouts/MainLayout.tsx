@@ -118,7 +118,14 @@ const MainLayout = () => {
               style={{ color: 'white', fontSize: '18px' }}
             />
           )}
-          <div className="logo">📁 Portfolio Admin</div>
+          <div 
+            className="logo" 
+            onClick={() => navigate('/dashboard')}
+            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <FolderOutlined style={{ fontSize: '18px' }} />
+            Portfolio Admin
+          </div>
         </div>
         <div className="user-menu">
           {isMobile ? (
@@ -154,7 +161,7 @@ const MainLayout = () => {
             placement="left"
             onClose={() => setMobileMenuOpen(false)}
             open={mobileMenuOpen}
-            bodyStyle={{ padding: 0 }}
+            styles={{ body: { padding: 0 } }}
             width={200}
           >
             <MenuComponent />
