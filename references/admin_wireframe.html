@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Admin - Interactive Wireframe</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: #1890ff;
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .user-menu {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            background: white;
+            color: #1890ff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            background: #f0f0f0;
+        }
+
+        .btn-primary {
+            background: #1890ff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #40a9ff;
+        }
+
+        /* Layout */
+        .main-layout {
+            display: flex;
+        }
+
+        .sidebar {
+            width: 200px;
+            background: #001529;
+            min-height: calc(100vh - 56px);
+            padding: 16px 0;
+        }
+
+        .menu-item {
+            padding: 12px 24px;
+            color: rgba(255,255,255,0.65);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .menu-item:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .menu-item.active {
+            background: #1890ff;
+            color: white;
+        }
+
+        .content {
+            flex: 1;
+            padding: 24px;
+        }
+
+        /* Screens */
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        /* Dashboard */
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1890ff;
+            margin: 8px 0;
+        }
+
+        .stat-label {
+            color: #8c8c8c;
+            font-size: 14px;
+        }
+
+        /* Work List */
+        .toolbar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .work-list {
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .work-item {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid #f0f0f0;
+            gap: 16px;
+        }
+
+        .work-item:last-child {
+            border-bottom: none;
+        }
+
+        .work-thumbnail {
+            width: 80px;
+            height: 80px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8c8c8c;
+        }
+
+        .work-info {
+            flex: 1;
+        }
+
+        .work-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .work-desc {
+            font-size: 14px;
+            color: #8c8c8c;
+            margin-bottom: 4px;
+        }
+
+        .work-meta {
+            font-size: 12px;
+            color: #8c8c8c;
+        }
+
+        .work-tags {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tag {
+            background: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .work-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .status-published {
+            background: #f6ffed;
+            color: #52c41a;
+        }
+
+        .status-draft {
+            background: #fff7e6;
+            color: #faad14;
+        }
+
+        /* Work Form */
+        .form-section {
+            background: white;
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 16px;
+        }
+
+        /* Image Upload */
+        .upload-area {
+            border: 2px dashed #d9d9d9;
+            border-radius: 8px;
+            padding: 48px;
+            text-align: center;
+            cursor: pointer;
+            background: #fafafa;
+            margin-bottom: 16px;
+        }
+
+        .upload-area:hover {
+            border-color: #1890ff;
+            background: #f0f8ff;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #8c8c8c;
+            margin-bottom: 8px;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 16px;
+        }
+
+        .image-card {
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            padding: 8px;
+            position: relative;
+        }
+
+        .image-preview {
+            width: 100%;
+            aspect-ratio: 1;
+            background: #f0f0f0;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+
+        .image-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .image-number {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        /* Categories */
+        .category-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .category-card {
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .category-sentence {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .keyword-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-left: 16px;
+        }
+
+        .keyword-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background: #fafafa;
+            border-radius: 4px;
+        }
+
+        /* Navigation */
+        .page-header {
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 500;
+        }
+
+        .action-bar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .icon {
+            font-size: 18px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-layout {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                min-height: auto;
+            }
+
+            .stats-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .image-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            background: #52c41a;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: none;
+            animation: slideIn 0.3s;
+        }
+
+        .toast.show {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">📁 Portfolio Admin</div>
+            <div class="user-menu">
+                <span>👤 홍길동</span>
+                <button class="btn">로그아웃</button>
+            </div>
+        </div>
+
+        <!-- Main Layout -->
+        <div class="main-layout">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="menu-item active" onclick="showScreen('dashboard')">
+                    <span>📊</span> 대시보드
+                </div>
+                <div class="menu-item" onclick="showScreen('works')">
+                    <span>🎨</span> 작업 관리
+                </div>
+                <div class="menu-item" onclick="showScreen('categories')">
+                    <span>📁</span> 카테고리
+                </div>
+                <div class="menu-item" onclick="showScreen('settings')">
+                    <span>⚙️</span> 설정
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content">
+                <!-- Dashboard Screen -->
+                <div id="dashboard" class="screen active">
+                    <div class="page-header">
+                        <h1 class="page-title">📊 대시보드</h1>
+                    </div>
+
+                    <div class="stats-cards">
+                        <div class="stat-card">
+                            <div class="stat-label">📝 전체 작업</div>
+                            <div class="stat-number">50</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">✅ 공개</div>
+                            <div class="stat-number">45</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">🔒 비공개</div>
+                            <div class="stat-number">5</div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3 class="section-title">최근 수정한 작업</h3>
+                        <div class="work-list">
+                            <div class="work-item">
+                                <div class="work-thumbnail">🖼️</div>
+                                <div class="work-info">
+                                    <div class="work-title">아름다운 바다</div>
+                                    <div class="work-meta">2시간 전</div>
+                                </div>
+                                <button class="btn btn-primary" onclick="showScreen('work-form')">편집</button>
+                            </div>
+                            <div class="work-item">
+                                <div class="work-thumbnail">🖼️</div>
+                                <div class="work-info">
+                                    <div class="work-title">고요한 산</div>
+                                    <div class="work-meta">1일 전</div>
+                                </div>
+                                <button class="btn btn-primary" onclick="showScreen('work-form')">편집</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="action-bar">
+                        <button class="btn btn-primary" onclick="showScreen('work-form')">+ 새 작업 추가</button>
+                        <button class="btn" onclick="showScreen('categories')">카테고리 관리</button>
+                    </div>
+                </div>
+
+                <!-- Works List Screen -->
+                <div id="works" class="screen">
+                    <div class="page-header">
+                        <h1 class="page-title">🎨 작업 관리</h1>
+                    </div>
+
+                    <div class="toolbar">
+                        <button class="btn btn-primary" onclick="showScreen('work-form')">+ 새 작업</button>
+                        <select class="search-box" style="flex: 0 0 150px;">
+                            <option>필터: 전체</option>
+                            <option>공개</option>
+                            <option>비공개</option>
+                        </select>
+                        <input type="text" class="search-box" placeholder="🔍 검색...">
+                        <button class="btn">미리보기</button>
+                    </div>
+
+                    <div class="work-list">
+                        <div class="work-item">
+                            <input type="checkbox">
+                            <div class="work-thumbnail">🖼️</div>
+                            <div class="work-info">
+                                <div class="work-title">아름다운 바다</div>
+                                <div class="work-desc">바다에서 영감을 받은 작업...</div>
+                                <div class="work-tags">
+                                    <span class="tag">디자인</span>
+                                </div>
+                                <div class="work-meta">2025.10.15</div>
+                            </div>
+                            <span class="status-badge status-published">● 공개</span>
+                            <div class="work-actions">
+                                <button class="btn btn-primary" onclick="showScreen('work-form')">편집</button>
+                                <button class="btn">삭제</button>
+                            </div>
+                        </div>
+
+                        <div class="work-item">
+                            <input type="checkbox">
+                            <div class="work-thumbnail">🖼️</div>
+                            <div class="work-info">
+                                <div class="work-title">고요한 산</div>
+                                <div class="work-desc">산의 고요함을 표현한...</div>
+                                <div class="work-tags">
+                                    <span class="tag">조각</span>
+                                    <span class="tag">추상</span>
+                                </div>
+                                <div class="work-meta">2025.10.10</div>
+                            </div>
+                            <span class="status-badge status-draft">○ 비공개</span>
+                            <div class="work-actions">
+                                <button class="btn btn-primary" onclick="showScreen('work-form')">편집</button>
+                                <button class="btn">삭제</button>
+                            </div>
+                        </div>
+
+                        <div class="work-item">
+                            <input type="checkbox">
+                            <div class="work-thumbnail">🖼️</div>
+                            <div class="work-info">
+                                <div class="work-title">푸른 하늘</div>
+                                <div class="work-desc">하늘의 다양한 표정...</div>
+                                <div class="work-tags">
+                                    <span class="tag">디자인</span>
+                                    <span class="tag">추상</span>
+                                </div>
+                                <div class="work-meta">2025.10.05</div>
+                            </div>
+                            <span class="status-badge status-published">● 공개</span>
+                            <div class="work-actions">
+                                <button class="btn btn-primary" onclick="showScreen('work-form')">편집</button>
+                                <button class="btn">삭제</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 16px; padding: 16px; background: #f0f0f0; border-radius: 4px;">
+                        선택된 항목 (2개): 
+                        <button class="btn">일괄 공개</button>
+                        <button class="btn">일괄 비공개</button>
+                        <button class="btn">카테고리 추가</button>
+                    </div>
+                </div>
+
+                <!-- Work Form Screen -->
+                <div id="work-form" class="screen">
+                    <div class="page-header">
+                        <h1 class="page-title">✏️ 작업 수정: 아름다운 바다</h1>
+                    </div>
+
+                    <div class="action-bar">
+                        <button class="btn" onclick="showToast('임시 저장되었습니다')">임시저장</button>
+                        <button class="btn">미리보기</button>
+                        <button class="btn btn-primary" onclick="saveWork()">저장</button>
+                        <button class="btn" onclick="showScreen('works')">취소</button>
+                    </div>
+
+                    <!-- Basic Info -->
+                    <div class="form-section">
+                        <h3 class="section-title">📝 기본 정보</h3>
+                        
+                        <div class="form-group">
+                            <label class="form-label">제목 *</label>
+                            <input type="text" class="form-input" value="아름다운 바다" placeholder="작업 제목을 입력하세요">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">간단한 설명 (선택)</label>
+                            <input type="text" class="form-input" value="바다에서 영감을 받은 작업" placeholder="카드에 표시될 간단한 설명">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">상세 설명 *</label>
+                            <textarea class="form-textarea" placeholder="작업에 대한 상세한 설명을 입력하세요">이 작업은 제주도 바다에서 본 풍경을 재해석한 작업입니다...</textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">공개 상태</label>
+                            <div class="radio-group">
+                                <label><input type="radio" name="status"> 공개</label>
+                                <label><input type="radio" name="status" checked> 비공개</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Image Upload -->
+                    <div class="form-section">
+                        <h3 class="section-title">🖼️ 이미지 관리</h3>
+                        
+                        <div class="upload-area">
+                            <div class="upload-icon">📤</div>
+                            <div><strong>이미지를 드래그하거나 클릭하여 업로드</strong></div>
+                            <div style="font-size: 12px; color: #8c8c8c; margin-top: 8px;">
+                                (최대 50장, JPG/PNG, 각 10MB 이하)
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 16px; font-weight: 500;">
+                            업로드된 이미지 (3/50)
+                        </div>
+
+                        <div class="image-grid">
+                            <div class="image-card">
+                                <div class="image-number">1</div>
+                                <div class="image-preview">🖼️</div>
+                                <div style="text-align: center; margin-bottom: 8px;">
+                                    <label><input type="radio" name="thumbnail" checked> 대표</label>
+                                </div>
+                                <div class="image-actions">
+                                    <button class="btn">↻ 회전</button>
+                                    <button class="btn">🗑 삭제</button>
+                                </div>
+                            </div>
+
+                            <div class="image-card">
+                                <div class="image-number">2</div>
+                                <div class="image-preview">🖼️</div>
+                                <div style="text-align: center; margin-bottom: 8px;">
+                                    <label><input type="radio" name="thumbnail"> 대표</label>
+                                </div>
+                                <div class="image-actions">
+                                    <button class="btn">↻ 회전</button>
+                                    <button class="btn">🗑 삭제</button>
+                                </div>
+                            </div>
+
+                            <div class="image-card">
+                                <div class="image-number">3</div>
+                                <div class="image-preview">🖼️</div>
+                                <div style="text-align: center; margin-bottom: 8px;">
+                                    <label><input type="radio" name="thumbnail"> 대표</label>
+                                </div>
+                                <div class="image-actions">
+                                    <button class="btn">↻ 회전</button>
+                                    <button class="btn">🗑 삭제</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 16px; padding: 12px; background: #f0f8ff; border-radius: 4px; font-size: 14px;">
+                            💡 드래그하여 순서를 변경할 수 있습니다
+                        </div>
+                    </div>
+
+                    <!-- Image Captions -->
+                    <div class="form-section">
+                        <h3 class="section-title">✍️ 이미지 캡션</h3>
+                        
+                        <div class="form-group">
+                            <label class="form-label">이미지 1</label>
+                            <div style="border: 1px solid #d9d9d9; border-radius: 4px; padding: 8px; margin-bottom: 8px;">
+                                <div style="display: flex; gap: 8px; margin-bottom: 8px; border-bottom: 1px solid #f0f0f0; padding-bottom: 8px;">
+                                    <button class="btn">B</button>
+                                    <button class="btn">I</button>
+                                    <button class="btn">U</button>
+                                    <button class="btn">🔗 작업링크</button>
+                                </div>
+                                <textarea class="form-textarea" style="border: none; min-height: 60px;">이 장면은 고요한 산에서 영감을 받았습니다...</textarea>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">이미지 2</label>
+                            <div style="border: 1px solid #d9d9d9; border-radius: 4px; padding: 8px;">
+                                <div style="display: flex; gap: 8px; margin-bottom: 8px; border-bottom: 1px solid #f0f0f0; padding-bottom: 8px;">
+                                    <button class="btn">B</button>
+                                    <button class="btn">I</button>
+                                    <button class="btn">U</button>
+                                    <button class="btn">🔗 작업링크</button>
+                                </div>
+                                <textarea class="form-textarea" style="border: none; min-height: 60px;" placeholder="캡션을 입력하세요..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Categories -->
+                    <div class="form-section">
+                        <h3 class="section-title">📁 카테고리 선택</h3>
+                        
+                        <div style="margin-bottom: 16px;">
+                            <strong>문장형 카테고리</strong>
+                        </div>
+                        <div style="margin-left: 16px; margin-bottom: 24px;">
+                            <div><label><input type="checkbox" checked> 물 <span style="color: #8c8c8c;">(물은 아름다운 불과 같다)</span></label></div>
+                            <div><label><input type="checkbox" checked> 아름다운 <span style="color: #8c8c8c;">(물은 아름다운 불과 같다)</span></label></div>
+                            <div><label><input type="checkbox"> 불 <span style="color: #8c8c8c;">(물은 아름다운 불과 같다)</span></label></div>
+                        </div>
+
+                        <div style="margin-bottom: 16px;">
+                            <strong>텍스트형 카테고리</strong>
+                        </div>
+                        <div style="margin-left: 16px;">
+                            <div><label><input type="checkbox" checked> 디자인</label></div>
+                            <div><label><input type="checkbox"> 조각</label></div>
+                            <div><label><input type="checkbox" checked> 추상</label></div>
+                        </div>
+                    </div>
+
+                    <div class="action-bar">
+                        <button class="btn" onclick="showToast('임시 저장되었습니다')">임시저장</button>
+                        <button class="btn">미리보기</button>
+                        <button class="btn btn-primary" onclick="saveWork()">저장</button>
+                        <button class="btn" onclick="showScreen('works')">취소</button>
+                    </div>
+                </div>
+
+                <!-- Categories Screen -->
+                <div id="categories" class="screen">
+                    <div class="page-header">
+                        <h1 class="page-title">📁 카테고리 관리</h1>
+                    </div>
+
+                    <!-- Sentence Categories -->
+                    <div class="form-section">
+                        <h3 class="section-title">📝 문장형 카테고리</h3>
+                        <button class="btn btn-primary" style="margin-bottom: 16px;">+ 새 문장 추가</button>
+
+                        <div class="category-list">
+                            <div class="category-card">
+                                <div class="category-header">
+                                    <div class="category-sentence">"물은 아름다운 불과 같다"</div>
+                                    <div>
+                                        <button class="btn">위로</button>
+                                        <button class="btn">아래</button>
+                                        <button class="btn">삭제</button>
+                                    </div>
+                                </div>
+                                <div style="margin-bottom: 8px; color: #8c8c8c; font-size: 14px;">키워드 (카테고리):</div>
+                                <div class="keyword-list">
+                                    <div class="keyword-item">
+                                        <span>• 물 (0-1) - 작업 3개</span>
+                                        <button class="btn">순서 변경</button>
+                                    </div>
+                                    <div class="keyword-item">
+                                        <span>• 아름다운 (3-7) - 작업 5개</span>
+                                        <button class="btn">순서 변경</button>
+                                    </div>
+                                    <div class="keyword-item">
+                                        <span>• 불 (8-9) - 작업 2개</span>
+                                        <button class="btn">순서 변경</button>
+                                    </div>
+                                </div>
+                                <button class="btn" style="margin-top: 12px;">편집</button>
+                            </div>
+
+                            <div class="category-card">
+                                <div class="category-header">
+                                    <div class="category-sentence">"고요함 속에 소리가 있다"</div>
+                                    <div>
+                                        <button class="btn">위로</button>
+                                        <button class="btn">아래</button>
+                                        <button class="btn">삭제</button>
+                                    </div>
+                                </div>
+                                <div style="margin-bottom: 8px; color: #8c8c8c; font-size: 14px;">키워드 (카테고리):</div>
+                                <div class="keyword-list">
+                                    <div class="keyword-item">
+                                        <span>• 고요함 (0-3) - 작업 7개</span>
+                                        <button class="btn">순서 변경</button>
+                                    </div>
+                                    <div class="keyword-item">
+                                        <span>• 소리 (7-9) - 작업 4개</span>
+                                        <button class="btn">순서 변경</button>
+                                    </div>
+                                </div>
+                                <button class="btn" style="margin-top: 12px;">편집</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Text Categories -->
+                    <div class="form-section">
+                        <h3 class="section-title">📁 텍스트형 카테고리</h3>
+                        <button class="btn btn-primary" style="margin-bottom: 16px;">+ 새 카테고리 추가</button>
+
+                        <div class="category-list">
+                            <div class="category-card">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <span style="font-size: 20px; margin-right: 8px;">☰</span>
+                                        <strong>디자인</strong>
+                                        <span style="color: #8c8c8c; margin-left: 8px;">작업 12개</span>
+                                    </div>
+                                    <div>
+                                        <button class="btn">위로</button>
+                                        <button class="btn">아래</button>
+                                        <button class="btn">순서</button>
+                                        <button class="btn">편집</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="category-card">
+                                <div style="display: flex; justify-space-between; align-items: center;">
+                                    <div>
+                                        <span style="font-size: 20px; margin-right: 8px;">☰</span>
+                                        <strong>조각</strong>
+                                        <span style="color: #8c8c8c; margin-left: 8px;">작업 8개</span>
+                                    </div>
+                                    <div>
+                                        <button class="btn">위로</button>
+                                        <button class="btn">아래</button>
+                                        <button class="btn">순서</button>
+                                        <button class="btn">편집</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="category-card">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <span style="font-size: 20px; margin-right: 8px;">☰</span>
+                                        <strong>추상</strong>
+                                        <span style="color: #8c8c8c; margin-left: 8px;">작업 15개</span>
+                                    </div>
+                                    <div>
+                                        <button class="btn">위로</button>
+                                        <button class="btn">아래</button>
+                                        <button class="btn">순서</button>
+                                        <button class="btn">편집</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Screen -->
+                <div id="settings" class="screen">
+                    <div class="page-header">
+                        <h1 class="page-title">⚙️ 설정</h1>
+                    </div>
+
+                    <div class="form-section">
+                        <h3 class="section-title">프로필</h3>
+                        
+                        <div style="margin-bottom: 16px;">
+                            <div class="work-thumbnail" style="width: 100px; height: 100px;">👤</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">이름</label>
+                            <input type="text" class="form-input" value="홍길동">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">이메일</label>
+                            <input type="email" class="form-input" value="hong@example.com" disabled>
+                        </div>
+
+                        <button class="btn btn-primary">프로필 수정</button>
+                    </div>
+
+                    <div class="form-section">
+                        <h3 class="section-title">사이트 설정</h3>
+                        
+                        <div class="form-group">
+                            <label class="form-label">사이트 제목</label>
+                            <input type="text" class="form-input" value="민지의 포트폴리오">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">사이트 설명</label>
+                            <textarea class="form-textarea">조각 작품을 전시합니다</textarea>
+                        </div>
+
+                        <button class="btn btn-primary">저장</button>
+                    </div>
+
+                    <div class="form-section">
+                        <h3 class="section-title">데이터 관리</h3>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <button class="btn">📥 데이터 내보내기 (JSON)</button>
+                            <button class="btn">📤 데이터 가져오기</button>
+                            <button class="btn" style="color: #ff4d4f;">🗑️ 모든 데이터 삭제 (위험)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        function showScreen(screenId) {
+            // Hide all screens
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+
+            // Show selected screen
+            document.getElementById(screenId).classList.add('active');
+
+            // Update menu
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.menu-item')?.classList.add('active');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function saveWork() {
+            showToast('✅ 작업이 저장되었습니다');
+            setTimeout(() => {
+                showScreen('works');
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
