@@ -110,7 +110,7 @@ const Dashboard = () => {
                   title={work.title}
                   description={
                     <Space direction="vertical" size="small">
-                      <span>{work.shortDescription || work.fullDescription.substring(0, 50)}...</span>
+                      <span>{(work.shortDescription || work.fullDescription || work.caption || '').substring(0, 50)}...</span>
                       <span style={{ color: '#8c8c8c', fontSize: '12px' }}>
                         {getTimeAgo(work.updatedAt)}
                       </span>

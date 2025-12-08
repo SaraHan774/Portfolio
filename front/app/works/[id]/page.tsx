@@ -3,13 +3,123 @@
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Header from '@/app/components/layout/Header';
 import Footer from '@/app/components/layout/Footer';
 import Sidebar from '@/app/components/layout/Sidebar';
 import { getWorkById, getWorksByKeywordId, getWorksByExhibitionCategoryId } from '@/lib/services/worksService';
 import { getSentenceCategories, getExhibitionCategories } from '@/lib/services/categoriesService';
 import FloatingWorkWindow from '@/app/components/work/FloatingWorkWindow';
-import type { Work, ExhibitionCategory, SentenceCategory as SentenceCategoryType } from '@/types';
+import type { Work, WorkImage, ExhibitionCategory, SentenceCategory as SentenceCategoryType } from '@/types';
+
+// Fade In 이미지 컴포넌트 (스켈레톤 포함)
+function FadeInImage({
+  src,
+  alt,
+  width,
+  height,
+  priority = false,
+  style = {},
+}: {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  priority?: boolean;
+  style?: React.CSSProperties;
+}) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(false);
+  const aspectRatio = height / width;
+
+  // 1200ms 후에도 로딩 중이면 스켈레톤 표시
+  useEffect(() => {
+    if (isLoaded) return;
+
+    const timer = setTimeout(() => {
+      if (!isLoaded) {
+        setShowSkeleton(true);
+      }
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [isLoaded]);
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        width: style.width || '100%',
+        paddingBottom: `${aspectRatio * 100}%`,
+        borderRadius: style.borderRadius || '4px',
+        overflow: 'hidden',
+      }}
+    >
+      {/* 스켈레톤 - 1200ms 후에도 로딩 중일 때만 표시 */}
+      {!isLoaded && showSkeleton && (
+        <div
+          className="skeleton-shimmer"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+            backgroundSize: '200% 100%',
+            animation: 'shimmer 1.5s infinite',
+            borderRadius: style.borderRadius || '4px',
+          }}
+        />
+      )}
+      <Image
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        priority={priority}
+        onLoad={() => setIsLoaded(true)}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          borderRadius: style.borderRadius || '4px',
+          opacity: isLoaded ? 1 : 0,
+          transition: 'opacity 0.3s ease-in-out',
+        }}
+      />
+    </div>
+  );
+}
+
+// 모달 내 이미지 컴포넌트 (fade in 효과)
+function ModalImage({ image, alt, isLast }: { image: WorkImage; alt: string; isLast: boolean }) {
+  return (
+    <div
+      data-image-id={image.id}
+      style={{
+        marginBottom: isLast ? 0 : 'var(--space-8)',
+        position: 'relative',
+        width: '100%',
+      }}
+    >
+      <FadeInImage
+        src={image.url}
+        alt={alt}
+        width={image.width}
+        height={image.height}
+        style={{
+          width: '100%',
+          height: 'auto',
+          borderRadius: '4px',
+        }}
+      />
+    </div>
+  );
+}
 
 // 모달 컴포넌트
 function WorkModal({
@@ -103,8 +213,8 @@ function WorkModal({
         }
       });
 
-      if (bestImage) {
-        const imageId = bestImage.getAttribute('data-image-id');
+      if (bestImage !== null) {
+        const imageId = (bestImage as HTMLElement).getAttribute('data-image-id');
         if (imageId && imageId !== lastTrackedImageId) {
           lastTrackedImageId = imageId;
           setModalCurrentImageId(imageId);
@@ -192,7 +302,11 @@ function WorkModal({
   }
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
       style={{
         position: 'fixed',
         top: 0,
@@ -213,7 +327,24 @@ function WorkModal({
       }}
       className="modal-overlay"
     >
-      <div
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{
+          opacity: 1,
+          y: 0,
+          transition: {
+            duration: 0.35,
+            ease: [0.16, 1, 0.3, 1],
+          }
+        }}
+        exit={{
+          opacity: 0,
+          y: 30,
+          transition: {
+            duration: 0.25,
+            ease: [0.4, 0, 0.2, 1],
+          }
+        }}
         style={{
           backgroundColor: 'var(--color-white)',
           borderRadius: '8px',
@@ -390,27 +521,12 @@ function WorkModal({
               {modalWork.images
                 .sort((a, b) => a.order - b.order)
                 .map((image, index) => (
-                  <div
+                  <ModalImage
                     key={image.id}
-                    data-image-id={image.id}
-                    style={{
-                      marginBottom: index === modalWork.images.length - 1 ? 0 : 'var(--space-8)',
-                      position: 'relative',
-                      width: '100%',
-                    }}
-                  >
-                    <Image
-                      src={image.url}
-                      alt={modalWork.title}
-                      width={image.width}
-                      height={image.height}
-                      style={{
-                        width: '100%',
-                        height: 'auto',
-                        borderRadius: '4px',
-                      }}
-                    />
-                  </div>
+                    image={image}
+                    alt={modalWork.title}
+                    isLast={index === modalWork.images.length - 1}
+                  />
                 ))}
             </div>
           </div>
@@ -448,8 +564,8 @@ function WorkModal({
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -988,7 +1104,7 @@ export default function WorkDetailPage() {
         dangerouslySetInnerHTML={{ __html: doc.body.innerHTML }}
         style={{
           fontSize: 'var(--font-size-xs)',
-          color: 'var(--color-text-muted)',
+          color: 'var(--color-category-disabled)',
           lineHeight: 'var(--line-height-normal)',
           maxWidth: '200px',
           textAlign: 'left',
@@ -1171,12 +1287,12 @@ export default function WorkDetailPage() {
                             scrollMarginTop: '280px', // 상단 여백과 동일하게 설정
                           }}
                         >
-                          <Image
+                          <FadeInImage
                             src={image.url}
                             alt={selectedWork.title}
                             width={image.width}
                             height={image.height}
-                            priority={isFirst} // 첫 번째 이미지는 우선 로딩
+                            priority={isFirst}
                             style={{
                               width: '100%',
                               height: 'auto',
@@ -1212,43 +1328,55 @@ export default function WorkDetailPage() {
         </main>
       </div>
 
-      {modalWorkId && (
-        <WorkModal
-          workId={modalWorkId}
-          onClose={() => setModalWorkId(null)}
-          onWorkClick={(clickedWorkId) => setModalWorkId(clickedWorkId)}
-          renderCaption={renderCaption}
-        />
-      )}
+      <AnimatePresence>
+        {modalWorkId && (
+          <WorkModal
+            workId={modalWorkId}
+            onClose={() => setModalWorkId(null)}
+            onWorkClick={(clickedWorkId) => setModalWorkId(clickedWorkId)}
+            renderCaption={renderCaption}
+          />
+        )}
+      </AnimatePresence>
 
-      {hoveredWorkId && (
-        <div
-          className="floating-work-window-container"
-          onMouseEnter={(e) => {
-            e.stopPropagation();
-          }}
-          style={{
-            position: 'fixed',
-            left: 0,
-            top: 0,
-            width: '100vw',
-            height: '100vh',
-            pointerEvents: 'none',
-            zIndex: 999,
-          }}
-        >
-          <div
+      <AnimatePresence>
+        {hoveredWorkId && (
+          <motion.div
+            key="floating-window-container"
+            className="floating-work-window-container"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] } }}
+            onMouseEnter={(e) => {
+              e.stopPropagation();
+            }}
             style={{
-              pointerEvents: 'auto',
+              position: 'fixed',
+              left: 0,
+              top: 0,
+              width: '100vw',
+              height: '100vh',
+              pointerEvents: 'none',
+              zIndex: 999,
             }}
           >
-            <FloatingWorkWindow
-              workId={hoveredWorkId}
-              position={hoverPosition}
-            />
-          </div>
-        </div>
-      )}
+            <div
+              style={{
+                pointerEvents: 'auto',
+              }}
+            >
+              <FloatingWorkWindow
+                workId={hoveredWorkId}
+                position={hoverPosition}
+                onClick={(clickedWorkId) => {
+                  setHoveredWorkId(null);
+                  setModalWorkId(clickedWorkId);
+                }}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <Footer />
     </div>

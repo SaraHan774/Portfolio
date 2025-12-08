@@ -10,9 +10,10 @@ import type { Work } from '@/types';
 interface FloatingWorkWindowProps {
   workId: string;
   position: { x: number; y: number };
+  onClick?: (workId: string) => void;
 }
 
-export default function FloatingWorkWindow({ workId, position }: FloatingWorkWindowProps) {
+export default function FloatingWorkWindow({ workId, position, onClick }: FloatingWorkWindowProps) {
   const [adjustedPosition, setAdjustedPosition] = useState({ x: position.x + 15, y: position.y + 15 });
   const [work, setWork] = useState<Work | null>(null);
 
@@ -90,20 +91,20 @@ export default function FloatingWorkWindow({ workId, position }: FloatingWorkWin
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        initial={{ opacity: 0, y: 8 }}
+        initial={{ opacity: 0, y: -12, scale: 0.97 }}
         animate={{
           opacity: 1,
           y: 0,
+          scale: 1,
           transition: {
-            duration: 0.2,
-            ease: [0.25, 0.1, 0.25, 1],
+            duration: 0.3,
+            ease: [0.16, 1, 0.3, 1],
           }
         }}
         exit={{
           opacity: 0,
-          y: 8,
           transition: {
-            duration: 0.15,
+            duration: 0.5,
             ease: [0.4, 0, 0.2, 1],
           }
         }}
@@ -113,23 +114,44 @@ export default function FloatingWorkWindow({ workId, position }: FloatingWorkWin
           position: 'fixed',
           left: `${adjustedPosition.x}px`,
           top: `${adjustedPosition.y}px`,
-          backgroundColor: 'var(--color-white)',
-          borderRadius: '4px',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-          padding: '16px',
           zIndex: 1000,
           pointerEvents: 'auto',
         }}
         onMouseEnter={(e) => e.stopPropagation()}
         onMouseLeave={(e) => e.stopPropagation()}
       >
+        {/* 뭉게구름 배경 - 여러 레이어로 부드러운 페이드 효과 */}
         <div
           style={{
+            position: 'absolute',
+            inset: '-20px',
+            background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 40%, rgba(255,255,255,0.4) 65%, rgba(255,255,255,0) 100%)',
+            filter: 'blur(8px)',
+            borderRadius: '50%',
+            transform: 'scale(1.1)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            inset: '-10px',
+            background: 'radial-gradient(ellipse at center, rgba(255,255,255,1) 0%, rgba(255,255,255,0.9) 50%, rgba(255,255,255,0) 100%)',
+            filter: 'blur(4px)',
+            borderRadius: '50%',
+          }}
+        />
+
+        {/* 콘텐츠 */}
+        <div
+          onClick={() => onClick?.(workId)}
+          style={{
+            position: 'relative',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             gap: '12px',
             cursor: 'pointer',
+            padding: '16px',
           }}
         >
           {/* 작품명 + 년도 */}
@@ -140,6 +162,7 @@ export default function FloatingWorkWindow({ workId, position }: FloatingWorkWin
               color: 'var(--color-text-primary)',
               textAlign: 'center',
               whiteSpace: 'nowrap',
+              textShadow: '0 0 20px rgba(255,255,255,1), 0 0 40px rgba(255,255,255,0.8)',
             }}
           >
             {`「'${work.title}'」, ${work.year || ''}`}
@@ -152,18 +175,38 @@ export default function FloatingWorkWindow({ workId, position }: FloatingWorkWin
                 width: '120px',
                 height: '120px',
                 position: 'relative',
-                overflow: 'hidden',
+                overflow: 'visible',
               }}
             >
-              <Image
-                src={thumbnailImage?.thumbnailUrl || thumbnailImage?.url || ''}
-                alt={work.title}
-                fill
-                sizes="120px"
+              {/* 이미지 주변 뭉게구름 글로우 */}
+              <div
                 style={{
-                  objectFit: 'contain',
+                  position: 'absolute',
+                  inset: '-15px',
+                  background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.9) 30%, rgba(255,255,255,0) 70%)',
+                  filter: 'blur(10px)',
+                  borderRadius: '50%',
                 }}
               />
+              <div
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                }}
+              >
+                <Image
+                  src={thumbnailImage?.thumbnailUrl || thumbnailImage?.url || ''}
+                  alt={work.title}
+                  fill
+                  sizes="120px"
+                  style={{
+                    objectFit: 'cover',
+                  }}
+                />
+              </div>
             </div>
           )}
         </div>

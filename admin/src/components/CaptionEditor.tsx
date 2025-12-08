@@ -32,7 +32,29 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
         blockquote: false,
         codeBlock: false,
       }),
-      Link.configure({
+      Link.extend({
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            'data-work-id': {
+              default: null,
+              parseHTML: element => element.getAttribute('data-work-id'),
+              renderHTML: attributes => {
+                if (!attributes['data-work-id']) return {};
+                return { 'data-work-id': attributes['data-work-id'] };
+              },
+            },
+            'data-work-title': {
+              default: null,
+              parseHTML: element => element.getAttribute('data-work-title'),
+              renderHTML: attributes => {
+                if (!attributes['data-work-title']) return {};
+                return { 'data-work-title': attributes['data-work-title'] };
+              },
+            },
+          };
+        },
+      }).configure({
         openOnClick: false,
         HTMLAttributes: {
           class: 'caption-link',
@@ -111,28 +133,21 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
     if (selectedWork && selectedText.trim()) {
       // 선택된 텍스트가 있는 경우에만 링크 적용
       const { from, to } = selection;
-      
+
       editor
         .chain()
         .focus()
         .setTextSelection({ from, to })
+        .extendMarkRange('link')
         .setLink({
           href: `/works/${selectedWorkId}`,
           target: '_blank',
         })
+        .updateAttributes('link', {
+          'data-work-id': selectedWorkId,
+          'data-work-title': selectedWork.title,
+        })
         .run();
-
-      // HTML을 가져와서 data 속성 추가
-      setTimeout(() => {
-        let html = editor.getHTML();
-        // 링크에 data 속성 추가
-        const escapedTitle = selectedWork.title.replace(/"/g, '&quot;');
-        html = html.replace(
-          new RegExp(`<a([^>]*href="/works/${selectedWorkId}"[^>]*)>`, 'g'),
-          `<a$1 data-work-id="${selectedWorkId}" data-work-title="${escapedTitle}">`
-        );
-        onChange?.(html);
-      }, 0);
 
       message.success(`"${selectedWork.title}" 작업 링크가 삽입되었습니다.`);
       setLinkModalVisible(false);
@@ -247,7 +262,7 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
                       />
                     }
                     title={work.title}
-                    description={work.shortDescription || work.fullDescription.substring(0, 50) + '...'}
+                    description={(work.shortDescription || work.fullDescription || work.caption || '').substring(0, 50) + '...'}
                   />
                 </List.Item>
               );

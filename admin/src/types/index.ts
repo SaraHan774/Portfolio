@@ -70,8 +70,10 @@ export interface Work {
   id: string;
   title: string;
   year?: number;  // 작품 제작 년도
+  /** @deprecated 사용하지 않음 - 캡션으로 대체 */
   shortDescription?: string;
-  fullDescription: string;
+  /** @deprecated 사용하지 않음 - 캡션으로 대체 */
+  fullDescription?: string;
   thumbnailImageId: string;
   images: WorkImage[];
   caption?: string;

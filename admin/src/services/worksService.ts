@@ -23,8 +23,9 @@ const COLLECTION_NAME = 'works';
 const mapFirestoreToWork = (id: string, data: Record<string, unknown>): Work => ({
   id,
   title: data.title as string || '',
+  year: data.year as number | undefined,
   shortDescription: data.shortDescription as string | undefined,
-  fullDescription: data.fullDescription as string || '',
+  fullDescription: data.fullDescription as string | undefined,
   thumbnailImageId: data.thumbnailImageId as string || '',
   images: (data.images as WorkImage[]) || [],
   caption: data.caption as string | undefined,

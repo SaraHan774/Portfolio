@@ -80,9 +80,9 @@
   --dot-color: var(--color-black);
 
   /* 카테고리 상태별 색상 */
-  --color-category-basic: #B3B3B3;                       /* 기본 상태, 클릭 불가 - 검정보다 30% 옅은 회색 */
+  --color-category-basic: #8e8c8c;                       /* 기본 상태, 클릭 불가 - 검정보다 30% 옅은 회색 */
   --color-category-clickable: var(--color-black);        /* 클릭 가능한 카테고리 - 완전 검정 */
-  --color-category-disabled: #B3B3B3;                    /* 현재 작업에 포함되지 않는 카테고리 - 검정보다 30% 옅은 회색 */
+  --color-category-disabled: #8e8c8c;                    /* 현재 작업에 포함되지 않는 카테고리 - 검정보다 30% 옅은 회색 */
   --color-category-hover-stroke: var(--color-black);     /* hover 시 획(stroke) 색상 */
 
   /* 브레이크포인트 */
@@ -291,4 +291,13 @@ img {
   opacity: 1;
 }
 
+/* 스켈레톤 shimmer 애니메이션 */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
 

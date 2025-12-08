@@ -26,7 +26,6 @@ import CaptionEditor from '../components/CaptionEditor';
 import './WorkForm.css';
 
 const { Title } = Typography;
-const { TextArea } = Input;
 
 const WorkForm = () => {
   const navigate = useNavigate();
@@ -68,17 +67,14 @@ const WorkForm = () => {
     if (isEditMode && work) {
       // 폼 값이나 이미지가 변경되었는지 확인
       const formValues = form.getFieldsValue();
-      const hasFormChanges =
-        formValues.title !== work.title ||
-        formValues.shortDescription !== work.shortDescription ||
-        formValues.fullDescription !== work.fullDescription;
-      
+      const hasFormChanges = formValues.title !== work.title;
+
       const hasImageChanges =
         images.length !== work.images.length ||
         thumbnailImageId !== work.thumbnailImageId;
-      
+
       const hasCaptionChanges = caption !== (work.caption || '');
-      
+
       const hasCategoryChanges =
         JSON.stringify(selectedSentenceCategoryIds.sort()) !== JSON.stringify(work.sentenceCategoryIds.sort()) ||
         JSON.stringify(selectedExhibitionCategoryIds.sort()) !== JSON.stringify(work.exhibitionCategoryIds.sort());
@@ -89,8 +85,6 @@ const WorkForm = () => {
       const formValues = form.getFieldsValue();
       setHasChanges(
         !!formValues.title ||
-        !!formValues.shortDescription ||
-        !!formValues.fullDescription ||
         images.length > 0 ||
         !!caption
       );
@@ -103,8 +97,6 @@ const WorkForm = () => {
       form.setFieldsValue({
         title: work.title,
         year: work.year,
-        shortDescription: work.shortDescription,
-        fullDescription: work.fullDescription,
       });
       setImages(work.images);
       setThumbnailImageId(work.thumbnailImageId);
@@ -149,8 +141,6 @@ const WorkForm = () => {
       const workData = {
         title: formValues.title,
         year: formValues.year ? Number(formValues.year) : undefined,
-        shortDescription: formValues.shortDescription || '',
-        fullDescription: formValues.fullDescription,
         images,
         thumbnailImageId,
         caption,
@@ -185,8 +175,19 @@ const WorkForm = () => {
       setIsSaving(false);
       setSavingMessage('');
 
-      // 폼 유효성 검사 실패는 각 필드에 표시되므로 별도 알림 불필요
+      // 폼 유효성 검사 실패 시 토스트로 알림
       if (error && typeof error === 'object' && 'errorFields' in error) {
+        const errorFields = (error as { errorFields: Array<{ name: string[]; errors: string[] }> }).errorFields;
+        const firstError = errorFields[0];
+        if (firstError && firstError.errors.length > 0) {
+          notification.warning({
+            message: '입력 확인 필요',
+            description: firstError.errors[0],
+            placement: 'topRight',
+          });
+          // 첫 번째 에러 필드로 스크롤
+          form.scrollToField(firstError.name);
+        }
         return;
       }
 
@@ -220,8 +221,6 @@ const WorkForm = () => {
       const workData = {
         title: formValues.title,
         year: formValues.year ? Number(formValues.year) : undefined,
-        shortDescription: formValues.shortDescription || '',
-        fullDescription: formValues.fullDescription || '',
         images,
         thumbnailImageId: thumbnailImageId || (images.length > 0 ? images[0].id : ''),
         caption,
@@ -558,34 +557,6 @@ const WorkForm = () => {
         />
       </Form.Item>
 
-      <Form.Item
-        name="shortDescription"
-        label="간단한 설명 (선택)"
-        rules={[{ max: 200, message: '간단한 설명은 200자 이하로 입력해주세요.' }]}
-      >
-        <Input
-          placeholder="카드에 표시될 간단한 설명"
-          maxLength={200}
-          showCount
-        />
-      </Form.Item>
-
-      <Form.Item
-        name="fullDescription"
-        label="상세 설명"
-        rules={[
-          { required: true, message: '상세 설명을 입력해주세요.' },
-          { max: 5000, message: '상세 설명은 5000자 이하로 입력해주세요.' },
-        ]}
-      >
-        <TextArea
-          placeholder="작업에 대한 상세한 설명을 입력하세요"
-          rows={8}
-          maxLength={5000}
-          showCount
-        />
-      </Form.Item>
-
       <Form.Item label="게시 상태">
         <div style={{ padding: '8px 12px', background: '#f5f5f5', borderRadius: '6px' }}>
           {isEditMode && work ? (
@@ -886,13 +857,6 @@ const WorkForm = () => {
             </span>
           </div>
 
-          {/* 간단한 설명 */}
-          {form.getFieldValue('shortDescription') && (
-            <Typography.Paragraph type="secondary">
-              {form.getFieldValue('shortDescription')}
-            </Typography.Paragraph>
-          )}
-
           {/* 이미지 */}
           {images.length > 0 && (
             <div style={{ marginBottom: '24px' }}>
@@ -922,16 +886,6 @@ const WorkForm = () => {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* 상세 설명 */}
-          {form.getFieldValue('fullDescription') && (
-            <div style={{ marginBottom: '24px' }}>
-              <Typography.Title level={5}>상세 설명</Typography.Title>
-              <Typography.Paragraph style={{ whiteSpace: 'pre-wrap' }}>
-                {form.getFieldValue('fullDescription')}
-              </Typography.Paragraph>
             </div>
           )}
 
