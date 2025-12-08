@@ -1,0 +1,5 @@
+{
+  "firestore": {
+    "indexes": "front/firestore.indexes.json"
+  }
+}

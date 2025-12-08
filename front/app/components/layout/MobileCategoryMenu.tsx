@@ -3,31 +3,33 @@
 import { useState } from 'react';
 import SentenceCategory from '@/app/components/category/SentenceCategory';
 import TextCategory from '@/app/components/category/TextCategory';
-import type { SentenceCategory as SentenceCategoryType, TextCategory as TextCategoryType } from '@/types';
+import type { SentenceCategory as SentenceCategoryType, ExhibitionCategory } from '@/types';
 
 interface MobileCategoryMenuProps {
   open: boolean;
   onClose: () => void;
   sentenceCategories: SentenceCategoryType[];
-  textCategories: TextCategoryType[];
+  exhibitionCategories: ExhibitionCategory[];
   selectedKeywordId: string | null;
-  selectedTextCategoryId: string | null;
+  selectedExhibitionCategoryId: string | null;
   onKeywordSelect: (keywordId: string) => void;
-  onTextCategorySelect: (categoryId: string) => void;
+  onExhibitionCategorySelect: (categoryId: string) => void;
+  selectedWorkIds?: string[]; // 현재 선택된 카테고리의 작업 ID 목록 (disabled 상태 계산용)
 }
 
 export default function MobileCategoryMenu({
   open,
   onClose,
   sentenceCategories,
-  textCategories,
+  exhibitionCategories,
   selectedKeywordId,
-  selectedTextCategoryId,
+  selectedExhibitionCategoryId,
   onKeywordSelect,
-  onTextCategorySelect,
+  onExhibitionCategorySelect,
+  selectedWorkIds = [],
 }: MobileCategoryMenuProps) {
   const [hoveredKeywordId, setHoveredKeywordId] = useState<string | null>(null);
-  const [hoveredTextCategoryId, setHoveredTextCategoryId] = useState<string | null>(null);
+  const [hoveredExhibitionCategoryId, setHoveredExhibitionCategoryId] = useState<string | null>(null);
 
   if (!open) return null;
 
@@ -94,27 +96,29 @@ export default function MobileCategoryMenu({
                 }}
                 hoveredKeywordId={hoveredKeywordId}
                 onKeywordHover={setHoveredKeywordId}
+                selectedWorkIds={selectedWorkIds}
               />
             ))}
         </div>
         <div>
           <h3 style={{ fontSize: 'var(--font-size-lg)', marginBottom: 'var(--space-4)', fontWeight: 'var(--font-weight-bold)' }}>
-            텍스트형 카테고리
+            전시명 카테고리
           </h3>
-          {textCategories
+          {exhibitionCategories
             .filter((cat) => cat.isActive)
             .sort((a, b) => a.displayOrder - b.displayOrder)
             .map((category) => (
               <TextCategory
                 key={category.id}
                 category={category}
-                isSelected={selectedTextCategoryId === category.id}
+                isSelected={selectedExhibitionCategoryId === category.id}
                 onSelect={() => {
-                  onTextCategorySelect(category.id);
+                  onExhibitionCategorySelect(category.id);
                   onClose();
                 }}
-                hoveredCategoryId={hoveredTextCategoryId}
-                onHover={setHoveredTextCategoryId}
+                hoveredCategoryId={hoveredExhibitionCategoryId}
+                onHover={setHoveredExhibitionCategoryId}
+                selectedWorkIds={selectedWorkIds}
               />
             ))}
         </div>
@@ -122,4 +126,3 @@ export default function MobileCategoryMenu({
     </>
   );
 }
-

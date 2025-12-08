@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import type { SentenceCategory as SentenceCategoryType, KeywordCategory } from '@/types';
+import type { SentenceCategory as SentenceCategoryType, KeywordCategory, CategoryState } from '@/types';
 
 interface SentenceCategoryProps {
   category: SentenceCategoryType;
@@ -9,6 +9,7 @@ interface SentenceCategoryProps {
   onKeywordSelect: (keywordId: string) => void;
   hoveredKeywordId: string | null;
   onKeywordHover: (keywordId: string | null) => void;
+  selectedWorkIds?: string[]; // 현재 선택된 카테고리의 작업 ID 목록 (disabled 상태 계산용)
 }
 
 export default function SentenceCategory({
@@ -17,7 +18,80 @@ export default function SentenceCategory({
   onKeywordSelect,
   hoveredKeywordId,
   onKeywordHover,
+  selectedWorkIds = [],
 }: SentenceCategoryProps) {
+  // 키워드의 상태를 계산하는 함수
+  const getKeywordState = (keyword: KeywordCategory, isSelected: boolean, isHovered: boolean): CategoryState => {
+    // active 상태: 선택된 경우
+    if (isSelected) {
+      return 'active';
+    }
+
+    // hover 상태: 마우스 오버 시
+    if (isHovered) {
+      return 'hover';
+    }
+
+    // disabled 상태: 선택된 카테고리가 있고, 이 키워드가 선택된 작업에 포함되지 않는 경우
+    // 주의: workOrders가 비어있어도 Work.sentenceCategoryIds로 연결된 작업이 있을 수 있음
+    if (selectedWorkIds.length > 0 && keyword.workOrders && keyword.workOrders.length > 0) {
+      const keywordWorkIds = keyword.workOrders.map(order => order.workId);
+      const hasCommonWork = keywordWorkIds.some(workId => selectedWorkIds.includes(workId));
+      if (!hasCommonWork) {
+        return 'disabled';
+      }
+    }
+
+    // 모든 키워드는 기본적으로 클릭 가능
+    // (workOrders가 비어있어도 Work.sentenceCategoryIds를 통해 작업 조회 가능)
+    return 'clickable';
+  };
+
+  // 상태에 따른 스타일을 반환하는 함수
+  const getKeywordStyle = (state: CategoryState, _isHovered: boolean) => {
+    const baseStyle: React.CSSProperties = {
+      position: 'relative',
+      display: 'inline-block',
+      transition: 'color 0.2s ease-in-out',
+    };
+
+    switch (state) {
+      case 'basic':
+        return {
+          ...baseStyle,
+          color: 'var(--color-category-basic)',
+          cursor: 'default',
+        };
+      case 'clickable':
+        return {
+          ...baseStyle,
+          color: 'var(--color-category-clickable)',
+          cursor: 'pointer',
+        };
+      case 'hover':
+        return {
+          ...baseStyle,
+          color: 'transparent',
+          WebkitTextStroke: '1px var(--color-category-hover-stroke)',
+          cursor: 'pointer',
+        };
+      case 'active':
+        return {
+          ...baseStyle,
+          color: 'var(--color-text-primary)',
+          cursor: 'pointer',
+        };
+      case 'disabled':
+        return {
+          ...baseStyle,
+          color: 'var(--color-category-disabled)',
+          cursor: 'default',
+        };
+      default:
+        return baseStyle;
+    }
+  };
+
   // 문장을 키워드 단위로 분할하여 렌더링
   const renderSentence = () => {
     const { sentence, keywords } = category;
@@ -46,25 +120,32 @@ export default function SentenceCategory({
       if (part.keyword) {
         const isSelected = selectedKeywordId === part.keyword.id;
         const isHovered = hoveredKeywordId === part.keyword.id;
+        const state = getKeywordState(part.keyword, isSelected, isHovered);
+        const keywordStyle = getKeywordStyle(state, isHovered);
         
         // 텍스트를 글자 단위로 분할하여 좌->우 애니메이션 적용
         const characters = part.text.split('');
         
+        // 클릭 가능 여부 확인
+        const isClickable = state === 'clickable' || state === 'active' || state === 'hover';
+        
         return (
           <motion.span
             key={index}
-            onClick={() => onKeywordSelect(part.keyword!.id)}
-            onMouseEnter={() => onKeywordHover(part.keyword!.id)}
-            onMouseLeave={() => onKeywordHover(null)}
-            style={{
-              cursor: 'pointer',
-              color: isSelected || isHovered ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-              transition: 'color 0.2s ease-in-out',
-              position: 'relative',
-              display: 'inline-block',
+            onClick={() => {
+              if (isClickable) {
+                onKeywordSelect(part.keyword!.id);
+              }
             }}
+            onMouseEnter={() => {
+              if (state !== 'basic' && state !== 'disabled') {
+                onKeywordHover(part.keyword!.id);
+              }
+            }}
+            onMouseLeave={() => onKeywordHover(null)}
+            style={keywordStyle}
             initial={false}
-            animate={isSelected || isHovered ? 'bold' : 'normal'}
+            animate={isSelected || (isHovered && state === 'hover') ? 'bold' : 'normal'}
           >
             <motion.span
               style={{ display: 'inline-block' }}
@@ -140,7 +221,9 @@ export default function SentenceCategory({
         color: 'var(--color-text-secondary)',
       }}
     >
+      {'\''}
       {renderSentence()}
+      {'\''}
     </div>
   );
 }

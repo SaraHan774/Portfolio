@@ -79,6 +79,12 @@
   --dot-offset-top: -8px;                /* 글자 정중앙 위 */
   --dot-color: var(--color-black);
 
+  /* 카테고리 상태별 색상 */
+  --color-category-basic: var(--color-gray-400);        /* 기본 상태, 클릭 불가 */
+  --color-category-clickable: var(--color-gray-600);     /* 클릭 가능한 카테고리 */
+  --color-category-disabled: var(--color-gray-800);      /* 현재 작업에 포함되지 않는 카테고리 */
+  --color-category-hover-stroke: var(--color-black);     /* hover 시 획(stroke) 색상 */
+
   /* 브레이크포인트 */
   --breakpoint-sm: 640px;
   --breakpoint-md: 768px;
@@ -96,7 +102,9 @@
 
 html {
   scroll-behavior: smooth;
+  /* snap 효과 제거 - 자연스러운 스크롤 유지 */
 }
+
 
 body {
   font-family: var(--font-family);
@@ -169,6 +177,33 @@ img {
     width: 100% !important;
     margin-top: var(--space-2) !important;
   }
+
+  /* 모바일에서 모달 전체 화면 */
+  .modal-overlay {
+    padding: 0 !important;
+    align-items: stretch !important;
+  }
+
+  .modal-content {
+    max-width: 100% !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    height: 100vh !important;
+    margin: 0 !important;
+  }
+
+  /* 모바일에서 모달 내부 레이아웃 조정 */
+  .modal-content > div:last-child {
+    flex-direction: column !important;
+    padding: var(--space-4) !important;
+  }
+
+  .modal-content .work-caption {
+    position: relative !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-top: var(--space-4) !important;
+  }
 }
 
 /* 스크롤바 완전히 투명 처리 */
@@ -204,6 +239,20 @@ img {
 * {
   scrollbar-width: none;
   scrollbar-color: transparent transparent;
+}
+
+/* 이미지 스크롤 컨테이너 스크롤바 숨김 */
+.image-scroll-container::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+.image-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.image-scroll-container::-webkit-scrollbar-thumb {
+  background: transparent;
 }
 
 /* 가로 스크롤 컨테이너에 fading edge 적용 - Apple/Google 스타일 */

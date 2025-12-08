@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { getWorkById } from '@/lib/mockData';
+import { getWorkById } from '@/lib/services/worksService';
 import type { Work } from '@/types';
 
 interface FloatingWorkWindowProps {
@@ -14,14 +14,25 @@ interface FloatingWorkWindowProps {
 
 export default function FloatingWorkWindow({ workId, position }: FloatingWorkWindowProps) {
   const [adjustedPosition, setAdjustedPosition] = useState({ x: position.x + 15, y: position.y + 15 });
-  
-  // 작업 정보 가져오기
-  const work = getWorkById(workId);
+  const [work, setWork] = useState<Work | null>(null);
+
+  // Firebase에서 작업 정보 가져오기
+  useEffect(() => {
+    const loadWork = async () => {
+      try {
+        const fetchedWork = await getWorkById(workId);
+        setWork(fetchedWork);
+      } catch (error) {
+        console.error('작업 로드 실패:', error);
+      }
+    };
+    loadWork();
+  }, [workId]);
   
   useEffect(() => {
     // 위키피디아 스타일: 링크 기준으로 위치 계산 (한 번만 계산하고 고정)
     const calculatePosition = () => {
-      const offsetX = 12; // 위키피디아는 더 가까운 간격
+      const _offsetX = 12; // 위키피디아는 더 가까운 간격 (reserved for future use)
       const offsetY = 8; // 링크 바로 아래에서 약간의 간격
       const windowWidth = window.innerWidth;
       const windowHeight = window.innerHeight;

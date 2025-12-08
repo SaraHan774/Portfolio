@@ -77,18 +77,19 @@ const ImageUploader = ({ value = [], onChange, maxCount = 50 }: ImageUploaderPro
       setUploadingImages((prev) => prev.filter((img) => img.id !== uploadId));
       URL.revokeObjectURL(previewUrl);
 
-      // 업로드된 이미지에 순서 추가
-      const newImage: WorkImage = {
-        ...uploadedImage,
-        order: images.length + 1,
-      };
-
-      const newImages = [...images, newImage];
-      setImages(newImages);
-      onChange?.(newImages);
+      // 업로드된 이미지에 순서 추가 - 함수형 업데이트 사용으로 동시 업로드 버그 해결
+      setImages((prevImages) => {
+        const newImage: WorkImage = {
+          ...uploadedImage,
+          order: prevImages.length + 1,
+        };
+        const newImages = [...prevImages, newImage];
+        onChange?.(newImages);
+        return newImages;
+      });
 
       message.success('이미지가 업로드되었습니다.');
-      onSuccess?.(newImage);
+      onSuccess?.(uploadedImage);
     } catch (error) {
       console.error('이미지 업로드 실패:', error);
       // 업로드 실패 - 업로드 중 목록에서 제거

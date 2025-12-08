@@ -50,7 +50,7 @@ export default function WorkGrid({ works }: WorkGridProps) {
   };
 
   useEffect(() => {
-    checkScrollButtons();
+    checkScrollButtons(); // eslint-disable-line react-hooks/set-state-in-effect
     const container = scrollContainerRef.current;
     if (container) {
       container.addEventListener('scroll', checkScrollButtons);
@@ -110,7 +110,7 @@ export default function WorkGrid({ works }: WorkGridProps) {
         className={`horizontal-scroll-container ${showLeftFade ? 'show-left-fade' : ''} ${showRightFade ? 'show-right-fade' : ''}`}
         style={{
           width: '100%',
-          maxHeight: '150px',
+          maxHeight: '180px', // 제목(32px) + 여백(4px) + 썸네일(80px) + 패딩
           overflowX: 'auto',
           overflowY: 'hidden',
           padding: 'var(--space-3)',
@@ -132,7 +132,7 @@ export default function WorkGrid({ works }: WorkGridProps) {
           style={{
             display: 'flex',
             flexDirection: 'row',
-            gap: 'var(--space-2)',
+            gap: '32px', // PRD: 카드 간 32px
             alignItems: 'flex-start',
           }}
         >
@@ -147,7 +147,7 @@ export default function WorkGrid({ works }: WorkGridProps) {
               }}
               style={{
                 flexShrink: 0,
-                width: '70px',
+                width: '80px', // PRD: 80px
               }}
             >
               <WorkCard work={work} index={index} />
