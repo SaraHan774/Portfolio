@@ -521,46 +521,68 @@ export default function WorkDetailPage() {
     // 약간의 딜레이 후 observer 설정 (DOM 렌더링 완료 대기)
     const timeoutId = setTimeout(() => {
       const imageElements = document.querySelectorAll('[data-image-id]');
-      let lastImageId: string | null = null;
+      let lastTrackedImageId: string | null = null;
+
+      const updateCurrentImage = () => {
+        // 모든 관찰 대상의 현재 상태를 확인
+        const allImages = Array.from(document.querySelectorAll('[data-image-id]'));
+
+        // 스크롤이 맨 끝에 도달했는지 확인
+        const scrollTop = window.scrollY;
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+        const isAtBottom = scrollTop + windowHeight >= documentHeight - 50; // 50px 여유
+
+        // 맨 끝에 도달하면 마지막 이미지 활성화
+        if (isAtBottom && allImages.length > 0) {
+          const lastImage = allImages[allImages.length - 1] as HTMLElement;
+          const imageId = lastImage.getAttribute('data-image-id');
+          if (imageId && imageId !== lastTrackedImageId) {
+            lastTrackedImageId = imageId;
+            setCurrentImageId(imageId);
+          }
+          return;
+        }
+
+        let bestImage: HTMLElement | null = null;
+        let bestScore = -Infinity;
+
+        allImages.forEach((img) => {
+          const rect = img.getBoundingClientRect();
+          const viewportHeight = window.innerHeight;
+          const viewportCenter = viewportHeight / 2;
+
+          // 이미지 중심점
+          const imageCenter = rect.top + rect.height / 2;
+
+          // 화면에 보이는지 확인
+          const isVisible = rect.bottom > 0 && rect.top < viewportHeight;
+
+          if (isVisible) {
+            // 화면 중앙에 가까울수록 높은 점수 (거리의 역수)
+            const distanceFromCenter = Math.abs(imageCenter - viewportCenter);
+            const score = 1000 - distanceFromCenter;
+
+            if (score > bestScore) {
+              bestScore = score;
+              bestImage = img as HTMLElement;
+            }
+          }
+        });
+
+        if (bestImage) {
+          const imageId = (bestImage as HTMLElement).getAttribute('data-image-id');
+          // 깜빡임 방지: 이전과 같은 이미지면 업데이트 안 함
+          if (imageId && imageId !== lastTrackedImageId) {
+            lastTrackedImageId = imageId;
+            setCurrentImageId(imageId);
+          }
+        }
+      };
 
       const observer = new IntersectionObserver(
         () => {
-          // 모든 관찰 대상의 현재 상태를 확인
-          const allImages = Array.from(document.querySelectorAll('[data-image-id]'));
-          let bestImage: HTMLElement | null = null;
-          let bestScore = -Infinity;
-
-          allImages.forEach((img) => {
-            const rect = img.getBoundingClientRect();
-            const viewportHeight = window.innerHeight;
-            const viewportCenter = viewportHeight / 2;
-
-            // 이미지 중심점
-            const imageCenter = rect.top + rect.height / 2;
-
-            // 화면에 보이는지 확인
-            const isVisible = rect.bottom > 0 && rect.top < viewportHeight;
-
-            if (isVisible) {
-              // 화면 중앙에 가까울수록 높은 점수 (거리의 역수)
-              const distanceFromCenter = Math.abs(imageCenter - viewportCenter);
-              const score = 1000 - distanceFromCenter;
-
-              if (score > bestScore) {
-                bestScore = score;
-                bestImage = img as HTMLElement;
-              }
-            }
-          });
-
-          if (bestImage) {
-            const imageId = (bestImage as HTMLElement).getAttribute('data-image-id');
-            // 깜빡임 방지: 이전과 같은 이미지면 업데이트 안 함
-            if (imageId && imageId !== lastImageId) {
-              lastImageId = imageId;
-              setCurrentImageId(imageId);
-            }
-          }
+          updateCurrentImage();
         },
         {
           rootMargin: '0px',
@@ -570,15 +592,25 @@ export default function WorkDetailPage() {
 
       imageElements.forEach((el) => observer.observe(el));
 
+      // 스크롤 이벤트로도 체크 (맨 끝 도달 감지용)
+      const handleScroll = () => {
+        updateCurrentImage();
+      };
+      window.addEventListener('scroll', handleScroll, { passive: true });
+
       // cleanup 함수에서 사용할 수 있도록 저장
-      (window as Window & { __imageObserver?: IntersectionObserver }).__imageObserver = observer;
+      (window as Window & { __imageObserver?: IntersectionObserver; __scrollHandler?: () => void }).__imageObserver = observer;
+      (window as Window & { __imageObserver?: IntersectionObserver; __scrollHandler?: () => void }).__scrollHandler = handleScroll;
     }, 100);
 
     return () => {
       clearTimeout(timeoutId);
-      const observer = (window as Window & { __imageObserver?: IntersectionObserver }).__imageObserver;
-      if (observer) {
-        observer.disconnect();
+      const windowWithHandlers = window as Window & { __imageObserver?: IntersectionObserver; __scrollHandler?: () => void };
+      if (windowWithHandlers.__imageObserver) {
+        windowWithHandlers.__imageObserver.disconnect();
+      }
+      if (windowWithHandlers.__scrollHandler) {
+        window.removeEventListener('scroll', windowWithHandlers.__scrollHandler);
       }
     };
   }, [selectedWorkId, work, relatedWorks, workId]);

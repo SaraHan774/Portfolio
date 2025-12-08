@@ -10,7 +10,7 @@ export default function Footer() {
         color: 'var(--color-text-muted)',
       }}
     >
-      © 2025 Portfolio | Contact: email@example.com
+      나혜빈, hyebinnaa@gmail.com, 82)10-8745-1728
     </footer>
   );
 }
