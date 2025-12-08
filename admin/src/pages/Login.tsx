@@ -3,26 +3,24 @@ import { Card, Button, Space, Typography, message } from 'antd';
 import { GoogleOutlined, FolderOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { mockLogin } from '../stores/authStore';
 import './Login.css';
 
 const { Title, Text } = Typography;
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuthStore();
+  const { login, isLoading, error } = useAuthStore();
 
-  // Google 로그인 핸들러 (하드코딩)
+  // Google 로그인 핸들러 (Firebase)
   const handleLogin = async () => {
     try {
       message.loading({ content: '로그인 중...', key: 'login' });
-      const user = await mockLogin();
-      login(user);
+      await login();
       message.success({ content: '로그인 성공!', key: 'login', duration: 2 });
       navigate('/dashboard');
-    } catch (error) {
-      message.error({ content: '로그인 실패', key: 'login', duration: 2 });
-      console.error('로그인 오류:', error);
+    } catch (err) {
+      message.error({ content: '로그인 실패: ' + (error || '알 수 없는 오류'), key: 'login', duration: 3 });
+      console.error('로그인 오류:', err);
     }
   };
 
@@ -42,13 +40,11 @@ const Login = () => {
             size="large"
             icon={<GoogleOutlined />}
             onClick={handleLogin}
+            loading={isLoading}
             block
           >
             Google로 로그인
           </Button>
-          <Text type="secondary" style={{ fontSize: '12px' }}>
-            (현재는 하드코딩된 로그인을 사용합니다)
-          </Text>
         </Space>
       </Card>
     </div>

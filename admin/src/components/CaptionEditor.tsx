@@ -6,7 +6,7 @@ import Underline from '@tiptap/extension-underline';
 import { Button, Space, Modal, Input, List, Avatar, message } from 'antd';
 import { BoldOutlined, ItalicOutlined, UnderlineOutlined, LinkOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
-import { mockWorks } from '../services/mockData';
+import { useWorks } from '../hooks/useWorks';
 import type { Work } from '../types';
 import './CaptionEditor.css';
 
@@ -21,6 +21,9 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
   const [linkModalVisible, setLinkModalVisible] = useState(false);
   const [linkSearchText, setLinkSearchText] = useState('');
   const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null);
+
+  // Firebase에서 작업 목록 조회
+  const { data: works = [] } = useWorks();
 
   const editor = useEditor({
     extensions: [
@@ -103,7 +106,7 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
 
     const selection = editor.state.selection;
     const selectedText = editor.state.doc.textBetween(selection.from, selection.to);
-    const selectedWork = mockWorks.find((w) => w.id === selectedWorkId);
+    const selectedWork = works.find((w) => w.id === selectedWorkId);
 
     if (selectedWork && selectedText.trim()) {
       // 선택된 텍스트가 있는 경우에만 링크 적용
@@ -139,7 +142,7 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
   };
 
   // 작업 검색 결과 필터링
-  const filteredWorks = mockWorks.filter((work) =>
+  const filteredWorks = works.filter((work) =>
     work.title.toLowerCase().includes(linkSearchText.toLowerCase()) ||
     work.shortDescription?.toLowerCase().includes(linkSearchText.toLowerCase())
   );

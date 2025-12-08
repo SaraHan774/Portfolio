@@ -1,5 +1,5 @@
 // 하드코딩된 가짜 데이터
-import type { Work, SentenceCategory, TextCategory, User, WorkImage } from '../types';
+import type { Work, SentenceCategory, ExhibitionCategory, User, WorkImage } from '../types';
 
 // 더미 사용자 데이터
 export const mockUser: User = {
@@ -37,7 +37,7 @@ export const mockWorks: Work[] = [
     thumbnailImageId: 'img-work-001-1',
     images: createMockImages('work-001', 3),
     sentenceCategoryIds: ['key-001', 'key-002'],
-    textCategoryIds: ['text-001'],
+    exhibitionCategoryIds: ['exhibition-001'],
     isPublished: true,
     viewCount: 150,
     createdAt: new Date('2025-10-15'),
@@ -52,7 +52,7 @@ export const mockWorks: Work[] = [
     thumbnailImageId: 'img-work-002-1',
     images: createMockImages('work-002', 5),
     sentenceCategoryIds: ['key-003'],
-    textCategoryIds: ['text-002', 'text-003'],
+    exhibitionCategoryIds: ['exhibition-002', 'exhibition-003'],
     isPublished: false,
     createdAt: new Date('2025-10-10'),
     updatedAt: new Date('2025-10-12'),
@@ -65,7 +65,7 @@ export const mockWorks: Work[] = [
     thumbnailImageId: 'img-work-003-1',
     images: createMockImages('work-003', 4),
     sentenceCategoryIds: ['key-001'],
-    textCategoryIds: ['text-001', 'text-003'],
+    exhibitionCategoryIds: ['exhibition-001', 'exhibition-003'],
     isPublished: true,
     viewCount: 230,
     createdAt: new Date('2025-10-05'),
@@ -80,7 +80,7 @@ export const mockWorks: Work[] = [
     thumbnailImageId: 'img-work-004-1',
     images: createMockImages('work-004', 6),
     sentenceCategoryIds: ['key-004'],
-    textCategoryIds: ['text-003'],
+    exhibitionCategoryIds: ['exhibition-003'],
     isPublished: true,
     viewCount: 180,
     createdAt: new Date('2025-09-28'),
@@ -95,7 +95,7 @@ export const mockWorks: Work[] = [
     thumbnailImageId: 'img-work-005-1',
     images: createMockImages('work-005', 3),
     sentenceCategoryIds: ['key-001', 'key-002'],
-    textCategoryIds: ['text-001'],
+    exhibitionCategoryIds: ['exhibition-001'],
     isPublished: false,
     createdAt: new Date('2025-09-20'),
     updatedAt: new Date('2025-09-22'),
@@ -165,11 +165,16 @@ export const mockSentenceCategories: SentenceCategory[] = [
   },
 ];
 
-// 더미 텍스트형 카테고리 데이터
-export const mockTextCategories: TextCategory[] = [
+// 더미 전시명 카테고리 데이터
+export const mockExhibitionCategories: ExhibitionCategory[] = [
   {
-    id: 'text-001',
-    name: '디자인',
+    id: 'exhibition-001',
+    title: 'Cushioning Attack',
+    description: {
+      exhibitionType: '2인전',
+      venue: 'YPCSpace',
+      year: 2023,
+    },
     displayOrder: 1,
     workOrders: [
       { workId: 'work-001', order: 1 },
@@ -181,8 +186,13 @@ export const mockTextCategories: TextCategory[] = [
     updatedAt: new Date('2024-01-01'),
   },
   {
-    id: 'text-002',
-    name: '조각',
+    id: 'exhibition-002',
+    title: 'Silent Echo',
+    description: {
+      exhibitionType: '개인전',
+      venue: 'Gallery H',
+      year: 2022,
+    },
     displayOrder: 2,
     workOrders: [
       { workId: 'work-002', order: 1 },
@@ -192,8 +202,13 @@ export const mockTextCategories: TextCategory[] = [
     updatedAt: new Date('2024-01-01'),
   },
   {
-    id: 'text-003',
-    name: '추상',
+    id: 'exhibition-003',
+    title: 'Wave Form',
+    description: {
+      exhibitionType: '그룹전',
+      venue: 'Art Center',
+      year: 2024,
+    },
     displayOrder: 3,
     workOrders: [
       { workId: 'work-002', order: 1 },
@@ -205,4 +220,7 @@ export const mockTextCategories: TextCategory[] = [
     updatedAt: new Date('2024-01-01'),
   },
 ];
+
+// 하위 호환성을 위한 별칭 (deprecated)
+export const mockTextCategories = mockExhibitionCategories;
 

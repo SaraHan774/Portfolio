@@ -1,5 +1,5 @@
 // 카테고리 관리 페이지 컴포넌트
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Typography,
   Card,
@@ -12,6 +12,9 @@ import {
   Popconfirm,
   Tag,
   Collapse,
+  Spin,
+  Divider,
+  Tooltip,
 } from 'antd';
 import {
   PlusOutlined,
@@ -22,27 +25,37 @@ import {
   DragOutlined,
   FolderOutlined,
   FileTextOutlined,
+  HighlightOutlined,
 } from '@ant-design/icons';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  mockSentenceCategories,
-  mockTextCategories,
-  mockWorks,
-} from '../services/mockData';
-import type { SentenceCategory, TextCategory } from '../types';
+  useSentenceCategories,
+  useExhibitionCategories,
+  useCreateSentenceCategory,
+  useUpdateSentenceCategory,
+  useDeleteSentenceCategory,
+  useCreateExhibitionCategory,
+  useUpdateExhibitionCategory,
+  useDeleteExhibitionCategory,
+  useUpdateCategoryOrders,
+} from '../hooks/useCategories';
+import { useWorks } from '../hooks/useWorks';
+import type { SentenceCategory, ExhibitionCategory, KeywordCategory } from '../types';
 import './Categories.css';
 
 const { Title } = Typography;
 
 const Categories = () => {
   const [sentenceModalVisible, setSentenceModalVisible] = useState(false);
-  const [textModalVisible, setTextModalVisible] = useState(false);
+  const [exhibitionModalVisible, setExhibitionModalVisible] = useState(false);
   const [editingSentence, setEditingSentence] = useState<SentenceCategory | null>(null);
-  const [editingText, setEditingText] = useState<TextCategory | null>(null);
+  const [editingExhibition, setEditingExhibition] = useState<ExhibitionCategory | null>(null);
   const [form] = Form.useForm();
-  const [textForm] = Form.useForm();
+  const [exhibitionForm] = Form.useForm();
   const [isMobile, setIsMobile] = useState(false);
-  const queryClient = useQueryClient();
+
+  // 키워드 선택 관련 상태
+  const [keywords, setKeywords] = useState<KeywordCategory[]>([]);
+  const [sentenceText, setSentenceText] = useState('');
 
   // 모바일 여부 확인
   useEffect(() => {
@@ -54,102 +67,106 @@ const Categories = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // 문장형 카테고리 조회 (displayOrder로 정렬)
-  const { data: sentenceCategories = [], refetch: refetchSentences } = useQuery({
-    queryKey: ['sentenceCategories'],
-    queryFn: async () => {
-      // displayOrder로 정렬하여 반환
-      return [...mockSentenceCategories].sort((a, b) => a.displayOrder - b.displayOrder);
-    },
-  });
+  // 문장형 카테고리 조회 (Firebase)
+  const { data: sentenceCategories = [], isLoading: isSentenceLoading } = useSentenceCategories();
 
-  // 텍스트형 카테고리 조회 (displayOrder로 정렬)
-  const { data: textCategories = [], refetch: refetchTexts } = useQuery({
-    queryKey: ['textCategories'],
-    queryFn: async () => {
-      // displayOrder로 정렬하여 반환
-      return [...mockTextCategories].sort((a, b) => a.displayOrder - b.displayOrder);
-    },
-  });
+  // 전시명 카테고리 조회 (Firebase)
+  const { data: exhibitionCategories = [], isLoading: isExhibitionLoading } = useExhibitionCategories();
+
+  // 작업 목록 조회 (Firebase)
+  const { data: works = [] } = useWorks();
+
+  // Firebase 뮤테이션 훅
+  const createSentenceMutation = useCreateSentenceCategory();
+  const updateSentenceMutation = useUpdateSentenceCategory();
+  const deleteSentenceMutation = useDeleteSentenceCategory();
+  const createExhibitionMutation = useCreateExhibitionCategory();
+  const updateExhibitionMutation = useUpdateExhibitionCategory();
+  const deleteExhibitionMutation = useDeleteExhibitionCategory();
+  const updateOrdersMutation = useUpdateCategoryOrders();
 
   // 작업 개수 계산 (키워드별)
   const getWorkCount = (keywordId: string) => {
-    return mockWorks.filter((work) => work.sentenceCategoryIds.includes(keywordId)).length;
+    return works.filter((work) => work.sentenceCategoryIds.includes(keywordId)).length;
   };
 
-  // 텍스트 카테고리 작업 개수 계산
-  const getTextCategoryWorkCount = (categoryId: string) => {
-    return mockWorks.filter((work) => work.textCategoryIds.includes(categoryId)).length;
+  // 전시명 카테고리 작업 개수 계산
+  const getExhibitionCategoryWorkCount = (categoryId: string) => {
+    return works.filter((work) => work.exhibitionCategoryIds.includes(categoryId)).length;
   };
 
-  // 문장형 카테고리 순서 변경
-  const handleMoveSentence = (index: number, direction: 'up' | 'down') => {
-    const currentCategories = queryClient.getQueryData<SentenceCategory[]>(['sentenceCategories']) || sentenceCategories;
-    
+  // 문장형 카테고리 순서 변경 (Firebase)
+  const handleMoveSentence = async (index: number, direction: 'up' | 'down') => {
     if (direction === 'up' && index === 0) return;
-    if (direction === 'down' && index === currentCategories.length - 1) return;
+    if (direction === 'down' && index === sentenceCategories.length - 1) return;
 
-    // 배열 복사 및 위치 교환
-    const newCategories = [...currentCategories];
+    const newCategories = [...sentenceCategories];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    
-    // 배열에서 두 요소의 위치 교환
+
     [newCategories[index], newCategories[targetIndex]] = [newCategories[targetIndex], newCategories[index]];
-    
-    // displayOrder 업데이트 (새 객체 생성하여 불변성 유지)
-    const updatedCategories = newCategories.map((cat, idx) => ({
-      ...cat,
+
+    const orders = newCategories.map((cat, idx) => ({
+      id: cat.id,
       displayOrder: idx + 1,
-      updatedAt: new Date(),
     }));
 
-    // 캐시 업데이트
-    queryClient.setQueryData(['sentenceCategories'], updatedCategories);
-    message.success('순서가 변경되었습니다.');
+    try {
+      await updateOrdersMutation.mutateAsync({ type: 'sentence', orders });
+      message.success('순서가 변경되었습니다.');
+    } catch {
+      message.error('순서 변경에 실패했습니다.');
+    }
   };
 
-  // 텍스트형 카테고리 순서 변경
-  const handleMoveText = (index: number, direction: 'up' | 'down') => {
-    const currentCategories = queryClient.getQueryData<TextCategory[]>(['textCategories']) || textCategories;
-    
+  // 전시명 카테고리 순서 변경 (Firebase)
+  const handleMoveExhibition = async (index: number, direction: 'up' | 'down') => {
     if (direction === 'up' && index === 0) return;
-    if (direction === 'down' && index === currentCategories.length - 1) return;
+    if (direction === 'down' && index === exhibitionCategories.length - 1) return;
 
-    // 배열 복사 및 위치 교환
-    const newCategories = [...currentCategories];
+    const newCategories = [...exhibitionCategories];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    
-    // 배열에서 두 요소의 위치 교환
+
     [newCategories[index], newCategories[targetIndex]] = [newCategories[targetIndex], newCategories[index]];
-    
-    // displayOrder 업데이트 (새 객체 생성하여 불변성 유지)
-    const updatedCategories = newCategories.map((cat, idx) => ({
-      ...cat,
+
+    const orders = newCategories.map((cat, idx) => ({
+      id: cat.id,
       displayOrder: idx + 1,
-      updatedAt: new Date(),
     }));
 
-    // 캐시 업데이트
-    queryClient.setQueryData(['textCategories'], updatedCategories);
-    message.success('순서가 변경되었습니다.');
+    try {
+      await updateOrdersMutation.mutateAsync({ type: 'exhibition', orders });
+      message.success('순서가 변경되었습니다.');
+    } catch {
+      message.error('순서 변경에 실패했습니다.');
+    }
   };
 
-  // 문장형 카테고리 삭제
-  const handleDeleteSentence = (_categoryId: string) => {
-    message.success('문장이 삭제되었습니다.');
-    refetchSentences();
+  // 문장형 카테고리 삭제 (Firebase)
+  const handleDeleteSentence = async (categoryId: string) => {
+    try {
+      await deleteSentenceMutation.mutateAsync(categoryId);
+      message.success('문장이 삭제되었습니다.');
+    } catch {
+      message.error('삭제에 실패했습니다.');
+    }
   };
 
-  // 텍스트형 카테고리 삭제
-  const handleDeleteText = (_categoryId: string) => {
-    message.success('카테고리가 삭제되었습니다.');
-    refetchTexts();
+  // 전시명 카테고리 삭제 (Firebase)
+  const handleDeleteExhibition = async (categoryId: string) => {
+    try {
+      await deleteExhibitionMutation.mutateAsync(categoryId);
+      message.success('전시명 카테고리가 삭제되었습니다.');
+    } catch {
+      message.error('삭제에 실패했습니다.');
+    }
   };
 
   // 새 문장 추가 모달 열기
   const handleAddSentence = () => {
     setEditingSentence(null);
     form.resetFields();
+    setKeywords([]);
+    setSentenceText('');
     setSentenceModalVisible(true);
   };
 
@@ -159,67 +176,205 @@ const Categories = () => {
     form.setFieldsValue({
       sentence: category.sentence,
     });
+    setKeywords(category.keywords || []);
+    setSentenceText(category.sentence);
     setSentenceModalVisible(true);
   };
 
-  // 문장 저장
+  // 문장 입력 변경 핸들러
+  const handleSentenceChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newText = e.target.value;
+    setSentenceText(newText);
+    // 문장이 변경되면 기존 키워드 중 유효하지 않은 것 제거
+    setKeywords((prevKeywords) =>
+      prevKeywords.filter(
+        (kw) => kw.startIndex < newText.length && kw.endIndex <= newText.length
+      )
+    );
+  }, []);
+
+  // 텍스트 선택으로 키워드 추가
+  const handleTextSelection = useCallback(() => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const selectedText = selection.toString().trim();
+    if (!selectedText) return;
+
+    // 선택된 텍스트의 위치 찾기
+    const startIndex = sentenceText.indexOf(selectedText);
+    if (startIndex === -1) return;
+
+    const endIndex = startIndex + selectedText.length;
+
+    // 이미 존재하는 키워드인지 확인
+    const exists = keywords.some(
+      (kw) => kw.startIndex === startIndex && kw.endIndex === endIndex
+    );
+    if (exists) {
+      void message.warning('이미 추가된 키워드입니다.');
+      return;
+    }
+
+    // 겹치는 키워드가 있는지 확인
+    const overlaps = keywords.some(
+      (kw) =>
+        (startIndex >= kw.startIndex && startIndex < kw.endIndex) ||
+        (endIndex > kw.startIndex && endIndex <= kw.endIndex) ||
+        (startIndex <= kw.startIndex && endIndex >= kw.endIndex)
+    );
+    if (overlaps) {
+      void message.warning('다른 키워드와 겹칩니다.');
+      return;
+    }
+
+    const newKeyword: KeywordCategory = {
+      id: `kw-${Date.now()}`,
+      name: selectedText,
+      startIndex,
+      endIndex,
+      workOrders: [],
+    };
+
+    setKeywords((prev) => [...prev, newKeyword]);
+    selection.removeAllRanges();
+    void message.success(`"${selectedText}" 키워드가 추가되었습니다.`);
+  }, [sentenceText, keywords]);
+
+  // 키워드 삭제
+  const handleRemoveKeyword = useCallback((keywordId: string) => {
+    setKeywords((prev) => prev.filter((kw) => kw.id !== keywordId));
+  }, []);
+
+  // 문장에서 키워드 하이라이트 렌더링
+  const renderHighlightedSentence = useCallback(() => {
+    if (!sentenceText) return null;
+
+    // 키워드를 startIndex 기준으로 정렬
+    const sortedKeywords = [...keywords].sort((a, b) => a.startIndex - b.startIndex);
+
+    const elements: React.ReactNode[] = [];
+    let lastIndex = 0;
+
+    sortedKeywords.forEach((kw, idx) => {
+      // 키워드 이전 텍스트
+      if (kw.startIndex > lastIndex) {
+        elements.push(
+          <span key={`text-${idx}`}>{sentenceText.slice(lastIndex, kw.startIndex)}</span>
+        );
+      }
+      // 키워드 (하이라이트)
+      elements.push(
+        <Tooltip key={`kw-${kw.id}`} title="클릭하여 삭제">
+          <Tag
+            color="blue"
+            style={{ cursor: 'pointer', margin: '0 2px' }}
+            onClick={() => handleRemoveKeyword(kw.id)}
+          >
+            {kw.name}
+          </Tag>
+        </Tooltip>
+      );
+      lastIndex = kw.endIndex;
+    });
+
+    // 마지막 키워드 이후 텍스트
+    if (lastIndex < sentenceText.length) {
+      elements.push(<span key="text-last">{sentenceText.slice(lastIndex)}</span>);
+    }
+
+    return elements;
+  }, [sentenceText, keywords, handleRemoveKeyword]);
+
+  // 문장 저장 (Firebase)
   const handleSaveSentence = async () => {
     try {
-      await form.validateFields();
+      const values = await form.validateFields();
       if (editingSentence) {
+        await updateSentenceMutation.mutateAsync({
+          id: editingSentence.id,
+          updates: { sentence: values.sentence, keywords },
+        });
         message.success('문장이 수정되었습니다.');
       } else {
+        await createSentenceMutation.mutateAsync({
+          sentence: values.sentence,
+          keywords,
+          displayOrder: sentenceCategories.length + 1,
+          isActive: true,
+        });
         message.success('문장이 추가되었습니다.');
       }
       setSentenceModalVisible(false);
-      refetchSentences();
-    } catch (error) {
-      console.error('저장 실패:', error);
+      setKeywords([]);
+      setSentenceText('');
+    } catch {
+      message.error('저장에 실패했습니다.');
     }
   };
 
-  // 새 텍스트 카테고리 추가
-  const handleAddText = () => {
-    setEditingText(null);
-    textForm.resetFields();
-    setTextModalVisible(true);
+  // 새 전시명 카테고리 추가
+  const handleAddExhibition = () => {
+    setEditingExhibition(null);
+    exhibitionForm.resetFields();
+    setExhibitionModalVisible(true);
   };
 
-  // 텍스트 카테고리 편집
-  const handleEditText = (category: TextCategory) => {
-    setEditingText(category);
-    textForm.setFieldsValue({
-      name: category.name,
+  // 전시명 카테고리 편집
+  const handleEditExhibition = (category: ExhibitionCategory) => {
+    setEditingExhibition(category);
+    exhibitionForm.setFieldsValue({
+      title: category.title,
+      exhibitionType: category.description.exhibitionType,
+      venue: category.description.venue,
+      year: category.description.year,
     });
-    setTextModalVisible(true);
+    setExhibitionModalVisible(true);
   };
 
-  // 텍스트 카테고리 저장
-  const handleSaveText = async () => {
+  // 전시명 카테고리 저장 (Firebase)
+  const handleSaveExhibition = async () => {
     try {
-      await textForm.validateFields();
-      if (editingText) {
-        message.success('카테고리가 수정되었습니다.');
+      const values = await exhibitionForm.validateFields();
+      const categoryData = {
+        title: values.title,
+        description: {
+          exhibitionType: values.exhibitionType,
+          venue: values.venue,
+          year: Number(values.year),
+        },
+      };
+
+      if (editingExhibition) {
+        await updateExhibitionMutation.mutateAsync({
+          id: editingExhibition.id,
+          updates: categoryData,
+        });
+        message.success('전시명 카테고리가 수정되었습니다.');
       } else {
-        message.success('카테고리가 추가되었습니다.');
+        await createExhibitionMutation.mutateAsync({
+          ...categoryData,
+          displayOrder: exhibitionCategories.length + 1,
+          workOrders: [],
+          isActive: true,
+        });
+        message.success('전시명 카테고리가 추가되었습니다.');
       }
-      setTextModalVisible(false);
-      refetchTexts();
-    } catch (error) {
-      console.error('저장 실패:', error);
+      setExhibitionModalVisible(false);
+    } catch {
+      message.error('저장에 실패했습니다.');
     }
   };
 
-  // 작업 순서 변경 (키워드 또는 텍스트 카테고리 내 작업 순서 변경)
-  const handleWorkOrderChange = (categoryType: 'sentence' | 'text', categoryId: string) => {
+  // 작업 순서 변경 (키워드 또는 전시명 카테고리 내 작업 순서 변경)
+  const handleWorkOrderChange = (categoryType: 'sentence' | 'exhibition', categoryId: string) => {
     if (categoryType === 'sentence') {
       // 문장형 카테고리의 키워드 찾기
-      const currentCategories = queryClient.getQueryData<SentenceCategory[]>(['sentenceCategories']) || sentenceCategories;
-      const category = currentCategories.find((cat) => cat.keywords.some((kw) => kw.id === categoryId));
+      const category = sentenceCategories.find((cat) => cat.keywords.some((kw) => kw.id === categoryId));
       const keyword = category?.keywords.find((kw) => kw.id === categoryId);
-      
+
       if (!keyword || !keyword.workOrders || keyword.workOrders.length === 0) {
-        message.warning('순서를 변경할 작업이 없습니다.');
+        void message.warning('순서를 변경할 작업이 없습니다.');
         return;
       }
 
@@ -230,27 +385,26 @@ const Categories = () => {
         okText: '확인',
         cancelText: '취소',
         onOk: () => {
-          message.info('작업 순서 변경 UI는 향후 구현 예정입니다.');
+          void message.info('작업 순서 변경 UI는 향후 구현 예정입니다.');
         },
       });
     } else {
-      // 텍스트형 카테고리 찾기
-      const currentCategories = queryClient.getQueryData<TextCategory[]>(['textCategories']) || textCategories;
-      const category = currentCategories.find((cat) => cat.id === categoryId);
-      
+      // 전시명 카테고리 찾기
+      const category = exhibitionCategories.find((cat) => cat.id === categoryId);
+
       if (!category || !category.workOrders || category.workOrders.length === 0) {
-        message.warning('순서를 변경할 작업이 없습니다.');
+        void message.warning('순서를 변경할 작업이 없습니다.');
         return;
       }
 
       // 작업 순서 변경 모달 표시
       Modal.confirm({
-        title: `"${category.name}" 작업 순서 변경`,
+        title: `"${category.title}" 작업 순서 변경`,
         content: '작업 순서 변경 기능은 드래그 앤 드롭으로 구현할 예정입니다. 현재는 수동으로 작업 ID와 순서를 지정해야 합니다.',
         okText: '확인',
         cancelText: '취소',
         onOk: () => {
-          message.info('작업 순서 변경 UI는 향후 구현 예정입니다.');
+          void message.info('작업 순서 변경 UI는 향후 구현 예정입니다.');
         },
       });
     }
@@ -262,103 +416,44 @@ const Categories = () => {
       key: category.id,
       label: `"${category.sentence}"`,
       children: (
-        <div>
-          <div style={{ marginBottom: '8px' }}>
-            <Typography.Text type="secondary">키워드 (카테고리):</Typography.Text>
-          </div>
-          <Space direction="vertical" size="small" style={{ width: '100%' }}>
-            {category.keywords.map((keyword) => {
-              const workCount = getWorkCount(keyword.id);
-              return (
-                <div
-                  key={keyword.id}
-                  style={{
-                    padding: '12px',
-                    background: '#fafafa',
-                    borderRadius: '4px',
-                    marginBottom: '8px',
-                  }}
-                >
-                  <div style={{ marginBottom: '8px' }}>
-                    <Typography.Text strong>
-                      • {keyword.name}
-                    </Typography.Text>
-                    <Typography.Text type="secondary" style={{ fontSize: '12px', display: 'block', marginTop: '4px' }}>
-                      ({keyword.startIndex}-{keyword.endIndex}) - 작업 {workCount}개
-                    </Typography.Text>
-                  </div>
-                  <Space wrap style={{ width: '100%' }}>
-                    <Button
-                      size="small"
-                      icon={<DragOutlined />}
-                      onClick={() => handleWorkOrderChange('sentence', keyword.id)}
-                    >
-                      순서 변경
-                    </Button>
-                  </Space>
-                </div>
-              );
-            })}
-          </Space>
-        </div>
-      ),
-      extra: (
-        <Space>
-          <Button
-            size="small"
-            icon={<ArrowUpOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleMoveSentence(index, 'up');
-            }}
-            disabled={index === 0}
-          />
-          <Button
-            size="small"
-            icon={<ArrowDownOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleMoveSentence(index, 'down');
-            }}
-            disabled={index === sentenceCategories.length - 1}
-          />
-        </Space>
-      ),
-    };
-  });
-
-  // 텍스트형 카테고리 Collapse 아이템 생성 (모바일용)
-  const textCollapseItems = textCategories.map((category, index) => {
-    const workCount = getTextCategoryWorkCount(category.id);
-    return {
-      key: category.id,
-      label: (
-        <Space>
-          <Typography.Text strong>{category.name}</Typography.Text>
-          <Tag color="blue">작업 {workCount}개</Tag>
-        </Space>
-      ),
-      children: (
         <Space direction="vertical" style={{ width: '100%' }}>
-          <Button
-            block
-            icon={<DragOutlined />}
-            onClick={() => handleWorkOrderChange('text', category.id)}
-          >
-            작업 순서 변경
-          </Button>
+          {/* 키워드 목록 */}
+          {category.keywords.length > 0 && (
+            <div>
+              <div style={{ marginBottom: '8px' }}>
+                <Typography.Text type="secondary">키워드 ({category.keywords.length}개):</Typography.Text>
+              </div>
+              <Space wrap>
+                {category.keywords.map((keyword) => {
+                  const workCount = getWorkCount(keyword.id);
+                  return (
+                    <Tag key={keyword.id} color="blue">
+                      {keyword.name} ({workCount}개)
+                    </Tag>
+                  );
+                })}
+              </Space>
+            </div>
+          )}
+          {category.keywords.length === 0 && (
+            <Typography.Text type="secondary">등록된 키워드가 없습니다.</Typography.Text>
+          )}
+
+          {/* 액션 버튼 */}
+          <Divider style={{ margin: '12px 0' }} />
           <Button
             block
             icon={<EditOutlined />}
-            onClick={() => handleEditText(category)}
+            onClick={() => handleEditSentence(category)}
           >
             편집
           </Button>
           <Popconfirm
             title="정말 삭제하시겠습니까?"
-            onConfirm={() => handleDeleteText(category.id)}
+            onConfirm={() => void handleDeleteSentence(category.id)}
             okText="삭제"
             cancelText="취소"
+            okButtonProps={{ danger: true }}
           >
             <Button block danger icon={<DeleteOutlined />}>
               삭제
@@ -373,7 +468,7 @@ const Categories = () => {
             icon={<ArrowUpOutlined />}
             onClick={(e) => {
               e.stopPropagation();
-              handleMoveText(index, 'up');
+              void handleMoveSentence(index, 'up');
             }}
             disabled={index === 0}
           />
@@ -382,14 +477,91 @@ const Categories = () => {
             icon={<ArrowDownOutlined />}
             onClick={(e) => {
               e.stopPropagation();
-              handleMoveText(index, 'down');
+              void handleMoveSentence(index, 'down');
             }}
-            disabled={index === textCategories.length - 1}
+            disabled={index === sentenceCategories.length - 1}
           />
         </Space>
       ),
     };
   });
+
+  // 전시명 카테고리 Collapse 아이템 생성 (모바일용)
+  const exhibitionCollapseItems = exhibitionCategories.map((category, index) => {
+    const workCount = getExhibitionCategoryWorkCount(category.id);
+    return {
+      key: category.id,
+      label: (
+        <Space direction="vertical" size={0}>
+          <Typography.Text strong>{category.title}</Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: '12px' }}>
+            {category.description.exhibitionType}, {category.description.venue}, {category.description.year}
+          </Typography.Text>
+        </Space>
+      ),
+      children: (
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Tag color="blue">작업 {workCount}개</Tag>
+          <Button
+            block
+            icon={<DragOutlined />}
+            onClick={() => handleWorkOrderChange('exhibition', category.id)}
+          >
+            작업 순서 변경
+          </Button>
+          <Button
+            block
+            icon={<EditOutlined />}
+            onClick={() => handleEditExhibition(category)}
+          >
+            편집
+          </Button>
+          <Popconfirm
+            title="정말 삭제하시겠습니까?"
+            onConfirm={() => void handleDeleteExhibition(category.id)}
+            okText="삭제"
+            cancelText="취소"
+            okButtonProps={{ danger: true }}
+          >
+            <Button block danger icon={<DeleteOutlined />}>
+              삭제
+            </Button>
+          </Popconfirm>
+        </Space>
+      ),
+      extra: (
+        <Space>
+          <Button
+            size="small"
+            icon={<ArrowUpOutlined />}
+            onClick={(e) => {
+              e.stopPropagation();
+              void handleMoveExhibition(index, 'up');
+            }}
+            disabled={index === 0}
+          />
+          <Button
+            size="small"
+            icon={<ArrowDownOutlined />}
+            onClick={(e) => {
+              e.stopPropagation();
+              void handleMoveExhibition(index, 'down');
+            }}
+            disabled={index === exhibitionCategories.length - 1}
+          />
+        </Space>
+      ),
+    };
+  });
+
+  // 로딩 상태
+  if (isSentenceLoading || isExhibitionLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <Spin size="large" tip="카테고리를 불러오는 중..." />
+      </div>
+    );
+  }
 
   return (
     <div className="categories">
@@ -415,7 +587,7 @@ const Categories = () => {
               <Button
                 key="up"
                 icon={<ArrowUpOutlined />}
-                onClick={() => handleMoveSentence(index, 'up')}
+                onClick={() => void handleMoveSentence(index, 'up')}
                 disabled={index === 0}
               >
                 위로
@@ -423,7 +595,7 @@ const Categories = () => {
               <Button
                 key="down"
                 icon={<ArrowDownOutlined />}
-                onClick={() => handleMoveSentence(index, 'down')}
+                onClick={() => void handleMoveSentence(index, 'down')}
                 disabled={index === sentenceCategories.length - 1}
               >
                 아래
@@ -431,9 +603,10 @@ const Categories = () => {
               <Popconfirm
                 key="delete"
                 title="정말 삭제하시겠습니까?"
-                onConfirm={() => handleDeleteSentence(category.id)}
+                onConfirm={() => void handleDeleteSentence(category.id)}
                 okText="삭제"
                 cancelText="취소"
+                okButtonProps={{ danger: true }}
               >
                 <Button danger icon={<DeleteOutlined />}>
                   삭제
@@ -486,18 +659,18 @@ const Categories = () => {
         </Card>
       )}
 
-      {/* 텍스트형 카테고리 섹션 - 데스크탑 */}
+      {/* 전시명 카테고리 섹션 - 데스크탑 */}
       {!isMobile && (
         <Card
-          title={<><FolderOutlined /> 텍스트형 카테고리</>}
+          title={<><FolderOutlined /> 전시명 카테고리</>}
           extra={
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddText}>
-              새 카테고리 추가
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddExhibition}>
+              새 전시 추가
             </Button>
           }
         >
-        {textCategories.map((category, index) => {
-          const workCount = getTextCategoryWorkCount(category.id);
+        {exhibitionCategories.map((category, index) => {
+          const workCount = getExhibitionCategoryWorkCount(category.id);
           return (
             <Card
               key={category.id}
@@ -506,7 +679,7 @@ const Categories = () => {
                 <Button
                   key="up"
                   icon={<ArrowUpOutlined />}
-                  onClick={() => handleMoveText(index, 'up')}
+                  onClick={() => void handleMoveExhibition(index, 'up')}
                   disabled={index === 0}
                 >
                   위로
@@ -514,28 +687,38 @@ const Categories = () => {
                 <Button
                   key="down"
                   icon={<ArrowDownOutlined />}
-                  onClick={() => handleMoveText(index, 'down')}
-                  disabled={index === textCategories.length - 1}
+                  onClick={() => void handleMoveExhibition(index, 'down')}
+                  disabled={index === exhibitionCategories.length - 1}
                 >
                   아래
                 </Button>,
-                <Button
-                  key="order"
-                  icon={<DragOutlined />}
-                  onClick={() => handleWorkOrderChange('text', category.id)}
+                <Popconfirm
+                  key="delete"
+                  title="정말 삭제하시겠습니까?"
+                  onConfirm={() => void handleDeleteExhibition(category.id)}
+                  okText="삭제"
+                  cancelText="취소"
+                  okButtonProps={{ danger: true }}
                 >
-                  순서
-                </Button>,
-                <Button key="edit" icon={<EditOutlined />} onClick={() => handleEditText(category)}>
+                  <Button danger icon={<DeleteOutlined />}>
+                    삭제
+                  </Button>
+                </Popconfirm>,
+                <Button key="edit" icon={<EditOutlined />} onClick={() => handleEditExhibition(category)}>
                   편집
                 </Button>,
               ]}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <DragOutlined style={{ fontSize: '20px', color: '#8c8c8c' }} />
-                <Typography.Text strong style={{ fontSize: '16px' }}>
-                  {category.name}
-                </Typography.Text>
+                <div>
+                  <Typography.Text strong style={{ fontSize: '16px' }}>
+                    {category.title}
+                  </Typography.Text>
+                  <Typography.Text type="secondary" style={{ marginLeft: '8px' }}>
+                    | {category.description.exhibitionType}, {category.description.venue}, {category.description.year}
+                  </Typography.Text>
+                </div>
                 <Tag color="blue">작업 {workCount}개</Tag>
               </div>
             </Card>
@@ -560,14 +743,14 @@ const Categories = () => {
           </Card>
 
           <Card
-            title={<><FolderOutlined /> 텍스트형 카테고리</>}
+            title={<><FolderOutlined /> 전시명 카테고리</>}
             extra={
-              <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleAddText}>
+              <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleAddExhibition}>
                 추가
               </Button>
             }
           >
-            <Collapse items={textCollapseItems} />
+            <Collapse items={exhibitionCollapseItems} />
           </Card>
         </>
       )}
@@ -577,9 +760,14 @@ const Categories = () => {
         title={editingSentence ? '문장 편집' : '새 문장 추가'}
         open={sentenceModalVisible}
         onOk={handleSaveSentence}
-        onCancel={() => setSentenceModalVisible(false)}
+        onCancel={() => {
+          setSentenceModalVisible(false);
+          setKeywords([]);
+          setSentenceText('');
+        }}
         okText="저장"
         cancelText="취소"
+        width={600}
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -587,30 +775,129 @@ const Categories = () => {
             label="문장"
             rules={[{ required: true, message: '문장을 입력해주세요.' }]}
           >
-            <Input.TextArea rows={3} placeholder="예: 물은 아름다운 불과 같다" />
+            <Input.TextArea
+              rows={3}
+              placeholder="예: 물은 아름다운 불과 같다"
+              onChange={handleSentenceChange}
+            />
           </Form.Item>
-          <Typography.Text type="secondary" style={{ fontSize: '12px' }}>
-            ※ 키워드 선택 기능은 향후 구현 예정입니다.
-          </Typography.Text>
+
+          {/* 키워드 선택 영역 */}
+          {sentenceText && (
+            <>
+              <Divider style={{ margin: '16px 0' }} />
+              <div style={{ marginBottom: '16px' }}>
+                <Typography.Text strong>
+                  <HighlightOutlined /> 키워드 선택
+                </Typography.Text>
+                <Typography.Text type="secondary" style={{ display: 'block', fontSize: '12px', marginTop: '4px' }}>
+                  아래 문장에서 텍스트를 드래그하여 선택한 후 "키워드 추가" 버튼을 클릭하세요.
+                </Typography.Text>
+              </div>
+
+              {/* 선택 가능한 문장 영역 */}
+              <div
+                style={{
+                  padding: '16px',
+                  background: '#fafafa',
+                  borderRadius: '8px',
+                  border: '1px solid #d9d9d9',
+                  marginBottom: '12px',
+                  fontSize: '16px',
+                  lineHeight: '1.8',
+                  userSelect: 'text',
+                }}
+              >
+                {sentenceText}
+              </div>
+
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleTextSelection}
+                style={{ marginBottom: '16px' }}
+              >
+                선택한 텍스트를 키워드로 추가
+              </Button>
+
+              {/* 등록된 키워드 미리보기 */}
+              {keywords.length > 0 && (
+                <div style={{ marginTop: '16px' }}>
+                  <Typography.Text strong style={{ display: 'block', marginBottom: '8px' }}>
+                    등록된 키워드 ({keywords.length}개)
+                  </Typography.Text>
+                  <div
+                    style={{
+                      padding: '12px',
+                      background: '#f5f5f5',
+                      borderRadius: '8px',
+                      lineHeight: '2',
+                    }}
+                  >
+                    {renderHighlightedSentence()}
+                  </div>
+                  <div style={{ marginTop: '12px' }}>
+                    <Space wrap>
+                      {keywords.map((kw) => (
+                        <Tag
+                          key={kw.id}
+                          color="blue"
+                          closable
+                          onClose={() => handleRemoveKeyword(kw.id)}
+                          style={{ marginBottom: '4px' }}
+                        >
+                          {kw.name}
+                          <Typography.Text type="secondary" style={{ fontSize: '10px', marginLeft: '4px' }}>
+                            ({kw.startIndex}-{kw.endIndex})
+                          </Typography.Text>
+                        </Tag>
+                      ))}
+                    </Space>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </Form>
       </Modal>
 
-      {/* 텍스트형 카테고리 추가/편집 모달 */}
+      {/* 전시명 카테고리 추가/편집 모달 */}
       <Modal
-        title={editingText ? '카테고리 편집' : '새 카테고리 추가'}
-        open={textModalVisible}
-        onOk={handleSaveText}
-        onCancel={() => setTextModalVisible(false)}
-        okText="저장"
+        title={editingExhibition ? '전시명 카테고리 편집' : '새 전시명 카테고리 추가'}
+        open={exhibitionModalVisible}
+        onOk={handleSaveExhibition}
+        onCancel={() => setExhibitionModalVisible(false)}
+        okText={editingExhibition ? '저장' : '추가'}
         cancelText="취소"
       >
-        <Form form={textForm} layout="vertical">
+        <Form form={exhibitionForm} layout="vertical">
           <Form.Item
-            name="name"
-            label="카테고리명"
-            rules={[{ required: true, message: '카테고리명을 입력해주세요.' }]}
+            name="title"
+            label="작업명"
+            rules={[{ required: true, message: '작업명을 입력해주세요.' }]}
           >
-            <Input placeholder="예: 디자인" />
+            <Input placeholder="예: Cushioning Attack" />
+          </Form.Item>
+          <Form.Item
+            name="exhibitionType"
+            label="전시 유형"
+            rules={[{ required: true, message: '전시 유형을 선택해주세요.' }]}
+          >
+            <Input placeholder="예: 개인전, 2인전, 그룹전, 기타" />
+          </Form.Item>
+          <Form.Item
+            name="venue"
+            label="공간"
+            rules={[{ required: true, message: '공간을 입력해주세요.' }]}
+          >
+            <Input placeholder="예: YPCSpace" />
+          </Form.Item>
+          <Form.Item
+            name="year"
+            label="년도"
+            rules={[{ required: true, message: '년도를 입력해주세요.' }]}
+          >
+            <Input type="number" placeholder="예: 2024" />
           </Form.Item>
         </Form>
       </Modal>

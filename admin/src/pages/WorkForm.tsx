@@ -13,10 +13,13 @@ import {
   Collapse,
   Checkbox,
   Modal,
+  Image,
+  Spin,
+  notification,
 } from 'antd';
-import { SaveOutlined, EyeOutlined, CloseOutlined, FileTextOutlined, EditOutlined, PlusOutlined, PictureOutlined, HighlightOutlined, FolderOutlined } from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
-import { mockWorks, mockSentenceCategories, mockTextCategories } from '../services/mockData';
+import { SaveOutlined, EyeOutlined, CloseOutlined, FileTextOutlined, EditOutlined, PlusOutlined, PictureOutlined, HighlightOutlined, FolderOutlined, ExclamationCircleOutlined, LoadingOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { useWork, useCreateWork, useUpdateWork } from '../hooks/useWorks';
+import { useSentenceCategories, useExhibitionCategories } from '../hooks/useCategories';
 import type { WorkImage } from '../types';
 import ImageUploader from '../components/ImageUploader';
 import CaptionEditor from '../components/CaptionEditor';
@@ -32,10 +35,14 @@ const WorkForm = () => {
   const isEditMode = !!id;
   const [images, setImages] = useState<WorkImage[]>([]);
   const [thumbnailImageId, setThumbnailImageId] = useState<string>('');
+  const [caption, setCaption] = useState<string>('');
   const [selectedSentenceCategoryIds, setSelectedSentenceCategoryIds] = useState<string[]>([]);
-  const [selectedTextCategoryIds, setSelectedTextCategoryIds] = useState<string[]>([]);
+  const [selectedExhibitionCategoryIds, setSelectedExhibitionCategoryIds] = useState<string[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savingMessage, setSavingMessage] = useState('');
 
   // 모바일 여부 확인
   useEffect(() => {
@@ -47,15 +54,14 @@ const WorkForm = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // 작업 데이터 조회 (수정 모드일 때)
-  const { data: work, isLoading } = useQuery({
-    queryKey: ['work', id],
-    queryFn: async () => {
-      if (!id) return null;
-      return mockWorks.find((w) => w.id === id) || null;
-    },
-    enabled: !!id,
-  });
+  // Firebase 데이터 조회
+  const { data: work, isLoading } = useWork(id);
+  const { data: sentenceCategories = [], isLoading: isSentenceCategoriesLoading } = useSentenceCategories();
+  const { data: exhibitionCategories = [], isLoading: isExhibitionCategoriesLoading } = useExhibitionCategories();
+
+  // 저장 mutations
+  const createWorkMutation = useCreateWork();
+  const updateWorkMutation = useUpdateWork();
 
   // 변경사항 추적
   useEffect(() => {
@@ -65,22 +71,19 @@ const WorkForm = () => {
       const hasFormChanges =
         formValues.title !== work.title ||
         formValues.shortDescription !== work.shortDescription ||
-        formValues.fullDescription !== work.fullDescription ||
-        formValues.isPublished !== work.isPublished;
+        formValues.fullDescription !== work.fullDescription;
       
       const hasImageChanges =
         images.length !== work.images.length ||
-        thumbnailImageId !== work.thumbnailImageId ||
-        images.some((img, idx) => {
-          const originalImg = work.images[idx];
-          return !originalImg || img.caption !== originalImg.caption;
-        });
+        thumbnailImageId !== work.thumbnailImageId;
+      
+      const hasCaptionChanges = caption !== (work.caption || '');
       
       const hasCategoryChanges =
         JSON.stringify(selectedSentenceCategoryIds.sort()) !== JSON.stringify(work.sentenceCategoryIds.sort()) ||
-        JSON.stringify(selectedTextCategoryIds.sort()) !== JSON.stringify(work.textCategoryIds.sort());
-      
-      setHasChanges(hasFormChanges || hasImageChanges || hasCategoryChanges);
+        JSON.stringify(selectedExhibitionCategoryIds.sort()) !== JSON.stringify(work.exhibitionCategoryIds.sort());
+
+      setHasChanges(hasFormChanges || hasImageChanges || hasCaptionChanges || hasCategoryChanges);
     } else if (!isEditMode) {
       // 새 작업의 경우 입력값이 있으면 변경사항 있음
       const formValues = form.getFieldsValue();
@@ -88,10 +91,11 @@ const WorkForm = () => {
         !!formValues.title ||
         !!formValues.shortDescription ||
         !!formValues.fullDescription ||
-        images.length > 0
+        images.length > 0 ||
+        !!caption
       );
     }
-  }, [form, images, thumbnailImageId, selectedSentenceCategoryIds, selectedTextCategoryIds, work, isEditMode]);
+  }, [form, images, thumbnailImageId, caption, selectedSentenceCategoryIds, selectedExhibitionCategoryIds, work, isEditMode]);
 
   // 폼 초기값 설정
   useEffect(() => {
@@ -100,56 +104,162 @@ const WorkForm = () => {
         title: work.title,
         shortDescription: work.shortDescription,
         fullDescription: work.fullDescription,
-        isPublished: work.isPublished,
       });
       setImages(work.images);
       setThumbnailImageId(work.thumbnailImageId);
+      setCaption(work.caption || '');
       setSelectedSentenceCategoryIds(work.sentenceCategoryIds);
-      setSelectedTextCategoryIds(work.textCategoryIds);
+      setSelectedExhibitionCategoryIds(work.exhibitionCategoryIds);
     }
   }, [work, isEditMode, form]);
 
-  // 저장 핸들러
+  // 저장 및 게시 핸들러 (포트폴리오에 공개)
   const handleSave = async () => {
     try {
+      // 폼 유효성 검사
+      await form.validateFields();
+
       // 이미지 최소 1장 확인
       if (images.length === 0) {
-        message.error('최소 1장의 이미지를 업로드해주세요.');
+        notification.warning({
+          message: '이미지 필요',
+          description: '게시하려면 최소 1장의 이미지를 업로드해주세요.',
+          placement: 'topRight',
+        });
         return;
       }
 
       // 대표 썸네일 확인
       if (!thumbnailImageId) {
-        message.error('대표 썸네일을 선택해주세요.');
+        notification.warning({
+          message: '썸네일 필요',
+          description: '게시하려면 대표 썸네일을 선택해주세요.',
+          placement: 'topRight',
+        });
         return;
       }
 
-      message.loading({ content: '저장 중...', key: 'save' });
-      
-      // 실제로는 API 호출
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      message.success({ content: '저장되었습니다.', key: 'save' });
-      setHasChanges(false); // 저장 후 변경사항 플래그 초기화
+      // 로딩 상태 시작
+      setIsSaving(true);
+      setSavingMessage('포트폴리오에 게시하는 중...');
+
+      const formValues = form.getFieldsValue();
+
+      const workData = {
+        title: formValues.title,
+        shortDescription: formValues.shortDescription || '',
+        fullDescription: formValues.fullDescription,
+        images,
+        thumbnailImageId,
+        caption,
+        sentenceCategoryIds: selectedSentenceCategoryIds,
+        exhibitionCategoryIds: selectedExhibitionCategoryIds,
+        isPublished: true, // 저장 버튼은 항상 게시 (공개)
+      };
+
+      if (isEditMode && id) {
+        await updateWorkMutation.mutateAsync({ id, updates: workData });
+      } else {
+        await createWorkMutation.mutateAsync(workData);
+      }
+
+      // 로딩 상태 종료
+      setIsSaving(false);
+      setSavingMessage('');
+      setHasChanges(false);
+
+      // 성공 알림
+      notification.success({
+        message: '게시 완료',
+        description: '작업이 포트폴리오에 게시되었습니다.',
+        icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
+        placement: 'topRight',
+        duration: 3,
+      });
+
       navigate('/works');
     } catch (error) {
-      message.error({ content: '저장 실패', key: 'save' });
+      console.error('게시 실패:', error);
+      setIsSaving(false);
+      setSavingMessage('');
+
+      // 폼 유효성 검사 실패는 각 필드에 표시되므로 별도 알림 불필요
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        return;
+      }
+
+      notification.error({
+        message: '게시 실패',
+        description: '작업 게시에 실패했습니다. 다시 시도해주세요.',
+        placement: 'topRight',
+      });
     }
   };
 
-  // 임시 저장 핸들러
-  const handleDraftSave = async () => {
+  // 임시 저장 핸들러 (비공개 상태로 저장)
+  const handleDraftSave = async (navigateAfter = false) => {
     try {
-      await form.validateFields();
-      message.loading({ content: '임시 저장 중...', key: 'draft' });
-      
-      // 실제로는 API 호출
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      
-      message.success({ content: '임시 저장되었습니다.', key: 'draft' });
-      setHasChanges(false); // 임시 저장 후에도 변경사항 플래그 초기화
+      const formValues = form.getFieldsValue();
+
+      // 제목은 필수
+      if (!formValues.title?.trim()) {
+        notification.warning({
+          message: '제목 필요',
+          description: '임시 저장하려면 최소한 제목을 입력해주세요.',
+          placement: 'topRight',
+        });
+        return;
+      }
+
+      // 로딩 상태 시작
+      setIsSaving(true);
+      setSavingMessage('임시 저장하는 중...');
+
+      const workData = {
+        title: formValues.title,
+        shortDescription: formValues.shortDescription || '',
+        fullDescription: formValues.fullDescription || '',
+        images,
+        thumbnailImageId: thumbnailImageId || (images.length > 0 ? images[0].id : ''),
+        caption,
+        sentenceCategoryIds: selectedSentenceCategoryIds,
+        exhibitionCategoryIds: selectedExhibitionCategoryIds,
+        isPublished: false, // 임시저장은 항상 비공개
+      };
+
+      if (isEditMode && id) {
+        await updateWorkMutation.mutateAsync({ id, updates: workData });
+      } else {
+        await createWorkMutation.mutateAsync(workData);
+      }
+
+      // 로딩 상태 종료
+      setIsSaving(false);
+      setSavingMessage('');
+      setHasChanges(false);
+
+      // 성공 알림
+      notification.success({
+        message: '임시 저장 완료',
+        description: '작업이 임시 저장되었습니다. (비공개 상태)',
+        icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
+        placement: 'topRight',
+        duration: 3,
+      });
+
+      if (navigateAfter) {
+        navigate('/works');
+      }
     } catch (error) {
-      message.error({ content: '저장 실패', key: 'draft' });
+      console.error('임시 저장 실패:', error);
+      setIsSaving(false);
+      setSavingMessage('');
+
+      notification.error({
+        message: '임시 저장 실패',
+        description: '임시 저장에 실패했습니다. 다시 시도해주세요.',
+        placement: 'topRight',
+      });
     }
   };
 
@@ -158,26 +268,14 @@ const WorkForm = () => {
     if (hasChanges) {
       Modal.confirm({
         title: '저장하지 않은 변경사항이 있습니다.',
-        content: '정말 나가시겠습니까?',
-        okText: '나가기',
-        cancelText: '취소',
+        icon: <ExclamationCircleOutlined />,
+        content: '변경사항을 저장하지 않고 나가시겠습니까?',
+        okText: '저장하지 않고 나가기',
+        okButtonProps: { danger: true },
+        cancelText: '계속 작업',
         onOk: () => {
           navigate('/works');
         },
-        footer: () => (
-          <Space>
-            <Button onClick={async () => {
-              await handleDraftSave();
-              navigate('/works');
-            }}>
-              임시저장
-            </Button>
-            <Button danger onClick={() => navigate('/works')}>
-              나가기
-            </Button>
-            <Button onClick={() => Modal.destroyAll()}>계속 작업</Button>
-          </Space>
-        ),
       });
     } else {
       navigate('/works');
@@ -186,7 +284,14 @@ const WorkForm = () => {
 
   // 미리보기 핸들러
   const handlePreview = () => {
-    window.open('/preview', '_blank');
+    const formValues = form.getFieldsValue();
+
+    if (!formValues.title?.trim()) {
+      message.warning('미리보기를 위해 최소한 제목을 입력해주세요.');
+      return;
+    }
+
+    setPreviewVisible(true);
   };
 
   // 키보드 단축키 핸들러
@@ -197,27 +302,31 @@ const WorkForm = () => {
         e.preventDefault();
         if (e.shiftKey) {
           // Shift + Ctrl/Cmd + S: 임시저장
-          handleDraftSave();
+          void handleDraftSave(false);
         } else {
           // Ctrl/Cmd + S: 저장
-          form.submit();
+          void handleSave();
         }
       }
-      
+
       // Ctrl/Cmd + P: 미리보기
       if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
         e.preventDefault();
         handlePreview();
       }
-      
+
       // Esc: 모달 닫기 (이미 Ant Design이 자동 처리)
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, images, thumbnailImageId, caption, selectedSentenceCategoryIds, selectedExhibitionCategoryIds, isEditMode, id]);
 
-  if (isEditMode && isLoading) {
+  // 로딩 상태 처리
+  const isDataLoading = (isEditMode && isLoading) || isSentenceCategoriesLoading || isExhibitionCategoriesLoading;
+
+  if (isDataLoading) {
     return <div>로딩 중...</div>;
   }
 
@@ -302,7 +411,7 @@ const WorkForm = () => {
       key: '3',
       label: (
         <>
-          <HighlightOutlined /> 이미지 캡션
+          <HighlightOutlined /> 상세 페이지 캡션
         </>
       ),
       children: (
@@ -310,36 +419,10 @@ const WorkForm = () => {
           {images.length === 0 ? (
             <p style={{ color: '#8c8c8c' }}>먼저 이미지를 업로드해주세요.</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              {images.map((image, index) => (
-                <Card key={image.id} title={`이미지 ${index + 1}`} size="small">
-                  <div style={{ marginBottom: '12px' }}>
-                    <img
-                      src={image.thumbnailUrl || image.url}
-                      alt={`이미지 ${index + 1}`}
-                      style={{
-                        width: '100%',
-                        maxWidth: '300px',
-                        height: 'auto',
-                        borderRadius: '4px',
-                        objectFit: 'cover',
-                      }}
-                    />
-                  </div>
-                  <CaptionEditor
-                    value={image.caption || ''}
-                    onChange={(html) => {
-                      const updatedImages = images.map((img) =>
-                        img.id === image.id ? { ...img, caption: html } : img
-                      );
-                      setImages(updatedImages);
-                    }}
-                    imageIndex={index}
-                    imageId={image.id}
-                  />
-                </Card>
-              ))}
-            </div>
+            <CaptionEditor
+              value={caption}
+              onChange={(html) => setCaption(html)}
+            />
           )}
         </>
       ),
@@ -356,47 +439,58 @@ const WorkForm = () => {
           <div style={{ marginBottom: '24px' }}>
             <div style={{ marginBottom: '12px', fontWeight: 500 }}>문장형 카테고리</div>
             <div style={{ marginLeft: '16px' }}>
-              {mockSentenceCategories.map((sentenceCat) => (
-                <div key={sentenceCat.id} style={{ marginBottom: '16px' }}>
-                  <div style={{ marginBottom: '8px', color: '#8c8c8c', fontSize: '12px' }}>
-                    "{sentenceCat.sentence}"
+              {sentenceCategories.length === 0 ? (
+                <p style={{ color: '#8c8c8c' }}>등록된 문장형 카테고리가 없습니다.</p>
+              ) : (
+                sentenceCategories.map((sentenceCat) => (
+                  <div key={sentenceCat.id} style={{ marginBottom: '16px' }}>
+                    <div style={{ marginBottom: '8px', color: '#8c8c8c', fontSize: '12px' }}>
+                      "{sentenceCat.sentence}"
+                    </div>
+                    <Checkbox.Group
+                      value={selectedSentenceCategoryIds}
+                      onChange={(checkedValues) =>
+                        setSelectedSentenceCategoryIds(checkedValues as string[])
+                      }
+                    >
+                      <Space direction="vertical" size="small">
+                        {sentenceCat.keywords.map((keyword) => (
+                          <Checkbox key={keyword.id} value={keyword.id}>
+                            {keyword.name}{' '}
+                            <span style={{ color: '#8c8c8c' }}>({sentenceCat.sentence})</span>
+                          </Checkbox>
+                        ))}
+                      </Space>
+                    </Checkbox.Group>
                   </div>
-                  <Checkbox.Group
-                    value={selectedSentenceCategoryIds}
-                    onChange={(checkedValues) =>
-                      setSelectedSentenceCategoryIds(checkedValues as string[])
-                    }
-                  >
-                    <Space direction="vertical" size="small">
-                      {sentenceCat.keywords.map((keyword) => (
-                        <Checkbox key={keyword.id} value={keyword.id}>
-                          {keyword.name}{' '}
-                          <span style={{ color: '#8c8c8c' }}>({sentenceCat.sentence})</span>
-                        </Checkbox>
-                      ))}
-                    </Space>
-                  </Checkbox.Group>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
           <div>
-            <div style={{ marginBottom: '12px', fontWeight: 500 }}>텍스트형 카테고리</div>
+            <div style={{ marginBottom: '12px', fontWeight: 500 }}>전시명 카테고리</div>
             <div style={{ marginLeft: '16px' }}>
-              <Checkbox.Group
-                value={selectedTextCategoryIds}
-                onChange={(checkedValues) =>
-                  setSelectedTextCategoryIds(checkedValues as string[])
-                }
-              >
-                <Space direction="vertical" size="small">
-                  {mockTextCategories.map((textCat) => (
-                    <Checkbox key={textCat.id} value={textCat.id}>
-                      {textCat.name}
-                    </Checkbox>
-                  ))}
-                </Space>
-              </Checkbox.Group>
+              {exhibitionCategories.length === 0 ? (
+                <p style={{ color: '#8c8c8c' }}>등록된 전시명 카테고리가 없습니다.</p>
+              ) : (
+                <Checkbox.Group
+                  value={selectedExhibitionCategoryIds}
+                  onChange={(checkedValues) =>
+                    setSelectedExhibitionCategoryIds(checkedValues as string[])
+                  }
+                >
+                  <Space direction="vertical" size="small">
+                    {exhibitionCategories.map((exhibitionCat) => (
+                      <Checkbox key={exhibitionCat.id} value={exhibitionCat.id}>
+                        <span style={{ fontWeight: 500 }}>{exhibitionCat.title}</span>
+                        <span style={{ color: '#8c8c8c', marginLeft: '8px' }}>
+                          | {exhibitionCat.description.exhibitionType}, {exhibitionCat.description.venue}, {exhibitionCat.description.year}
+                        </span>
+                      </Checkbox>
+                    ))}
+                  </Space>
+                </Checkbox.Group>
+              )}
             </div>
           </div>
         </>
@@ -446,11 +540,31 @@ const WorkForm = () => {
         />
       </Form.Item>
 
-      <Form.Item name="isPublished" label="공개 상태">
-        <Radio.Group>
-          <Radio value={true}>공개</Radio>
-          <Radio value={false}>비공개</Radio>
-        </Radio.Group>
+      <Form.Item label="게시 상태">
+        <div style={{ padding: '8px 12px', background: '#f5f5f5', borderRadius: '6px' }}>
+          {isEditMode && work ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: work.isPublished ? '#52c41a' : '#faad14',
+                }}
+              />
+              <span style={{ fontWeight: 500 }}>
+                현재: {work.isPublished ? '게시됨 (포트폴리오에 공개)' : '미게시 (비공개)'}
+              </span>
+            </div>
+          ) : (
+            <span style={{ color: '#8c8c8c' }}>새 작업 (저장 전)</span>
+          )}
+          <div style={{ marginTop: '8px', fontSize: '12px', color: '#8c8c8c' }}>
+            • <strong>임시저장</strong>: 비공개로 저장 (포트폴리오에 표시되지 않음)<br />
+            • <strong>게시</strong>: 포트폴리오에 공개
+          </div>
+        </div>
       </Form.Item>
     </Card>
   );
@@ -511,48 +625,59 @@ const WorkForm = () => {
       <div style={{ marginBottom: '24px' }}>
         <div style={{ marginBottom: '12px', fontWeight: 500 }}>문장형 카테고리</div>
         <div style={{ marginLeft: '16px' }}>
-          {mockSentenceCategories.map((sentenceCat) => (
-            <div key={sentenceCat.id} style={{ marginBottom: '16px' }}>
-              <div style={{ marginBottom: '8px', color: '#8c8c8c', fontSize: '12px' }}>
-                "{sentenceCat.sentence}"
+          {sentenceCategories.length === 0 ? (
+            <p style={{ color: '#8c8c8c' }}>등록된 문장형 카테고리가 없습니다.</p>
+          ) : (
+            sentenceCategories.map((sentenceCat) => (
+              <div key={sentenceCat.id} style={{ marginBottom: '16px' }}>
+                <div style={{ marginBottom: '8px', color: '#8c8c8c', fontSize: '12px' }}>
+                  "{sentenceCat.sentence}"
+                </div>
+                <Checkbox.Group
+                  value={selectedSentenceCategoryIds}
+                  onChange={(checkedValues) =>
+                    setSelectedSentenceCategoryIds(checkedValues as string[])
+                  }
+                >
+                  <Space direction="vertical" size="small">
+                    {sentenceCat.keywords.map((keyword) => (
+                      <Checkbox key={keyword.id} value={keyword.id}>
+                        {keyword.name}{' '}
+                        <span style={{ color: '#8c8c8c' }}>({sentenceCat.sentence})</span>
+                      </Checkbox>
+                    ))}
+                  </Space>
+                </Checkbox.Group>
               </div>
-              <Checkbox.Group
-                value={selectedSentenceCategoryIds}
-                onChange={(checkedValues) =>
-                  setSelectedSentenceCategoryIds(checkedValues as string[])
-                }
-              >
-                <Space direction="vertical" size="small">
-                  {sentenceCat.keywords.map((keyword) => (
-                    <Checkbox key={keyword.id} value={keyword.id}>
-                      {keyword.name}{' '}
-                      <span style={{ color: '#8c8c8c' }}>({sentenceCat.sentence})</span>
-                    </Checkbox>
-                  ))}
-                </Space>
-              </Checkbox.Group>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 
       <div>
-        <div style={{ marginBottom: '12px', fontWeight: 500 }}>텍스트형 카테고리</div>
+        <div style={{ marginBottom: '12px', fontWeight: 500 }}>전시명 카테고리</div>
         <div style={{ marginLeft: '16px' }}>
-          <Checkbox.Group
-            value={selectedTextCategoryIds}
-            onChange={(checkedValues) =>
-              setSelectedTextCategoryIds(checkedValues as string[])
-            }
-          >
-            <Space direction="vertical" size="small">
-              {mockTextCategories.map((textCat) => (
-                <Checkbox key={textCat.id} value={textCat.id}>
-                  {textCat.name}
-                </Checkbox>
-              ))}
-            </Space>
-          </Checkbox.Group>
+          {exhibitionCategories.length === 0 ? (
+            <p style={{ color: '#8c8c8c' }}>등록된 전시명 카테고리가 없습니다.</p>
+          ) : (
+            <Checkbox.Group
+              value={selectedExhibitionCategoryIds}
+              onChange={(checkedValues) =>
+                setSelectedExhibitionCategoryIds(checkedValues as string[])
+              }
+            >
+              <Space direction="vertical" size="small">
+                {exhibitionCategories.map((exhibitionCat) => (
+                  <Checkbox key={exhibitionCat.id} value={exhibitionCat.id}>
+                    <span style={{ fontWeight: 500 }}>{exhibitionCat.title}</span>
+                    <span style={{ color: '#8c8c8c', marginLeft: '8px' }}>
+                      | {exhibitionCat.description.exhibitionType}, {exhibitionCat.description.venue}, {exhibitionCat.description.year}
+                    </span>
+                  </Checkbox>
+                ))}
+              </Space>
+            </Checkbox.Group>
+          )}
         </div>
       </div>
     </Card>
@@ -560,6 +685,36 @@ const WorkForm = () => {
 
   return (
     <div className="work-form">
+      {/* 저장 중 로딩 오버레이 */}
+      {isSaving && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(255, 255, 255, 0.9)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <Spin
+            indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />}
+            size="large"
+          />
+          <div style={{ marginTop: '24px', fontSize: '18px', color: '#1890ff', fontWeight: 500 }}>
+            {savingMessage}
+          </div>
+          <div style={{ marginTop: '8px', fontSize: '14px', color: '#8c8c8c' }}>
+            잠시만 기다려주세요...
+          </div>
+        </div>
+      )}
+
       <div className="work-form-header">
         <Title level={2}>
           {isEditMode ? (
@@ -579,48 +734,19 @@ const WorkForm = () => {
         form={form}
         layout="vertical"
         onFinish={handleSave}
-        initialValues={{
-          isPublished: false,
-        }}
       >
         {/* 데스크탑: Card 형식, 모바일: Collapse 형식 */}
         <div className="desktop-sections">
           {basicInfoSection}
           {imageSection}
-          <Card title={<><HighlightOutlined /> 이미지 캡션</>} style={{ marginBottom: '24px' }}>
+          <Card title={<><HighlightOutlined /> 상세 페이지 캡션</>} style={{ marginBottom: '24px' }}>
             {images.length === 0 ? (
               <p style={{ color: '#8c8c8c' }}>먼저 이미지를 업로드해주세요.</p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                {images.map((image, index) => (
-                  <Card key={image.id} title={`이미지 ${index + 1}`} size="small" style={{ marginBottom: '16px' }}>
-                    <div style={{ marginBottom: '12px' }}>
-                      <img
-                        src={image.thumbnailUrl || image.url}
-                        alt={`이미지 ${index + 1}`}
-                        style={{
-                          width: '100%',
-                          maxWidth: '300px',
-                          height: 'auto',
-                          borderRadius: '4px',
-                          objectFit: 'cover',
-                        }}
-                      />
-                    </div>
-                    <CaptionEditor
-                      value={image.caption || ''}
-                      onChange={(html) => {
-                        const updatedImages = images.map((img) =>
-                          img.id === image.id ? { ...img, caption: html } : img
-                        );
-                        setImages(updatedImages);
-                      }}
-                      imageIndex={index}
-                      imageId={image.id}
-                    />
-                  </Card>
-                ))}
-              </div>
+              <CaptionEditor
+                value={caption}
+                onChange={(html) => setCaption(html)}
+              />
             )}
           </Card>
           {categorySection}
@@ -632,27 +758,174 @@ const WorkForm = () => {
 
         {/* 하단 액션 버튼 */}
         <div className="work-form-actions">
-          <Space 
-            className="work-form-actions-space" 
+          <Space
+            className="work-form-actions-space"
             direction={isMobile ? 'vertical' : 'horizontal'}
             style={{ width: '100%' }}
             size={isMobile ? 'middle' : 'small'}
           >
-            <Button icon={<FileTextOutlined />} onClick={handleDraftSave} block={isMobile}>
+            <Button
+              icon={<FileTextOutlined />}
+              onClick={() => void handleDraftSave(false)}
+              block={isMobile}
+              loading={isSaving}
+              disabled={isSaving}
+            >
               임시저장
             </Button>
-            <Button icon={<EyeOutlined />} onClick={handlePreview} block={isMobile}>
+            <Button
+              icon={<EyeOutlined />}
+              onClick={handlePreview}
+              block={isMobile}
+              disabled={isSaving}
+            >
               미리보기
             </Button>
-            <Button type="primary" icon={<SaveOutlined />} onClick={() => form.submit()} block={isMobile}>
-              저장
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              onClick={() => void handleSave()}
+              block={isMobile}
+              loading={isSaving}
+              disabled={isSaving}
+              style={{ background: '#52c41a', borderColor: '#52c41a' }}
+            >
+              게시
             </Button>
-            <Button icon={<CloseOutlined />} onClick={handleCancel} block={isMobile}>
+            <Button
+              icon={<CloseOutlined />}
+              onClick={handleCancel}
+              block={isMobile}
+              disabled={isSaving}
+            >
               취소
             </Button>
           </Space>
         </div>
       </Form>
+
+      {/* 미리보기 모달 */}
+      <Modal
+        title="작업 미리보기"
+        open={previewVisible}
+        onCancel={() => setPreviewVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setPreviewVisible(false)}>
+            닫기
+          </Button>,
+        ]}
+        width={800}
+      >
+        <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+          {/* 제목 */}
+          <Typography.Title level={3}>
+            {form.getFieldValue('title') || '(제목 없음)'}
+          </Typography.Title>
+
+          {/* 게시 상태 */}
+          <div style={{ marginBottom: '16px' }}>
+            <span style={{
+              padding: '4px 8px',
+              borderRadius: '4px',
+              background: (isEditMode && work?.isPublished) ? '#52c41a' : '#faad14',
+              color: 'white',
+              fontSize: '12px'
+            }}>
+              {(isEditMode && work?.isPublished) ? '게시됨' : '미게시 (임시저장하면 비공개, 게시하면 공개)'}
+            </span>
+          </div>
+
+          {/* 간단한 설명 */}
+          {form.getFieldValue('shortDescription') && (
+            <Typography.Paragraph type="secondary">
+              {form.getFieldValue('shortDescription')}
+            </Typography.Paragraph>
+          )}
+
+          {/* 이미지 */}
+          {images.length > 0 && (
+            <div style={{ marginBottom: '24px' }}>
+              <Typography.Title level={5}>이미지 ({images.length}장)</Typography.Title>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {images.map((img) => (
+                  <div
+                    key={img.id}
+                    style={{
+                      border: img.id === thumbnailImageId ? '3px solid #1890ff' : '1px solid #d9d9d9',
+                      borderRadius: '4px',
+                      padding: '2px'
+                    }}
+                  >
+                    <Image
+                      src={img.thumbnailUrl || img.url}
+                      alt={`이미지 ${img.order}`}
+                      width={100}
+                      height={100}
+                      style={{ objectFit: 'cover' }}
+                    />
+                    {img.id === thumbnailImageId && (
+                      <div style={{ textAlign: 'center', fontSize: '10px', color: '#1890ff' }}>
+                        대표
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 상세 설명 */}
+          {form.getFieldValue('fullDescription') && (
+            <div style={{ marginBottom: '24px' }}>
+              <Typography.Title level={5}>상세 설명</Typography.Title>
+              <Typography.Paragraph style={{ whiteSpace: 'pre-wrap' }}>
+                {form.getFieldValue('fullDescription')}
+              </Typography.Paragraph>
+            </div>
+          )}
+
+          {/* 캡션 */}
+          {caption && (
+            <div style={{ marginBottom: '24px' }}>
+              <Typography.Title level={5}>캡션</Typography.Title>
+              <div
+                dangerouslySetInnerHTML={{ __html: caption }}
+                style={{ padding: '12px', background: '#f5f5f5', borderRadius: '4px' }}
+              />
+            </div>
+          )}
+
+          {/* 선택된 카테고리 */}
+          <div>
+            <Typography.Title level={5}>선택된 카테고리</Typography.Title>
+            {selectedSentenceCategoryIds.length === 0 && selectedExhibitionCategoryIds.length === 0 ? (
+              <Typography.Text type="secondary">선택된 카테고리가 없습니다.</Typography.Text>
+            ) : (
+              <>
+                {selectedSentenceCategoryIds.length > 0 && (
+                  <div style={{ marginBottom: '8px' }}>
+                    <strong>문장형 키워드:</strong>{' '}
+                    {sentenceCategories
+                      .flatMap((cat) => cat.keywords)
+                      .filter((kw) => selectedSentenceCategoryIds.includes(kw.id))
+                      .map((kw) => kw.name)
+                      .join(', ') || '없음'}
+                  </div>
+                )}
+                {selectedExhibitionCategoryIds.length > 0 && (
+                  <div>
+                    <strong>전시명:</strong>{' '}
+                    {exhibitionCategories
+                      .filter((cat) => selectedExhibitionCategoryIds.includes(cat.id))
+                      .map((cat) => cat.title)
+                      .join(', ') || '없음'}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

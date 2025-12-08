@@ -1,0 +1,46 @@
+// Firebase 설정 및 초기화
+import { initializeApp } from 'firebase/app';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
+import { getAnalytics, isSupported } from 'firebase/analytics';
+
+// Firebase 설정 - 환경변수에서 로드
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+};
+
+// 필수 환경변수 확인
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  console.error('Firebase 환경변수가 설정되지 않았습니다. .env 파일을 확인해주세요.');
+}
+
+// Firebase 앱 초기화
+const app = initializeApp(firebaseConfig);
+
+// Firebase 서비스 내보내기
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app);
+
+// Google Auth Provider 설정
+export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  prompt: 'select_account', // 매번 계정 선택 창 표시
+});
+
+// Analytics (브라우저 환경에서만 초기화)
+export const initAnalytics = async () => {
+  if (await isSupported()) {
+    return getAnalytics(app);
+  }
+  return null;
+};
+
+export default app;

@@ -87,10 +87,15 @@ const MainLayout = () => {
   ];
 
   // 사용자 메뉴 클릭 핸들러
-  const handleUserMenuClick = ({ key }: { key: string }) => {
+  const handleUserMenuClick = async ({ key }: { key: string }) => {
     if (key === 'logout') {
-      logout();
-      navigate('/login');
+      try {
+        await logout();
+        navigate('/login');
+      } catch {
+        // 로그아웃 실패 시에도 로그인 페이지로 이동
+        navigate('/login');
+      }
     }
   };
 
@@ -128,22 +133,19 @@ const MainLayout = () => {
           </div>
         </div>
         <div className="user-menu">
-          {isMobile ? (
-            <Avatar icon={<UserOutlined />} src={user?.profileImage} />
-          ) : (
-            <Dropdown
-              menu={{
-                items: userMenuItems,
-                onClick: handleUserMenuClick,
-              }}
-              placement="bottomRight"
-            >
-              <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Avatar icon={<UserOutlined />} src={user?.profileImage} />
-                <span style={{ color: 'white' }}>{user?.displayName || '사용자'}</span>
-              </div>
-            </Dropdown>
-          )}
+          <Dropdown
+            menu={{
+              items: userMenuItems,
+              onClick: handleUserMenuClick,
+            }}
+            placement="bottomRight"
+            trigger={['click']}
+          >
+            <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Avatar icon={<UserOutlined />} src={user?.profileImage} />
+              {!isMobile && <span style={{ color: 'white' }}>{user?.displayName || '사용자'}</span>}
+            </div>
+          </Dropdown>
         </div>
       </Header>
       <Layout>

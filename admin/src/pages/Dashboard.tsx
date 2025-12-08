@@ -2,8 +2,7 @@
 import { Card, Row, Col, Typography, Space, Button, List, Avatar } from 'antd';
 import { DashboardOutlined, FileTextOutlined, CheckCircleOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { mockWorks } from '../services/mockData';
+import { useWorks } from '../hooks/useWorks';
 import './Dashboard.css';
 
 const { Title } = Typography;
@@ -11,27 +10,32 @@ const { Title } = Typography;
 const Dashboard = () => {
   const navigate = useNavigate();
 
-  // 작업 목록 조회 (하드코딩 데이터)
-  const { data: works = [] } = useQuery({
-    queryKey: ['works'],
-    queryFn: async () => mockWorks,
-    staleTime: 5 * 60 * 1000, // 5분
-  });
+  // Firebase에서 작업 목록 조회
+  const { data: works = [], isLoading } = useWorks();
 
   // 통계 계산
   const totalWorks = works.length;
   const publishedWorks = works.filter((w) => w.isPublished).length;
   const draftWorks = works.filter((w) => !w.isPublished).length;
 
+  // Date 객체로 변환 (Firebase Timestamp 대응)
+  const toDate = (date: Date | { toDate: () => Date }): Date => {
+    if (date && typeof (date as { toDate?: () => Date }).toDate === 'function') {
+      return (date as { toDate: () => Date }).toDate();
+    }
+    return date as Date;
+  };
+
   // 최근 수정한 작업 5개 (updatedAt 기준 정렬)
   const recentWorks = [...works]
-    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+    .sort((a, b) => toDate(b.updatedAt).getTime() - toDate(a.updatedAt).getTime())
     .slice(0, 5);
 
   // 시간 경과 표시 함수
-  const getTimeAgo = (date: Date): string => {
+  const getTimeAgo = (date: Date | { toDate: () => Date }): string => {
+    const d = toDate(date);
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
+    const diffMs = now.getTime() - d.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
@@ -40,6 +44,10 @@ const Dashboard = () => {
     if (diffHours < 24) return `${diffHours}시간 전`;
     return `${diffDays}일 전`;
   };
+
+  if (isLoading) {
+    return <div>로딩 중...</div>;
+  }
 
   return (
     <div className="dashboard">

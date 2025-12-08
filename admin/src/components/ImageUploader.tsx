@@ -1,7 +1,7 @@
 // 이미지 업로드 및 관리 컴포넌트
 import { useState, useEffect } from 'react';
-import { Upload, Image, Button, Space, Card, message } from 'antd';
-import { DragOutlined } from '@ant-design/icons';
+import { Upload, Image, Button, Space, Card, message, Progress, Spin } from 'antd';
+import { DragOutlined, LoadingOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
 import {
   InboxOutlined,
@@ -12,9 +12,18 @@ import {
   BulbOutlined,
 } from '@ant-design/icons';
 import type { WorkImage } from '../types';
+import { uploadImage, deleteImage } from '../services/storageService';
 import './ImageUploader.css';
 
 const { Dragger } = Upload;
+
+// 업로드 중인 이미지 타입
+interface UploadingImage {
+  id: string;
+  fileName: string;
+  progress: number;
+  previewUrl: string;
+}
 
 interface ImageUploaderProps {
   value?: WorkImage[];
@@ -26,56 +35,68 @@ const ImageUploader = ({ value = [], onChange, maxCount = 50 }: ImageUploaderPro
   const [fileList] = useState<UploadFile[]>([]);
   const [images, setImages] = useState<WorkImage[]>(value);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [uploadingImages, setUploadingImages] = useState<UploadingImage[]>([]);
 
   // value가 변경되면 images도 업데이트
   useEffect(() => {
     setImages(value);
   }, [value]);
 
-  // 파일 업로드 핸들러
-  const handleUpload: UploadProps['customRequest'] = async ({ file, onSuccess, onProgress }) => {
-    // 실제로는 서버로 업로드하지만, 여기서는 로컬 URL 생성
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const imageUrl = e.target?.result as string;
-      
-      // 이미지 크기 계산
-      const img = new window.Image();
-      img.onload = () => {
-        const newImage: WorkImage = {
-          id: `img-${Date.now()}-${Math.random()}`,
-          url: imageUrl,
-          thumbnailUrl: imageUrl, // 실제로는 서버에서 썸네일 생성
-          order: images.length + 1,
-          width: img.width,
-          height: img.height,
-          fileSize: (file as File).size,
-        };
+  // 파일 업로드 핸들러 (Firebase Storage에 실제 업로드)
+  const handleUpload: UploadProps['customRequest'] = async ({ file, onSuccess, onError, onProgress }) => {
+    const uploadFile = file as File;
+    const uploadId = `uploading-${Date.now()}-${Math.random()}`;
 
-        const newImages = [...images, newImage];
-        setImages(newImages);
-        onChange?.(newImages);
+    // 로컬 미리보기 URL 생성
+    const previewUrl = URL.createObjectURL(uploadFile);
 
-        onSuccess?.(newImage);
+    // 업로드 중 목록에 추가
+    setUploadingImages((prev) => [
+      ...prev,
+      {
+        id: uploadId,
+        fileName: uploadFile.name,
+        progress: 0,
+        previewUrl,
+      },
+    ]);
+
+    try {
+      // Firebase Storage에 업로드
+      const uploadedImage = await uploadImage(uploadFile, (progress) => {
+        // 진행률 업데이트
+        setUploadingImages((prev) =>
+          prev.map((img) =>
+            img.id === uploadId ? { ...img, progress: Math.round(progress) } : img
+          )
+        );
+        onProgress?.({ percent: progress } as Parameters<NonNullable<typeof onProgress>>[0]);
+      });
+
+      // 업로드 완료 - 업로드 중 목록에서 제거
+      setUploadingImages((prev) => prev.filter((img) => img.id !== uploadId));
+      URL.revokeObjectURL(previewUrl);
+
+      // 업로드된 이미지에 순서 추가
+      const newImage: WorkImage = {
+        ...uploadedImage,
+        order: images.length + 1,
       };
-      img.src = imageUrl;
-    };
-    reader.readAsDataURL(file as File);
 
-    // 업로드 진행률 시뮬레이션 (실제로는 서버 응답 기반)
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 15 + 5; // 5-20%씩 증가 (더 자연스러운 진행률)
-      if (progress > 95) progress = 95; // 95%까지만 표시
-      onProgress?.({ percent: progress } as any);
-      if (progress >= 95) {
-        clearInterval(interval);
-        // 완료 직전 100% 표시
-        setTimeout(() => {
-          onProgress?.({ percent: 100 } as any);
-        }, 200);
-      }
-    }, 200);
+      const newImages = [...images, newImage];
+      setImages(newImages);
+      onChange?.(newImages);
+
+      message.success('이미지가 업로드되었습니다.');
+      onSuccess?.(newImage);
+    } catch (error) {
+      console.error('이미지 업로드 실패:', error);
+      // 업로드 실패 - 업로드 중 목록에서 제거
+      setUploadingImages((prev) => prev.filter((img) => img.id !== uploadId));
+      URL.revokeObjectURL(previewUrl);
+      message.error('이미지 업로드에 실패했습니다.');
+      onError?.(error as Error);
+    }
   };
 
   // 파일 업로드 전 검증
@@ -100,17 +121,33 @@ const ImageUploader = ({ value = [], onChange, maxCount = 50 }: ImageUploaderPro
     return true;
   };
 
-  // 이미지 삭제 핸들러
-  const handleRemove = (imageId: string) => {
-    const newImages = images.filter((img) => img.id !== imageId);
-    // 순서 재정렬
-    const reorderedImages = newImages.map((img, index) => ({
-      ...img,
-      order: index + 1,
-    }));
-    setImages(reorderedImages);
-    onChange?.(reorderedImages);
-    message.success('이미지가 삭제되었습니다.');
+  // 이미지 삭제 핸들러 (Firebase Storage에서도 삭제)
+  const handleRemove = async (imageId: string) => {
+    try {
+      // Firebase Storage에서 삭제
+      await deleteImage(imageId);
+
+      const newImages = images.filter((img) => img.id !== imageId);
+      // 순서 재정렬
+      const reorderedImages = newImages.map((img, index) => ({
+        ...img,
+        order: index + 1,
+      }));
+      setImages(reorderedImages);
+      onChange?.(reorderedImages);
+      message.success('이미지가 삭제되었습니다.');
+    } catch (error) {
+      console.error('이미지 삭제 실패:', error);
+      // Storage 삭제 실패해도 UI에서는 제거 (이미 업로드 안된 이미지일 수 있음)
+      const newImages = images.filter((img) => img.id !== imageId);
+      const reorderedImages = newImages.map((img, index) => ({
+        ...img,
+        order: index + 1,
+      }));
+      setImages(reorderedImages);
+      onChange?.(reorderedImages);
+      message.success('이미지가 삭제되었습니다.');
+    }
   };
 
   // 이미지 순서 변경 (위로)
@@ -221,9 +258,86 @@ const ImageUploader = ({ value = [], onChange, maxCount = 50 }: ImageUploaderPro
       )}
 
       {/* 업로드된 이미지 개수 표시 */}
-      {images.length > 0 && (
+      {(images.length > 0 || uploadingImages.length > 0) && (
         <div className="image-count" style={{ margin: '16px 0', fontWeight: 500 }}>
           업로드된 이미지 ({images.length}/{maxCount})
+          {uploadingImages.length > 0 && (
+            <span style={{ marginLeft: '8px', color: '#1890ff' }}>
+              <LoadingOutlined style={{ marginRight: '4px' }} />
+              {uploadingImages.length}개 업로드 중...
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* 업로드 중인 이미지 표시 */}
+      {uploadingImages.length > 0 && (
+        <div className="image-grid" style={{ marginBottom: '16px' }}>
+          {uploadingImages.map((uploadingImg) => (
+            <Card
+              key={uploadingImg.id}
+              className="image-card uploading-card"
+              style={{
+                opacity: 0.8,
+                border: '2px dashed #1890ff',
+              }}
+            >
+              <div className="image-number" style={{ background: '#1890ff' }}>
+                <LoadingOutlined style={{ marginRight: '4px' }} />
+                업로드 중
+              </div>
+              <div className="image-preview" style={{ position: 'relative' }}>
+                <img
+                  src={uploadingImg.previewUrl}
+                  alt="업로드 중"
+                  style={{
+                    width: '100%',
+                    height: 150,
+                    objectFit: 'cover',
+                    borderRadius: '4px',
+                    filter: 'brightness(0.7)',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    textAlign: 'center',
+                    color: 'white',
+                  }}
+                >
+                  <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />
+                  <div style={{ marginTop: '8px', fontWeight: 'bold' }}>
+                    {uploadingImg.progress}%
+                  </div>
+                </div>
+              </div>
+              <div style={{ padding: '8px' }}>
+                <Progress
+                  percent={uploadingImg.progress}
+                  size="small"
+                  status="active"
+                  strokeColor={{
+                    '0%': '#108ee9',
+                    '100%': '#87d068',
+                  }}
+                />
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: '#8c8c8c',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {uploadingImg.fileName}
+                </div>
+              </div>
+            </Card>
+          ))}
         </div>
       )}
 
@@ -287,7 +401,7 @@ const ImageUploader = ({ value = [], onChange, maxCount = 50 }: ImageUploaderPro
                     size="small"
                     danger
                     icon={<DeleteOutlined />}
-                    onClick={() => handleRemove(image.id)}
+                    onClick={() => void handleRemove(image.id)}
                     block
                   >
                     삭제

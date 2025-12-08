@@ -28,15 +28,24 @@ export interface SentenceCategory {
   updatedAt: Date;
 }
 
-export interface TextCategory {
+// 전시명 카테고리: 통으로 클릭 (작업명 + 간단 설명)
+export interface ExhibitionCategory {
   id: string;
-  name: string;
+  title: string;              // 작업명 (예: "Cushioning Attack")
+  description: {              // 간단 설명 (구조화된 형태)
+    exhibitionType: string;   // 전시 유형 (예: "2인전", "개인전", "그룹전")
+    venue: string;            // 공간 (예: "YPCSpace")
+    year: number;             // 년도 (예: 2023)
+  };
   displayOrder: number;
   workOrders: WorkOrder[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
+
+// 하위 호환성을 위한 별칭 (deprecated)
+export type TextCategory = ExhibitionCategory;
 
 export interface WorkOrder {
   workId: string;
@@ -51,7 +60,6 @@ export interface WorkImage {
   mediumUrl?: string;
   webpUrl?: string;
   order: number;
-  caption?: string;
   width: number;
   height: number;
   fileSize?: number;
@@ -65,8 +73,11 @@ export interface Work {
   fullDescription: string;
   thumbnailImageId: string;
   images: WorkImage[];
+  caption?: string;
   sentenceCategoryIds: string[];
-  textCategoryIds: string[];
+  exhibitionCategoryIds: string[];
+  /** @deprecated Use exhibitionCategoryIds instead */
+  textCategoryIds?: string[];
   isPublished: boolean;
   viewCount?: number;
   createdAt: Date;

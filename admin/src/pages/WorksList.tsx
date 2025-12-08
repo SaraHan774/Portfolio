@@ -16,6 +16,8 @@ import {
   Popconfirm,
   Drawer,
   Avatar,
+  Spin,
+  notification,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -27,10 +29,12 @@ import {
   LockOutlined,
   UnlockOutlined,
   AppstoreOutlined,
+  LoadingOutlined,
+  CheckCircleOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { mockWorks, mockTextCategories, mockSentenceCategories } from '../services/mockData';
+import { useWorks, useUpdateWork, useDeleteWork } from '../hooks/useWorks';
+import { useSentenceCategories, useExhibitionCategories } from '../hooks/useCategories';
 import type { Work } from '../types';
 import './WorksList.css';
 
@@ -46,6 +50,8 @@ const WorksList = () => {
   const [sortBy, setSortBy] = useState<'latest' | 'oldest' | 'title'>('latest');
   const [isMobile, setIsMobile] = useState(false);
   const [batchDrawerOpen, setBatchDrawerOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deletingMessage, setDeletingMessage] = useState('');
 
   // 모바일 여부 확인
   useEffect(() => {
@@ -65,32 +71,33 @@ const WorksList = () => {
     return () => clearTimeout(timer);
   }, [searchText]);
 
-  // 작업 목록 조회
-  const { data: works = [], refetch } = useQuery({
-    queryKey: ['works'],
-    queryFn: async () => mockWorks,
-    staleTime: 5 * 60 * 1000,
-  });
+  // 작업 목록 조회 (Firebase)
+  const { data: works = [], isLoading: isWorksLoading } = useWorks();
 
-  // 카테고리 목록 조회 (필터용)
-  const { data: allCategories = [] } = useQuery({
-    queryKey: ['categories'],
-    queryFn: async () => {
-      const textCats = mockTextCategories.map((cat) => ({
-        id: cat.id,
-        name: cat.name,
-        type: 'text' as const,
-      }));
-      const sentenceCats = mockSentenceCategories.flatMap((sent) =>
-        sent.keywords.map((kw) => ({
-          id: kw.id,
-          name: kw.name,
-          type: 'sentence' as const,
-        }))
-      );
-      return [...textCats, ...sentenceCats];
-    },
-  });
+  // 카테고리 목록 조회 (Firebase)
+  const { data: sentenceCategories = [] } = useSentenceCategories();
+  const { data: exhibitionCategories = [] } = useExhibitionCategories();
+
+  // 필터용 카테고리 목록 생성
+  const allCategories = useMemo(() => {
+    const exhibitionCats = exhibitionCategories.map((cat) => ({
+      id: cat.id,
+      name: cat.title,
+      type: 'exhibition' as const,
+    }));
+    const sentenceCats = sentenceCategories.flatMap((sent) =>
+      sent.keywords.map((kw) => ({
+        id: kw.id,
+        name: kw.name,
+        type: 'sentence' as const,
+      }))
+    );
+    return [...exhibitionCats, ...sentenceCats];
+  }, [exhibitionCategories, sentenceCategories]);
+
+  // Firebase 뮤테이션 훅
+  const updateWorkMutation = useUpdateWork();
+  const deleteWorkMutation = useDeleteWork();
 
   // 필터링 및 정렬된 작업 목록
   const filteredAndSortedWorks = useMemo(() => {
@@ -117,7 +124,7 @@ const WorksList = () => {
     // 카테고리 필터
     if (categoryFilter.length > 0) {
       result = result.filter((work) => {
-        const workCategoryIds = [...work.sentenceCategoryIds, ...work.textCategoryIds];
+        const workCategoryIds = [...work.sentenceCategoryIds, ...work.exhibitionCategoryIds];
         return categoryFilter.some((catId) => workCategoryIds.includes(catId));
       });
     }
@@ -139,59 +146,142 @@ const WorksList = () => {
     return result;
   }, [works, statusFilter, debouncedSearchText, categoryFilter, sortBy]);
 
-  // 공개/비공개 토글 핸들러 (Optimistic Update)
+  // 공개/비공개 토글 핸들러 (Firebase)
   const handleTogglePublish = async (workId: string, checked: boolean) => {
-    // Optimistic Update: 즉시 UI 업데이트
-    const work = works.find((w) => w.id === workId);
-    if (work) {
-      work.isPublished = checked;
-    }
-    
     try {
-      // 실제로는 API 호출
-      // await updateWorkStatus(workId, checked);
-      
-      // 성공 시 토스트 메시지
+      await updateWorkMutation.mutateAsync({
+        id: workId,
+        updates: { isPublished: checked },
+      });
       message.success(`${checked ? '공개' : '비공개'}로 변경되었습니다.`);
-      
-      // 서버 상태 동기화 (실제 구현 시)
-      await refetch();
-    } catch (error) {
-      // 실패 시 롤백
-      if (work) {
-        work.isPublished = !checked;
-      }
+    } catch {
       message.error('상태 변경에 실패했습니다.');
-      await refetch();
     }
   };
 
-  // 작업 삭제 핸들러
-  const handleDelete = async (_workId: string) => {
-    message.success('작업이 삭제되었습니다.');
-    await refetch();
+  // 작업 삭제 핸들러 (Firebase + Storage)
+  const handleDelete = async (workId: string) => {
+    // 삭제할 작업 찾기
+    const workToDelete = works.find((w) => w.id === workId);
+    const imageCount = workToDelete?.images.length || 0;
+
+    setIsDeleting(true);
+    setDeletingMessage(imageCount > 0
+      ? `작업과 이미지 ${imageCount}개를 삭제하는 중...`
+      : '작업을 삭제하는 중...'
+    );
+
+    try {
+      await deleteWorkMutation.mutateAsync(workId);
+
+      setIsDeleting(false);
+      setDeletingMessage('');
+
+      notification.success({
+        message: '삭제 완료',
+        description: imageCount > 0
+          ? `작업과 Storage 이미지 ${imageCount}개가 삭제되었습니다.`
+          : '작업이 삭제되었습니다.',
+        icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
+        placement: 'topRight',
+      });
+    } catch {
+      setIsDeleting(false);
+      setDeletingMessage('');
+
+      notification.error({
+        message: '삭제 실패',
+        description: '작업 삭제에 실패했습니다. 다시 시도해주세요.',
+        placement: 'topRight',
+      });
+    }
   };
 
-  // 일괄 작업 핸들러
+  // 일괄 작업 핸들러 (Firebase)
   const handleBatchAction = async (action: 'publish' | 'unpublish' | 'delete') => {
     if (selectedRowKeys.length === 0) {
       message.warning('선택된 작업이 없습니다.');
       return;
     }
 
-    switch (action) {
-      case 'publish':
-        message.success(`${selectedRowKeys.length}개 작업을 공개로 변경했습니다.`);
-        break;
-      case 'unpublish':
-        message.success(`${selectedRowKeys.length}개 작업을 비공개로 변경했습니다.`);
-        break;
-      case 'delete':
-        message.success(`${selectedRowKeys.length}개 작업을 삭제했습니다.`);
-        break;
+    // 삭제의 경우 이미지 개수 계산
+    const totalImageCount = action === 'delete'
+      ? selectedRowKeys.reduce((count: number, key) => {
+          const work = works.find((w) => w.id === String(key));
+          return count + (work?.images.length || 0);
+        }, 0)
+      : 0;
+
+    if (action === 'delete') {
+      setIsDeleting(true);
+      setDeletingMessage(
+        totalImageCount > 0
+          ? `${selectedRowKeys.length}개 작업과 이미지 ${totalImageCount}개를 삭제하는 중...`
+          : `${selectedRowKeys.length}개 작업을 삭제하는 중...`
+      );
     }
-    setSelectedRowKeys([]);
-    await refetch();
+
+    try {
+      const promises = selectedRowKeys.map((key) => {
+        const id = String(key);
+        switch (action) {
+          case 'publish':
+            return updateWorkMutation.mutateAsync({ id, updates: { isPublished: true } });
+          case 'unpublish':
+            return updateWorkMutation.mutateAsync({ id, updates: { isPublished: false } });
+          case 'delete':
+            return deleteWorkMutation.mutateAsync(id);
+          default:
+            return Promise.resolve();
+        }
+      });
+      await Promise.all(promises);
+
+      if (action === 'delete') {
+        setIsDeleting(false);
+        setDeletingMessage('');
+      }
+
+      switch (action) {
+        case 'publish':
+          notification.success({
+            message: '일괄 공개 완료',
+            description: `${selectedRowKeys.length}개 작업을 공개로 변경했습니다.`,
+            icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
+            placement: 'topRight',
+          });
+          break;
+        case 'unpublish':
+          notification.success({
+            message: '일괄 비공개 완료',
+            description: `${selectedRowKeys.length}개 작업을 비공개로 변경했습니다.`,
+            icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
+            placement: 'topRight',
+          });
+          break;
+        case 'delete':
+          notification.success({
+            message: '일괄 삭제 완료',
+            description: totalImageCount > 0
+              ? `${selectedRowKeys.length}개 작업과 Storage 이미지 ${totalImageCount}개가 삭제되었습니다.`
+              : `${selectedRowKeys.length}개 작업이 삭제되었습니다.`,
+            icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
+            placement: 'topRight',
+          });
+          break;
+      }
+      setSelectedRowKeys([]);
+    } catch {
+      if (action === 'delete') {
+        setIsDeleting(false);
+        setDeletingMessage('');
+      }
+      notification.error({
+        message: '일괄 작업 실패',
+        description: '일괄 작업에 실패했습니다. 다시 시도해주세요.',
+        placement: 'topRight',
+      });
+    }
   };
 
   // 테이블 컬럼 정의
@@ -231,20 +321,20 @@ const WorksList = () => {
     },
     {
       title: '카테고리',
-      dataIndex: 'textCategoryIds',
+      dataIndex: 'exhibitionCategoryIds',
       key: 'categories',
       width: 200,
       render: (_, record) => {
         const categories = [
           ...record.sentenceCategoryIds.map((id) => {
-            const keyword = mockSentenceCategories
+            const keyword = sentenceCategories
               .flatMap((s) => s.keywords)
               .find((k) => k.id === id);
             return keyword?.name || '';
           }),
-          ...record.textCategoryIds.map((id) => {
-            const cat = mockTextCategories.find((c) => c.id === id);
-            return cat?.name || '';
+          ...record.exhibitionCategoryIds.map((id) => {
+            const cat = exhibitionCategories.find((c) => c.id === id);
+            return cat?.title || '';
           }),
         ].filter(Boolean);
 
@@ -318,8 +408,44 @@ const WorksList = () => {
     },
   };
 
+  // 로딩 상태
+  if (isWorksLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <Spin size="large" tip="작업 목록을 불러오는 중..." />
+      </div>
+    );
+  }
+
   return (
     <div className="works-list">
+      {/* 삭제 중 로딩 오버레이 */}
+      {isDeleting && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(255, 255, 255, 0.9)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <Spin indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} size="large" />
+          <div style={{ marginTop: '24px', fontSize: '18px', color: '#ff4d4f', fontWeight: 500 }}>
+            {deletingMessage}
+          </div>
+          <div style={{ marginTop: '8px', fontSize: '14px', color: '#8c8c8c' }}>
+            Storage 이미지도 함께 삭제됩니다...
+          </div>
+        </div>
+      )}
+
       <Title level={2}><AppstoreOutlined /> 작업 관리</Title>
 
       {/* 툴바 */}
@@ -488,14 +614,14 @@ const WorksList = () => {
             const thumbnailImage = work.images.find((img) => img.id === work.thumbnailImageId);
             const categories = [
               ...work.sentenceCategoryIds.map((id) => {
-                const keyword = mockSentenceCategories
+                const keyword = sentenceCategories
                   .flatMap((s) => s.keywords)
                   .find((k) => k.id === id);
                 return keyword?.name || '';
               }),
-              ...work.textCategoryIds.map((id) => {
-                const cat = mockTextCategories.find((c) => c.id === id);
-                return cat?.name || '';
+              ...work.exhibitionCategoryIds.map((id) => {
+                const cat = exhibitionCategories.find((c) => c.id === id);
+                return cat?.title || '';
               }),
             ].filter(Boolean);
 

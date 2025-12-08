@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "npm run build && firebase deploy --only hosting",
+    "deploy:preview": "npm run build && firebase hosting:channel:deploy preview"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
@@ -19,9 +21,11 @@
     "@tiptap/starter-kit": "^3.10.1",
     "antd": "^5.28.0",
     "dayjs": "^1.11.19",
+    "firebase": "^12.6.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.5",
+    "uuid": "^13.0.0",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
@@ -29,6 +33,7 @@
     "@types/node": "^24.6.0",
     "@types/react": "^19.1.16",
     "@types/react-dom": "^19.1.9",
+    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^5.0.4",
     "eslint": "^9.36.0",
     "eslint-plugin-react-hooks": "^5.2.0",
