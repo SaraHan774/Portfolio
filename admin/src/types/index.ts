@@ -69,6 +69,7 @@ export interface WorkImage {
 export interface Work {
   id: string;
   title: string;
+  year?: number;  // 작품 제작 년도
   shortDescription?: string;
   fullDescription: string;
   thumbnailImageId: string;

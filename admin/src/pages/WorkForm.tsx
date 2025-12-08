@@ -102,6 +102,7 @@ const WorkForm = () => {
     if (work && isEditMode) {
       form.setFieldsValue({
         title: work.title,
+        year: work.year,
         shortDescription: work.shortDescription,
         fullDescription: work.fullDescription,
       });
@@ -147,6 +148,7 @@ const WorkForm = () => {
 
       const workData = {
         title: formValues.title,
+        year: formValues.year ? Number(formValues.year) : undefined,
         shortDescription: formValues.shortDescription || '',
         fullDescription: formValues.fullDescription,
         images,
@@ -217,6 +219,7 @@ const WorkForm = () => {
 
       const workData = {
         title: formValues.title,
+        year: formValues.year ? Number(formValues.year) : undefined,
         shortDescription: formValues.shortDescription || '',
         fullDescription: formValues.fullDescription || '',
         images,
@@ -340,16 +343,38 @@ const WorkForm = () => {
         </>
       ),
       children: (
-        <Form.Item
-          name="title"
-          label="제목"
-          rules={[
-            { required: true, message: '제목을 입력해주세요.' },
-            { max: 100, message: '제목은 100자 이하로 입력해주세요.' },
-          ]}
-        >
-          <Input placeholder="작업 제목을 입력하세요" maxLength={100} showCount />
-        </Form.Item>
+        <>
+          <Form.Item
+            name="title"
+            label="제목"
+            rules={[
+              { required: true, message: '제목을 입력해주세요.' },
+              { max: 100, message: '제목은 100자 이하로 입력해주세요.' },
+            ]}
+          >
+            <Input placeholder="작업 제목을 입력하세요" maxLength={100} showCount />
+          </Form.Item>
+          <Form.Item
+            name="year"
+            label="제작 년도"
+            rules={[
+              {
+                validator: (_, value) => {
+                  if (value && (value < 1900 || value > new Date().getFullYear() + 1)) {
+                    return Promise.reject(new Error('유효한 년도를 입력해주세요.'));
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
+          >
+            <Input
+              type="number"
+              placeholder={`예: ${new Date().getFullYear()}`}
+              style={{ width: '150px' }}
+            />
+          </Form.Item>
+        </>
       ),
     },
     {
@@ -510,6 +535,27 @@ const WorkForm = () => {
         ]}
       >
         <Input placeholder="작업 제목을 입력하세요" maxLength={100} showCount />
+      </Form.Item>
+
+      <Form.Item
+        name="year"
+        label="제작 년도"
+        rules={[
+          {
+            validator: (_, value) => {
+              if (value && (value < 1900 || value > new Date().getFullYear() + 1)) {
+                return Promise.reject(new Error('유효한 년도를 입력해주세요.'));
+              }
+              return Promise.resolve();
+            },
+          },
+        ]}
+      >
+        <Input
+          type="number"
+          placeholder={`예: ${new Date().getFullYear()}`}
+          style={{ width: '150px' }}
+        />
       </Form.Item>
 
       <Form.Item
@@ -817,9 +863,14 @@ const WorkForm = () => {
         width={800}
       >
         <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-          {/* 제목 */}
+          {/* 제목 및 년도 */}
           <Typography.Title level={3}>
             {form.getFieldValue('title') || '(제목 없음)'}
+            {form.getFieldValue('year') && (
+              <span style={{ fontWeight: 'normal', fontSize: '18px', color: '#8c8c8c', marginLeft: '12px' }}>
+                ({form.getFieldValue('year')})
+              </span>
+            )}
           </Typography.Title>
 
           {/* 게시 상태 */}
