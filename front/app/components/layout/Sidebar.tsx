@@ -3,7 +3,7 @@
 import SentenceCategory from '@/app/components/category/SentenceCategory';
 import TextCategory from '@/app/components/category/TextCategory';
 import type { SentenceCategory as SentenceCategoryType, ExhibitionCategory, Work } from '@/types';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 
@@ -39,6 +39,28 @@ function WorkTitleButton({
         position: 'relative',
       }}
     >
+      {/* 점 공간 - 항상 동일한 높이 차지 (들썩임 방지) */}
+      <span
+        style={{
+          display: 'block',
+          textAlign: 'center',
+          fontSize: '14px',
+          lineHeight: 1,
+          height: '14px',
+          marginBottom: '-2px',
+        }}
+      >
+        <motion.span
+          initial={{ opacity: 0 }}
+          animate={{ opacity: isSelected ? 1 : 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut', delay: isSelected ? 0.4 : 0 }}
+          style={{
+            color: 'var(--dot-color)',
+          }}
+        >
+          ˙
+        </motion.span>
+      </span>
       {/* 제목: 「'작품명'」 */}
       <span
         style={{
@@ -46,31 +68,12 @@ function WorkTitleButton({
           fontSize: '12px',
           color: 'var(--color-text-primary)',
           textAlign: 'center',
-          position: 'relative',
           whiteSpace: 'nowrap',
           transition: 'font-weight 0.2s ease-out',
           marginBottom: showThumbnail ? '4px' : '0',
         }}
       >
         {`「'${work.title}'」`}
-        {isSelected && (
-          <motion.span
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3, ease: 'easeOut', delay: 0.4 }}
-            style={{
-              position: 'absolute',
-              top: 'var(--dot-offset-top)',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              fontSize: '14px',
-              color: 'var(--dot-color)',
-              lineHeight: 1,
-            }}
-          >
-            ˙
-          </motion.span>
-        )}
       </span>
 
       {/* 년도 */}
@@ -110,6 +113,156 @@ function WorkTitleButton({
         </div>
       )}
     </button>
+  );
+}
+
+// 가로 스크롤 작업 목록 컴포넌트
+function WorkListScroller({
+  works,
+  selectedWorkId,
+  onWorkSelect,
+  showThumbnail,
+  direction = 'ltr',
+}: {
+  works: Work[];
+  selectedWorkId: string | null;
+  onWorkSelect: (workId: string) => void;
+  showThumbnail: boolean;
+  direction?: 'ltr' | 'rtl';
+}) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+
+  const checkScrollButtons = () => {
+    if (!scrollContainerRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+    const hasOverflow = scrollWidth > clientWidth;
+
+    if (!hasOverflow) {
+      setShowLeftArrow(false);
+      setShowRightArrow(false);
+      return;
+    }
+
+    // RTL 방향일 때는 스크롤 방향이 반대
+    if (direction === 'rtl') {
+      // RTL에서 scrollLeft는 0에서 시작하여 음수로 감소
+      setShowRightArrow(scrollLeft < 0);
+      setShowLeftArrow(scrollLeft > -(scrollWidth - clientWidth) + 1);
+    } else {
+      setShowLeftArrow(scrollLeft > 1);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 1);
+    }
+  };
+
+  useEffect(() => {
+    checkScrollButtons();
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', checkScrollButtons);
+      window.addEventListener('resize', checkScrollButtons);
+      return () => {
+        container.removeEventListener('scroll', checkScrollButtons);
+        window.removeEventListener('resize', checkScrollButtons);
+      };
+    }
+  }, [works, direction]);
+
+  const scroll = (dir: 'left' | 'right') => {
+    if (!scrollContainerRef.current) return;
+    const scrollAmount = 200;
+    const currentScroll = scrollContainerRef.current.scrollLeft;
+    const newScroll = dir === 'left'
+      ? currentScroll - scrollAmount
+      : currentScroll + scrollAmount;
+    scrollContainerRef.current.scrollTo({
+      left: newScroll,
+      behavior: 'smooth',
+    });
+  };
+
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      {/* 좌측 화살표 */}
+      {showLeftArrow && (
+        <button
+          onClick={() => scroll('left')}
+          style={{
+            position: 'absolute',
+            left: '-24px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            background: 'var(--color-white)',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px',
+            zIndex: 10,
+            fontSize: '16px',
+            color: 'var(--color-text-primary)',
+            opacity: 0.7,
+            transition: 'opacity 0.2s ease',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
+          aria-label="왼쪽으로 스크롤"
+        >
+          ←
+        </button>
+      )}
+
+      {/* 스크롤 컨테이너 */}
+      <div
+        ref={scrollContainerRef}
+        style={{
+          display: 'flex',
+          flexDirection: direction === 'rtl' ? 'row-reverse' : 'row',
+          gap: showThumbnail ? '32px' : 'var(--space-2)',
+          alignItems: 'flex-start',
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          paddingBottom: '4px',
+        }}
+      >
+        {works.map((w) => (
+          <WorkTitleButton
+            key={w.id}
+            work={w}
+            isSelected={selectedWorkId === w.id}
+            onClick={() => onWorkSelect(w.id)}
+            showThumbnail={showThumbnail}
+          />
+        ))}
+      </div>
+
+      {/* 우측 화살표 */}
+      {showRightArrow && (
+        <button
+          onClick={() => scroll('right')}
+          style={{
+            position: 'absolute',
+            right: '-24px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            background: 'var(--color-white)',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px',
+            zIndex: 10,
+            fontSize: '16px',
+            color: 'var(--color-text-primary)',
+            opacity: 0.7,
+            transition: 'opacity 0.2s ease',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
+          aria-label="오른쪽으로 스크롤"
+        >
+          →
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -192,7 +345,7 @@ export default function Sidebar({
           );
         })}
 
-        {/* 문장형 카테고리 선택 시: 작업 목록 좌측 정렬 (좌 → 우) */}
+        {/* 문장형 카테고리 선택 시: 작업 목록 가로 스크롤 (좌 → 우) */}
         {showWorkList && isLeftAligned && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -200,22 +353,15 @@ export default function Sidebar({
             transition={{ duration: 0.3, ease: 'easeOut' }}
             style={{
               marginTop: 'var(--space-4)',
-              display: 'flex',
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: showThumbnail ? '32px' : 'var(--space-2)', // 썸네일 표시 시 32px 간격
-              alignItems: 'flex-start',
             }}
           >
-            {works.map((w) => (
-              <WorkTitleButton
-                key={w.id}
-                work={w}
-                isSelected={selectedWorkId === w.id}
-                onClick={() => onWorkSelect(w.id)}
-                showThumbnail={showThumbnail}
-              />
-            ))}
+            <WorkListScroller
+              works={works}
+              selectedWorkId={selectedWorkId}
+              onWorkSelect={onWorkSelect}
+              showThumbnail={showThumbnail}
+              direction="ltr"
+            />
           </motion.div>
         )}
       </div>
@@ -252,7 +398,7 @@ export default function Sidebar({
           );
         })}
 
-        {/* 전시명 카테고리 선택 시: 작업 목록 우측 정렬 (우 → 좌) */}
+        {/* 전시명 카테고리 선택 시: 작업 목록 가로 스크롤 (우 → 좌) */}
         {showWorkList && isRightAligned && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -260,23 +406,15 @@ export default function Sidebar({
             transition={{ duration: 0.3, ease: 'easeOut' }}
             style={{
               marginTop: 'var(--space-4)',
-              display: 'flex',
-              flexDirection: 'row-reverse', // 우 → 좌 방향
-              flexWrap: 'wrap-reverse',
-              gap: showThumbnail ? '32px' : 'var(--space-2)', // 썸네일 표시 시 32px 간격
-              alignItems: 'flex-start',
-              justifyContent: 'flex-start',
             }}
           >
-            {works.map((w) => (
-              <WorkTitleButton
-                key={w.id}
-                work={w}
-                isSelected={selectedWorkId === w.id}
-                onClick={() => onWorkSelect(w.id)}
-                showThumbnail={showThumbnail}
-              />
-            ))}
+            <WorkListScroller
+              works={works}
+              selectedWorkId={selectedWorkId}
+              onWorkSelect={onWorkSelect}
+              showThumbnail={showThumbnail}
+              direction="rtl"
+            />
           </motion.div>
         )}
       </div>

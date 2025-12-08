@@ -124,29 +124,35 @@ export default function TextCategory({
         }
       }}
       onMouseLeave={() => onHover(null)}
-      style={categoryStyle}
+      style={{
+        ...categoryStyle,
+        display: 'inline-block',
+      }}
     >
-      <span style={{ display: 'block' }}>{displayTitle}</span>
-      <span style={{ display: 'block', fontSize: 'var(--font-size-sm)' }}>{displayDescription}</span>
-      {/* 선택 시 점(˙) 표시 - 문장형 카테고리와 동일하게 */}
-      {isSelected && (
+      {/* 점 공간 - 항상 동일한 높이 차지 (들썩임 방지) */}
+      <span
+        style={{
+          display: 'block',
+          textAlign: 'center',
+          fontSize: '14px',
+          lineHeight: 1,
+          height: '14px',
+          marginBottom: '-4px',
+        }}
+      >
         <motion.span
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, ease: 'easeOut', delay: 0.4 }}
+          animate={{ opacity: isSelected ? 1 : 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut', delay: isSelected ? 0.4 : 0 }}
           style={{
-            position: 'absolute',
-            top: 'var(--dot-offset-top)', // -8px (글자 정중앙 위)
-            left: '50%',
-            transform: 'translateX(-50%)',
-            fontSize: '14px',
             color: 'var(--dot-color)',
-            lineHeight: 1,
           }}
         >
           ˙
         </motion.span>
-      )}
+      </span>
+      <span style={{ display: 'block' }}>{displayTitle}</span>
+      <span style={{ display: 'block', fontSize: 'var(--font-size-sm)' }}>{displayDescription}</span>
     </span>
   );
 }
