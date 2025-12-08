@@ -80,9 +80,9 @@
   --dot-color: var(--color-black);
 
   /* 카테고리 상태별 색상 */
-  --color-category-basic: var(--color-gray-400);        /* 기본 상태, 클릭 불가 */
-  --color-category-clickable: var(--color-gray-600);     /* 클릭 가능한 카테고리 */
-  --color-category-disabled: var(--color-gray-800);      /* 현재 작업에 포함되지 않는 카테고리 */
+  --color-category-basic: #B3B3B3;                       /* 기본 상태, 클릭 불가 - 검정보다 30% 옅은 회색 */
+  --color-category-clickable: var(--color-black);        /* 클릭 가능한 카테고리 - 완전 검정 */
+  --color-category-disabled: #B3B3B3;                    /* 현재 작업에 포함되지 않는 카테고리 - 검정보다 30% 옅은 회색 */
   --color-category-hover-stroke: var(--color-black);     /* hover 시 획(stroke) 색상 */
 
   /* 브레이크포인트 */
@@ -132,6 +132,11 @@ a {
 
 a:hover {
   opacity: 0.7;
+}
+
+/* 캡션 내 작품 링크는 hover 효과 없음 */
+a[data-work-id]:hover {
+  opacity: 1;
 }
 
 /* 이미지 기본 스타일 */

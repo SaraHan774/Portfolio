@@ -26,7 +26,14 @@ function WorkModal({
   const [modalWork, setModalWork] = useState<Work | null>(null);
   const [modalCurrentImageId, setModalCurrentImageId] = useState<string | null>(null);
   const modalImageScrollContainerRef = useRef<HTMLDivElement>(null);
-  const [showModalImageScrollButton, setShowModalImageScrollButton] = useState(false);
+
+  // 모달 열릴 때 배경 스크롤 방지
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
 
   // 모달 작업 데이터 로드
   useEffect(() => {
@@ -37,62 +44,77 @@ function WorkModal({
         const firstImage = work.images.sort((a, b) => a.order - b.order)[0];
         setModalCurrentImageId(firstImage.id);
       }
+      // 스크롤 초기화 (다른 작품으로 이동 시)
+      if (modalImageScrollContainerRef.current) {
+        modalImageScrollContainerRef.current.scrollTop = 0;
+      }
     };
     loadModalWork();
   }, [workId]);
 
-  // 모달 이미지 스크롤 버튼 체크
-  const checkModalImageScrollButton = () => {
-    if (!modalImageScrollContainerRef.current) return;
-    const container = modalImageScrollContainerRef.current;
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    const needsScroll = scrollHeight > clientHeight;
-    const isAtTop = scrollTop < 10;
-    setShowModalImageScrollButton(needsScroll && !isAtTop);
-  };
-
-  useEffect(() => {
-    if (modalImageScrollContainerRef.current) {
-      checkModalImageScrollButton(); // eslint-disable-line react-hooks/set-state-in-effect
-      const container = modalImageScrollContainerRef.current;
-      container.addEventListener('scroll', checkModalImageScrollButton);
-      const resizeObserver = new ResizeObserver(checkModalImageScrollButton);
-      resizeObserver.observe(container);
-      return () => {
-        container.removeEventListener('scroll', checkModalImageScrollButton);
-        resizeObserver.disconnect();
-      };
-    }
-  }, [modalWork]);
-
-  // 모달 내 이미지 Intersection Observer
+  // 모달 내 이미지 Intersection Observer + 스크롤 끝 감지
   useEffect(() => {
     if (!modalWork || !modalCurrentImageId || !modalImageScrollContainerRef.current) return;
 
     const container = modalImageScrollContainerRef.current;
     const imageElements = container.querySelectorAll('[data-image-id]');
+    const sortedImages = modalWork.images.sort((a, b) => a.order - b.order);
+    let lastTrackedImageId: string | null = null;
+
+    // 스크롤 끝 감지 및 이미지 위치 기반 활성화
+    const updateCurrentImage = () => {
+      const scrollTop = container.scrollTop;
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 30; // 30px 여유
+
+      // 맨 끝에 도달하면 마지막 이미지 활성화
+      if (isAtBottom && sortedImages.length > 0) {
+        const lastImage = sortedImages[sortedImages.length - 1];
+        if (lastImage.id !== lastTrackedImageId) {
+          lastTrackedImageId = lastImage.id;
+          setModalCurrentImageId(lastImage.id);
+        }
+        return;
+      }
+
+      // 화면 중앙에 가장 가까운 이미지 찾기
+      const allImages = Array.from(container.querySelectorAll('[data-image-id]')) as HTMLElement[];
+      let bestImage: HTMLElement | null = null;
+      let bestScore = -Infinity;
+      const containerRect = container.getBoundingClientRect();
+      const containerCenter = containerRect.top + containerRect.height / 2;
+
+      allImages.forEach((img) => {
+        const rect = img.getBoundingClientRect();
+        const imageCenter = rect.top + rect.height / 2;
+
+        // 컨테이너 내에 보이는지 확인
+        const isVisible = rect.bottom > containerRect.top && rect.top < containerRect.bottom;
+
+        if (isVisible) {
+          const distanceFromCenter = Math.abs(imageCenter - containerCenter);
+          const score = 1000 - distanceFromCenter;
+
+          if (score > bestScore) {
+            bestScore = score;
+            bestImage = img as HTMLElement;
+          }
+        }
+      });
+
+      if (bestImage) {
+        const imageId = bestImage.getAttribute('data-image-id');
+        if (imageId && imageId !== lastTrackedImageId) {
+          lastTrackedImageId = imageId;
+          setModalCurrentImageId(imageId);
+        }
+      }
+    };
+
     const observer = new IntersectionObserver(
-      (entries: IntersectionObserverEntry[]) => {
-        let topMostEntry: IntersectionObserverEntry | null = null;
-        let topMostRatio = 0;
-
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            const rect = entry.boundingClientRect;
-            if (rect.top < window.innerHeight * 0.4 && entry.intersectionRatio > topMostRatio) {
-              topMostEntry = entry;
-              topMostRatio = entry.intersectionRatio;
-            }
-          }
-        }
-
-        if (topMostEntry) {
-          const target = topMostEntry.target as HTMLElement;
-          const imageId = target.getAttribute('data-image-id');
-          if (imageId) {
-            setModalCurrentImageId(imageId);
-          }
-        }
+      () => {
+        updateCurrentImage();
       },
       {
         root: modalImageScrollContainerRef.current,
@@ -103,16 +125,17 @@ function WorkModal({
 
     imageElements.forEach((el) => observer.observe(el));
 
+    // 스크롤 이벤트로도 체크 (맨 끝 도달 감지용)
+    const handleScroll = () => {
+      updateCurrentImage();
+    };
+    container.addEventListener('scroll', handleScroll, { passive: true });
+
     return () => {
       imageElements.forEach((el) => observer.unobserve(el));
+      container.removeEventListener('scroll', handleScroll);
     };
   }, [modalWork, modalCurrentImageId]);
-
-  const scrollModalImagesToTop = () => {
-    if (modalImageScrollContainerRef.current) {
-      modalImageScrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
 
   // 모달 내 링크 클릭 이벤트 처리
   useEffect(() => {
@@ -232,115 +255,198 @@ function WorkModal({
           ×
         </button>
 
-        {/* 모달 내용 - 기존 상세 페이지와 동일한 구조 */}
+        {/* 상단: 작품명 */}
+        <div
+          style={{
+            padding: 'var(--space-6)',
+            paddingBottom: 'var(--space-4)',
+          }}
+        >
+          <h2
+            style={{
+              fontSize: 'var(--font-size-lg)',
+              fontWeight: 'var(--font-weight-bold)',
+              color: 'var(--color-text-primary)',
+              margin: 0,
+              textAlign: 'center',
+            }}
+          >
+            {`「'${modalWork.title}'」`}
+            {modalWork.year && (
+              <span
+                style={{
+                  fontWeight: 'var(--font-weight-normal)',
+                  color: 'var(--color-text-secondary)',
+                  marginLeft: '8px',
+                }}
+              >
+                {modalWork.year}
+              </span>
+            )}
+          </h2>
+        </div>
+
+        {/* 본문: 스크롤 영역 + 고정 캡션 */}
         <div
           style={{
             display: 'flex',
-            gap: 'var(--space-6)',
-            padding: 'var(--space-6)',
+            flex: 1,
             overflow: 'hidden',
             position: 'relative',
-            flex: 1,
           }}
         >
-          {/* 좌측: 스크롤 버튼 */}
-          {showModalImageScrollButton && (
-            <button
-              onClick={scrollModalImagesToTop}
-              style={{
-                position: 'absolute',
-                left: 'var(--space-6)',
-                top: 'var(--space-6)',
-                zIndex: 10,
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 'var(--space-2)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '4px',
-                color: 'var(--color-text-primary)',
-                opacity: 0.7,
-                transition: 'opacity 0.2s ease',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '2px',
-                  fontSize: '8px',
-                  lineHeight: 1,
-                }}
-              >
-                <span>·</span>
-                <span>·</span>
-                <span>·</span>
-              </div>
-              <span style={{ fontSize: '12px', lineHeight: 1 }}>↑</span>
-            </button>
-          )}
-
-          {/* 좌측: 이미지들 (세로 스크롤 가능) */}
+          {/* 좌측: 타임라인 + 이미지 영역 */}
           <div
-            ref={modalImageScrollContainerRef}
-            className="image-scroll-container"
             style={{
-              flex: 1,
-              maxHeight: 'calc(90vh - 120px)',
-              overflowY: 'auto',
-              paddingRight: 'var(--space-2)',
-              scrollbarWidth: 'none',
-              scrollbarColor: 'transparent transparent',
+              width: '65%',
+              display: 'flex',
+              position: 'relative',
             }}
           >
-            {modalWork.images
-              .sort((a, b) => a.order - b.order)
-              .map((image) => (
-                <div
-                  key={image.id}
-                  data-image-id={image.id}
-                  style={{
-                    marginBottom: 'var(--space-10)',
-                    position: 'relative',
-                    width: '100%',
-                  }}
-                >
-                  <Image
-                    src={image.url}
-                    alt={modalWork.title}
-                    width={image.width}
-                    height={image.height}
-                    style={{
-                      width: '100%',
-                      height: 'auto',
-                      borderRadius: '4px',
-                    }}
-                  />
-                </div>
-              ))}
-          </div>
+            {/* 타임라인 UI - 이미지가 2개 이상일 때만 표시 */}
+            {modalWork.images.length > 1 && (
+              <div
+                style={{
+                  position: 'sticky',
+                  top: 'var(--space-6)',
+                  height: 'fit-content',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  paddingLeft: 'var(--space-4)',
+                  paddingRight: 'var(--space-2)',
+                  zIndex: 10,
+                }}
+              >
+                {(() => {
+                  const sortedImages = modalWork.images.sort((a, b) => a.order - b.order);
+                  const activeIndex = sortedImages.findIndex(img => img.id === modalCurrentImageId);
 
-          {/* 우측: 캡션 (고정 배치) */}
-          {modalWork.caption && (
+                  return sortedImages.map((image, index) => {
+                    const isActive = modalCurrentImageId === image.id;
+                    const isLast = index === sortedImages.length - 1;
+
+                    const getLineHeight = () => {
+                      if (index === activeIndex) return '80px';
+                      else if (index === activeIndex - 1) return '50px';
+                      else return '25px';
+                    };
+
+                    return (
+                      <div key={image.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <button
+                          onClick={() => {
+                            const element = modalImageScrollContainerRef.current?.querySelector(`[data-image-id="${image.id}"]`);
+                            if (element) {
+                              element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                          }}
+                          style={{
+                            width: isActive ? '8px' : '5px',
+                            height: isActive ? '8px' : '5px',
+                            borderRadius: '50%',
+                            backgroundColor: isActive ? 'var(--color-text-primary)' : 'var(--color-gray-400)',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                            padding: 0,
+                          }}
+                          aria-label={`이미지 ${index + 1}로 이동`}
+                        />
+                        {!isLast && (
+                          <div
+                            style={{
+                              width: '1px',
+                              height: getLineHeight(),
+                              backgroundImage: 'linear-gradient(var(--color-gray-300) 50%, transparent 50%)',
+                              backgroundSize: '1px 5px',
+                              backgroundRepeat: 'repeat-y',
+                              margin: '5px 0',
+                              transition: 'height 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                            }}
+                          />
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            )}
+
+            {/* 이미지 스크롤 영역 */}
             <div
-              className="work-caption"
+              ref={modalImageScrollContainerRef}
+              className="image-scroll-container"
               style={{
-                flexShrink: 0,
-                width: '200px',
-                position: 'sticky',
-                top: 'var(--space-6)',
-                alignSelf: 'flex-start',
-                maxHeight: 'calc(90vh - 120px)',
-                marginBottom: 'var(--space-2)',
+                flex: 1,
+                height: 'calc(90vh - 100px)',
+                overflowY: 'auto',
+                padding: 'var(--space-6)',
+                paddingLeft: modalWork.images.length > 1 ? 'var(--space-2)' : 'var(--space-6)',
+                scrollbarWidth: 'none',
+                scrollbarColor: 'transparent transparent',
               }}
             >
-              {renderCaption(modalWork.caption, `modal-${modalWork.id}`, true)}
+              {modalWork.images
+                .sort((a, b) => a.order - b.order)
+                .map((image, index) => (
+                  <div
+                    key={image.id}
+                    data-image-id={image.id}
+                    style={{
+                      marginBottom: index === modalWork.images.length - 1 ? 0 : 'var(--space-8)',
+                      position: 'relative',
+                      width: '100%',
+                    }}
+                  >
+                    <Image
+                      src={image.url}
+                      alt={modalWork.title}
+                      width={image.width}
+                      height={image.height}
+                      style={{
+                        width: '100%',
+                        height: 'auto',
+                        borderRadius: '4px',
+                      }}
+                    />
+                  </div>
+                ))}
             </div>
-          )}
+          </div>
+
+          {/* 우측: 캡션 (고정, 정중앙) */}
+          <div
+            style={{
+              width: '35%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 'var(--space-6)',
+              position: 'sticky',
+              top: 0,
+              alignSelf: 'flex-start',
+              height: 'calc(90vh - 100px)',
+            }}
+            onWheel={(e) => {
+              // 캡션 영역에서 스크롤 시 이미지 영역으로 전달
+              if (modalImageScrollContainerRef.current) {
+                modalImageScrollContainerRef.current.scrollTop += e.deltaY;
+              }
+            }}
+          >
+            {modalWork.caption && (
+              <div
+                className="work-caption"
+                data-is-modal="true"
+                style={{
+                  maxWidth: '280px',
+                }}
+              >
+                {renderCaption(modalWork.caption, `modal-${modalWork.id}`, true)}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -395,57 +501,91 @@ export default function WorkDetailPage() {
     };
   }, [hoveredWorkId]);
 
-  // 위키피디아 스타일: 마우스가 Floating Window나 링크의 안전 마진 밖으로 너무 멀리 이동하면 사라짐
+  // 마우스가 링크나 FloatingWindow 밖으로 나가면 사라짐
+  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInSafeZoneRef = useRef<boolean>(true);
+
   useEffect(() => {
-    if (!hoveredWorkId) return;
+    if (!hoveredWorkId) {
+      isInSafeZoneRef.current = true;
+      return;
+    }
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const mouseX = e.clientX;
-      const mouseY = e.clientY;
-      const SAFE_MARGIN = 50;
+    const checkSafeZone = (mouseX: number, mouseY: number): boolean => {
+      const SAFE_MARGIN = 20;
 
-      const links = document.querySelectorAll(`a[data-work-id="${hoveredWorkId}"]`);
-      let isWithinSafeZone = false;
+      // 링크 영역 체크
+      const links = document.querySelectorAll(`a[data-work-id="${hoveredWorkIdRef.current}"]`);
+      let linkBottom = 0;
+      let linkLeft = Infinity;
+      let linkRight = 0;
 
-      links.forEach((link) => {
+      for (const link of links) {
         const rect = link.getBoundingClientRect();
-        const safeLeft = rect.left - SAFE_MARGIN;
-        const safeRight = rect.right + SAFE_MARGIN;
-        const safeTop = rect.top - SAFE_MARGIN;
-        const safeBottom = rect.bottom + SAFE_MARGIN;
+        linkBottom = Math.max(linkBottom, rect.bottom);
+        linkLeft = Math.min(linkLeft, rect.left);
+        linkRight = Math.max(linkRight, rect.right);
 
-        if (mouseX >= safeLeft && mouseX <= safeRight &&
-            mouseY >= safeTop && mouseY <= safeBottom) {
-          isWithinSafeZone = true;
-        }
-      });
-
-      const actualFloatingWindow = document.querySelector('[data-floating-window="true"]');
-      if (actualFloatingWindow) {
-        const rect = actualFloatingWindow.getBoundingClientRect();
-        const safeLeft = rect.left - SAFE_MARGIN;
-        const safeRight = rect.right + SAFE_MARGIN;
-        const safeTop = rect.top - SAFE_MARGIN;
-        const safeBottom = rect.bottom + SAFE_MARGIN;
-
-        if (mouseX >= safeLeft && mouseX <= safeRight &&
-            mouseY >= safeTop && mouseY <= safeBottom) {
-          isWithinSafeZone = true;
+        if (mouseX >= rect.left - SAFE_MARGIN && mouseX <= rect.right + SAFE_MARGIN &&
+            mouseY >= rect.top - SAFE_MARGIN && mouseY <= rect.bottom + SAFE_MARGIN) {
+          return true;
         }
       }
 
-      if (!isWithinSafeZone) {
-        if (linkLeaveTimeoutRef.current) {
-          clearTimeout(linkLeaveTimeoutRef.current);
-          linkLeaveTimeoutRef.current = null;
+      // FloatingWindow 영역 체크
+      const floatingWindow = document.querySelector('[data-floating-window="true"]');
+      if (floatingWindow) {
+        const rect = floatingWindow.getBoundingClientRect();
+        if (mouseX >= rect.left - SAFE_MARGIN && mouseX <= rect.right + SAFE_MARGIN &&
+            mouseY >= rect.top - SAFE_MARGIN && mouseY <= rect.bottom + SAFE_MARGIN) {
+          return true;
         }
-        setHoveredWorkId(null);
+
+        // 링크와 FloatingWindow 사이 연결 영역 (세로)
+        if (mouseY >= linkBottom - SAFE_MARGIN && mouseY <= rect.top + SAFE_MARGIN &&
+            mouseX >= Math.min(linkLeft, rect.left) - SAFE_MARGIN &&
+            mouseX <= Math.max(linkRight, rect.right) + SAFE_MARGIN) {
+          return true;
+        }
+      } else if (linkBottom > 0) {
+        // FloatingWindow 로딩 중일 때 링크 아래 영역 허용
+        if (mouseY >= linkBottom - SAFE_MARGIN && mouseY <= linkBottom + 180 &&
+            mouseX >= linkLeft - 100 && mouseX <= linkRight + 100) {
+          return true;
+        }
+      }
+
+      return false;
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const isInSafeZone = checkSafeZone(e.clientX, e.clientY);
+
+      if (isInSafeZone) {
+        isInSafeZoneRef.current = true;
+        if (hideTimeoutRef.current) {
+          clearTimeout(hideTimeoutRef.current);
+          hideTimeoutRef.current = null;
+        }
+      } else if (isInSafeZoneRef.current) {
+        // 안전 영역에서 처음 벗어날 때만 타이머 시작
+        isInSafeZoneRef.current = false;
+        if (!hideTimeoutRef.current) {
+          hideTimeoutRef.current = setTimeout(() => {
+            setHoveredWorkId(null);
+            hideTimeoutRef.current = null;
+          }, 200);
+        }
       }
     };
 
     document.addEventListener('mousemove', handleMouseMove);
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+        hideTimeoutRef.current = null;
+      }
     };
   }, [hoveredWorkId]);
 
@@ -627,47 +767,42 @@ export default function WorkDetailPage() {
       if (link) {
         const linkWorkId = link.getAttribute('data-work-id');
         if (linkWorkId) {
+          // 모든 관련 타이머 정리
           if (hoverLinkTimeoutRef.current) {
             clearTimeout(hoverLinkTimeoutRef.current);
             hoverLinkTimeoutRef.current = null;
           }
-
           if (linkLeaveTimeoutRef.current) {
             clearTimeout(linkLeaveTimeoutRef.current);
             linkLeaveTimeoutRef.current = null;
           }
+          if (hideTimeoutRef.current) {
+            clearTimeout(hideTimeoutRef.current);
+            hideTimeoutRef.current = null;
+          }
 
           hoverLinkTimeoutRef.current = setTimeout(() => {
-            if (hoveredWorkIdRef.current && hoveredWorkIdRef.current !== linkWorkId) {
-              setHoveredWorkId(null);
-            }
-
             const rect = link.getBoundingClientRect();
             const x = rect.left + rect.width / 2;
             const y = rect.bottom;
 
-            setHoveredWorkId(linkWorkId);
+            // 안전 영역 상태 초기화
+            isInSafeZoneRef.current = true;
+
             setHoverPosition({ x, y });
+            setHoveredWorkId(linkWorkId);
             hoverLinkTimeoutRef.current = null;
-          }, 500);
+          }, 400);
         }
       }
     };
 
     const handleLinkMouseLeave = () => {
+      // hover 대기 타이머만 취소 (FloatingWindow 숨김은 mousemove에서 처리)
       if (hoverLinkTimeoutRef.current) {
         clearTimeout(hoverLinkTimeoutRef.current);
         hoverLinkTimeoutRef.current = null;
       }
-
-      if (linkLeaveTimeoutRef.current) {
-        clearTimeout(linkLeaveTimeoutRef.current);
-        linkLeaveTimeoutRef.current = null;
-      }
-
-      linkLeaveTimeoutRef.current = setTimeout(() => {
-        linkLeaveTimeoutRef.current = null;
-      }, 200);
     };
 
     const handleLinkMouseMove = () => {};
@@ -679,6 +814,19 @@ export default function WorkDetailPage() {
       if (link) {
         const clickedWorkId = link.getAttribute('data-work-id');
         if (clickedWorkId) {
+          // 모든 hover 관련 타이머 정리
+          if (hoverLinkTimeoutRef.current) {
+            clearTimeout(hoverLinkTimeoutRef.current);
+            hoverLinkTimeoutRef.current = null;
+          }
+          if (linkLeaveTimeoutRef.current) {
+            clearTimeout(linkLeaveTimeoutRef.current);
+            linkLeaveTimeoutRef.current = null;
+          }
+          // hover 박스 즉시 숨김
+          setHoveredWorkId(null);
+          hoveredWorkIdRef.current = null;
+          // 모달 열기
           setModalWorkId(clickedWorkId);
         }
       }
@@ -789,9 +937,9 @@ export default function WorkDetailPage() {
         clearTimeout(hoverLinkTimeoutRef.current);
         hoverLinkTimeoutRef.current = null;
       }
-      if (linkLeaveTimeoutRef.current) {
-        clearTimeout(linkLeaveTimeoutRef.current);
-        linkLeaveTimeoutRef.current = null;
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+        hideTimeoutRef.current = null;
       }
     };
   }, [work, selectedWorkId]);
@@ -896,7 +1044,7 @@ export default function WorkDetailPage() {
           style={{
             position: 'relative',
             minHeight: 'calc(100vh - 60px)',
-            paddingTop: '280px', // 카테고리 영역(128px) + 작품 목록(~100px) + 여백(~50px)과 겹치지 않도록
+            paddingTop: '220px', // 카테고리 영역(64px) + 작품 목록(~100px) + 여백(~56px)과 겹치지 않도록
           }}
         >
           {/* 선택된 작품의 이미지들 표시 */}
@@ -918,7 +1066,7 @@ export default function WorkDetailPage() {
                   <div
                     style={{
                       position: 'fixed',
-                      left: 'var(--space-4)',
+                      left: 'var(--category-margin-left)', // 카테고리, 작업 목록과 동일한 시작점 (48px)
                       top: '50%',
                       transform: 'translateY(-50%)',
                       display: 'flex',
@@ -996,7 +1144,7 @@ export default function WorkDetailPage() {
                 <div
                   style={{
                     width: '50%',
-                    paddingLeft: 'var(--space-8)', // 타임라인 공간 확보
+                    paddingLeft: 'var(--space-12)', // 타임라인 공간 확보 (80px → 96px)
                     paddingRight: 'var(--space-6)',
                     paddingBottom: 'var(--space-10)',
                     position: 'relative',
@@ -1041,16 +1189,17 @@ export default function WorkDetailPage() {
                   </div>
                 </div>
 
-                {/* 우측: 캡션 - 첫 번째 이미지 우측 하단에 고정 */}
+                {/* 우측: 캡션 - 우측 하단에서 위로 확장 */}
                 {selectedWork.caption && (
                   <div
                     className="work-caption"
                     style={{
                       position: 'fixed',
-                      left: 'calc(50% + var(--space-6))', // 이미지 영역 바로 오른쪽
-                      top: '50%', // 화면 중간 높이
+                      left: 'calc(50% + var(--space-16))',
+                      bottom: 'var(--space-16)', // 하단에서 128px 위
                       width: '200px',
                       maxWidth: 'calc(50% - var(--space-12))',
+                      maxHeight: 'calc(100vh - 200px)', // 상단 여백 확보
                       zIndex: 40,
                     }}
                   >

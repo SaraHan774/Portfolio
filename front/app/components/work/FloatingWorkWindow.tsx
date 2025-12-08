@@ -88,24 +88,22 @@ export default function FloatingWorkWindow({ workId, position }: FloatingWorkWin
       : work.fullDescription);
 
   return (
-      <AnimatePresence mode="wait">
+    <AnimatePresence mode="wait">
       <motion.div
-        initial={{ opacity: 0, scale: 0.98, y: 8 }}
-        animate={{ 
-          opacity: 1, 
-          scale: 1, 
+        initial={{ opacity: 0, y: 8 }}
+        animate={{
+          opacity: 1,
           y: 0,
           transition: {
             duration: 0.2,
-            ease: [0.25, 0.1, 0.25, 1], // 위키피디아 스타일: 부드러운 fade-in
+            ease: [0.25, 0.1, 0.25, 1],
           }
         }}
-        exit={{ 
-          opacity: 0, 
-          scale: 0.98, 
+        exit={{
+          opacity: 0,
           y: 8,
           transition: {
-            duration: 0.2, // 위키피디아는 빠르게 사라짐
+            duration: 0.15,
             ease: [0.4, 0, 0.2, 1],
           }
         }}
@@ -115,105 +113,60 @@ export default function FloatingWorkWindow({ workId, position }: FloatingWorkWin
           position: 'fixed',
           left: `${adjustedPosition.x}px`,
           top: `${adjustedPosition.y}px`,
-          width: '320px',
-          maxHeight: '180px',
           backgroundColor: 'var(--color-white)',
-          border: '1px solid var(--color-gray-300)',
-          borderRadius: '6px',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08)', // 위키피디아 스타일: 더 부드러운 그림자
-          padding: '12px',
+          borderRadius: '4px',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+          padding: '16px',
           zIndex: 1000,
           pointerEvents: 'auto',
-          // 위키피디아 스타일: 더 깔끔한 디자인
-          fontSize: '14px',
         }}
-        onMouseEnter={(e) => {
-          // Floating Window 위에 hover하면 프리뷰 유지 (위키피디아 스타일)
-          e.stopPropagation();
-        }}
-        onMouseLeave={(e) => {
-          // 위키피디아 스타일: Floating Window에서 벗어나면 즉시 사라짐
-          // 부모 컴포넌트의 mousemove 핸들러가 이를 감지함
-          e.stopPropagation();
-        }}
+        onMouseEnter={(e) => e.stopPropagation()}
+        onMouseLeave={(e) => e.stopPropagation()}
       >
-        <Link href={`/works/${work.id}`}>
-          <div
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '12px',
+            cursor: 'pointer',
+          }}
+        >
+          {/* 작품명 + 년도 */}
+          <span
             style={{
-              display: 'flex',
-              gap: 'var(--space-2)',
-              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'var(--font-weight-normal)',
+              color: 'var(--color-text-primary)',
+              textAlign: 'center',
+              whiteSpace: 'nowrap',
             }}
           >
-            {/* 썸네일 - 위키피디아 스타일: 왼쪽에 작게 배치 */}
+            {`「'${work.title}'」, ${work.year || ''}`}
+          </span>
+
+          {/* 썸네일 */}
+          {thumbnailImage && (
             <div
               style={{
-                flexShrink: 0,
-                width: '70px',
-                height: '70px',
+                width: '120px',
+                height: '120px',
                 position: 'relative',
-                borderRadius: '4px',
                 overflow: 'hidden',
-                backgroundColor: 'var(--color-gray-100)',
               }}
             >
               <Image
                 src={thumbnailImage?.thumbnailUrl || thumbnailImage?.url || ''}
                 alt={work.title}
                 fill
-                sizes="70px"
+                sizes="120px"
                 style={{
-                  objectFit: 'cover',
+                  objectFit: 'contain',
                 }}
               />
             </div>
-            
-            {/* 작업 정보 - 위키피디아 스타일: 더 컴팩트한 레이아웃 */}
-            <div
-              style={{
-                flex: 1,
-                minWidth: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px',
-                paddingLeft: '4px',
-              }}
-            >
-              <h4
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 'var(--font-weight-bold)',
-                  color: 'var(--color-text-primary)',
-                  margin: 0,
-                  lineHeight: '1.4',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                }}
-              >
-                {work.title}
-              </h4>
-              
-              <p
-                style={{
-                  fontSize: '12px',
-                  color: 'var(--color-text-secondary)',
-                  margin: 0,
-                  lineHeight: '1.5',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 3,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {description}
-              </p>
-            </div>
-          </div>
-        </Link>
+          )}
+        </div>
       </motion.div>
     </AnimatePresence>
   );

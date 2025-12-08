@@ -61,33 +61,21 @@ function WorkTitleButton({
           ˙
         </motion.span>
       </span>
-      {/* 제목: 「'작품명'」 */}
+      {/* 제목 + 년도: 「'작품명'」, 2023 - 선택/hover 시 stroke 효과, 미선택 시 회색 */}
       <span
         style={{
-          fontWeight: isSelected ? 700 : (isHovered ? 700 : 400),
+          fontWeight: isSelected || isHovered ? 700 : 400,
           fontSize: '12px',
-          color: 'var(--color-text-primary)',
+          color: isSelected || isHovered ? 'transparent' : '#B3B3B3',
+          WebkitTextStroke: isSelected || isHovered ? '0.7px var(--color-category-hover-stroke)' : '0px transparent',
           textAlign: 'center',
           whiteSpace: 'nowrap',
-          transition: 'font-weight 0.2s ease-out',
+          transition: 'color 0.2s ease-out, font-weight 0.2s ease-out',
           marginBottom: showThumbnail ? '4px' : '0',
         }}
       >
-        {`「'${work.title}'」`}
+        {`「'${work.title}'」${work.year ? `, ${work.year}` : ''}`}
       </span>
-
-      {/* 년도 */}
-      {work.year && (
-        <span
-          style={{
-            fontSize: '10px',
-            color: 'var(--color-text-secondary)',
-            marginBottom: showThumbnail ? '4px' : '0',
-          }}
-        >
-          {work.year}
-        </span>
-      )}
 
       {/* 썸네일: 홈에서만 표시 */}
       {showThumbnail && thumbnailImage && (
@@ -190,14 +178,14 @@ function WorkListScroller({
           onClick={() => scroll('left')}
           style={{
             position: 'absolute',
-            left: '-24px',
+            left: '-32px',
             top: '50%',
             transform: 'translateY(-50%)',
             background: 'var(--color-white)',
             border: 'none',
             cursor: 'pointer',
             padding: '4px',
-            zIndex: 10,
+            zIndex: 20,
             fontSize: '16px',
             color: 'var(--color-text-primary)',
             opacity: 0.7,
@@ -209,6 +197,22 @@ function WorkListScroller({
         >
           ←
         </button>
+      )}
+
+      {/* 좌측 fading edge */}
+      {showLeftArrow && (
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: '40px',
+            background: 'linear-gradient(to right, var(--color-white) 0%, var(--color-white) 30%, transparent 100%)',
+            pointerEvents: 'none',
+            zIndex: 15,
+          }}
+        />
       )}
 
       {/* 스크롤 컨테이너 */}
@@ -223,6 +227,8 @@ function WorkListScroller({
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           paddingBottom: '4px',
+          paddingLeft: showLeftArrow ? '8px' : '0',
+          paddingRight: showRightArrow ? '8px' : '0',
         }}
       >
         {works.map((w) => (
@@ -236,20 +242,36 @@ function WorkListScroller({
         ))}
       </div>
 
+      {/* 우측 fading edge */}
+      {showRightArrow && (
+        <div
+          style={{
+            position: 'absolute',
+            right: 0,
+            top: 0,
+            bottom: 0,
+            width: '40px',
+            background: 'linear-gradient(to left, var(--color-white) 0%, var(--color-white) 30%, transparent 100%)',
+            pointerEvents: 'none',
+            zIndex: 15,
+          }}
+        />
+      )}
+
       {/* 우측 화살표 */}
       {showRightArrow && (
         <button
           onClick={() => scroll('right')}
           style={{
             position: 'absolute',
-            right: '-24px',
+            right: '-32px',
             top: '50%',
             transform: 'translateY(-50%)',
             background: 'var(--color-white)',
             border: 'none',
             cursor: 'pointer',
             padding: '4px',
-            zIndex: 10,
+            zIndex: 20,
             fontSize: '16px',
             color: 'var(--color-text-primary)',
             opacity: 0.7,
@@ -319,7 +341,7 @@ export default function Sidebar({
         className="hidden lg:block absolute"
         style={{
           left: 'var(--category-margin-left)', // 48px
-          top: 'var(--space-16)', // 헤더 아래 여백
+          top: 'var(--space-8)', // 헤더 바로 아래 (64px)
           maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-left))', // 중앙 영역과 겹치지 않도록 간격 확보
           zIndex: 100, // main 영역 위에 표시되도록
         }}
@@ -371,7 +393,7 @@ export default function Sidebar({
         className="hidden lg:block absolute"
         style={{
           right: 'var(--category-margin-right)', // 48px
-          top: 'var(--space-16)', // 헤더 아래 여백
+          top: 'var(--space-8)', // 헤더 바로 아래 (64px)
           textAlign: 'right',
           maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-right))', // 중앙 영역과 겹치지 않도록 간격 확보
           zIndex: 100, // main 영역 위에 표시되도록

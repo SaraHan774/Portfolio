@@ -65,20 +65,21 @@ export default function SentenceCategory({
       case 'clickable':
         return {
           ...baseStyle,
-          color: 'var(--color-category-clickable)',
+          color: 'var(--color-category-clickable)', // 완전 검정 - 클릭 가능
           cursor: 'pointer',
         };
       case 'hover':
         return {
           ...baseStyle,
           color: 'transparent',
-          WebkitTextStroke: '1px var(--color-category-hover-stroke)',
+          WebkitTextStroke: '0.7px var(--color-category-hover-stroke)',
           cursor: 'pointer',
         };
       case 'active':
         return {
           ...baseStyle,
-          color: 'var(--color-text-primary)',
+          color: 'transparent',
+          WebkitTextStroke: '0.7px var(--color-category-hover-stroke)',
           cursor: 'pointer',
         };
       case 'disabled':
@@ -125,10 +126,15 @@ export default function SentenceCategory({
         
         // 텍스트를 글자 단위로 분할하여 좌->우 애니메이션 적용
         const characters = part.text.split('');
-        
+
         // 클릭 가능 여부 확인
         const isClickable = state === 'clickable' || state === 'active' || state === 'hover';
-        
+
+        // hover: 샤라락 효과로 bold 전환
+        // selected: 즉시 bold 유지
+        // normal: 일반 weight
+        const animateState = isHovered ? 'hover' : (isSelected ? 'selected' : 'normal');
+
         return (
           <motion.span
             key={index}
@@ -145,19 +151,24 @@ export default function SentenceCategory({
             onMouseLeave={() => onKeywordHover(null)}
             style={keywordStyle}
             initial={false}
-            animate={isSelected || (isHovered && state === 'hover') ? 'bold' : 'normal'}
+            animate={animateState}
           >
             <motion.span
               style={{ display: 'inline-block' }}
               variants={{
-                bold: {
+                hover: {
                   transition: {
-                    staggerChildren: 0.05, // 각 글자 간 50ms 간격 (전체 약 500ms)
+                    staggerChildren: 0.03, // 각 글자 간 30ms 간격 (좌→우 샤라락)
+                  },
+                },
+                selected: {
+                  transition: {
+                    staggerChildren: 0, // 즉시 적용 (샤라락 없이 bold 유지)
                   },
                 },
                 normal: {
                   transition: {
-                    staggerChildren: 0.02,
+                    staggerChildren: 0,
                   },
                 },
               }}
@@ -167,18 +178,24 @@ export default function SentenceCategory({
                   key={charIndex}
                   style={{ display: 'inline-block' }}
                   variants={{
-                    bold: {
-                      fontWeight: 'var(--font-weight-bold)',
+                    hover: {
+                      fontWeight: 700,
                       transition: {
-                        duration: 0.15, // 각 글자당 150ms
-                        ease: 'easeInOut',
+                        duration: 0.1,
+                        ease: 'easeOut',
+                      },
+                    },
+                    selected: {
+                      fontWeight: 700,
+                      transition: {
+                        duration: 0,
                       },
                     },
                     normal: {
-                      fontWeight: 'var(--font-weight-normal)',
+                      fontWeight: 400,
                       transition: {
-                        duration: 0.15,
-                        ease: 'easeInOut',
+                        duration: 0.1,
+                        ease: 'easeOut',
                       },
                     },
                   }}

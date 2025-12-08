@@ -73,7 +73,7 @@ export default function TextCategory({
       case 'clickable':
         return {
           ...baseStyle,
-          color: 'var(--color-category-clickable)',
+          color: 'var(--color-category-clickable)', // 완전 검정 - 클릭 가능
           cursor: 'pointer',
           fontWeight: 'var(--font-weight-normal)',
         };
@@ -81,14 +81,15 @@ export default function TextCategory({
         return {
           ...baseStyle,
           color: 'transparent',
-          WebkitTextStroke: '1px var(--color-category-hover-stroke)',
+          WebkitTextStroke: '0.7px var(--color-category-hover-stroke)',
           cursor: 'pointer',
           fontWeight: 'var(--font-weight-bold)',
         };
       case 'active':
         return {
           ...baseStyle,
-          color: 'var(--color-text-primary)',
+          color: 'transparent',
+          WebkitTextStroke: '0.7px var(--color-category-hover-stroke)',
           cursor: 'pointer',
           fontWeight: 'var(--font-weight-bold)',
         };
@@ -110,6 +111,73 @@ export default function TextCategory({
   // 전시명 카테고리 표시 형식: <작업명> + 전시유형, 공간, 년도
   const displayTitle = `<${category.title}>`;
   const displayDescription = `${category.description.exhibitionType}, ${category.description.venue}, ${category.description.year}`;
+
+  // 글자 단위 애니메이션을 위한 렌더링 함수
+  // hover 시 좌→우 샤라락 bold 효과, selected 시 bold 유지
+  const renderAnimatedText = (text: string, fontSize?: string) => {
+    const characters = text.split('');
+
+    // hover: 샤라락 효과로 bold 전환
+    // selected: 즉시 bold 유지
+    // normal: 일반 weight
+    const animateState = isHovered ? 'hover' : (isSelected ? 'selected' : 'normal');
+
+    return (
+      <motion.span
+        style={{ display: 'block', fontSize }}
+        initial={false}
+        animate={animateState}
+        variants={{
+          hover: {
+            transition: {
+              staggerChildren: 0.02, // 각 글자 간 20ms 간격 (좌→우 샤라락)
+            },
+          },
+          selected: {
+            transition: {
+              staggerChildren: 0, // 즉시 적용 (샤라락 없이 bold 유지)
+            },
+          },
+          normal: {
+            transition: {
+              staggerChildren: 0,
+            },
+          },
+        }}
+      >
+        {characters.map((char, index) => (
+          <motion.span
+            key={index}
+            style={{ display: 'inline-block' }}
+            variants={{
+              hover: {
+                fontWeight: 700,
+                transition: {
+                  duration: 0.1,
+                  ease: 'easeOut',
+                },
+              },
+              selected: {
+                fontWeight: 700,
+                transition: {
+                  duration: 0,
+                },
+              },
+              normal: {
+                fontWeight: 400,
+                transition: {
+                  duration: 0.1,
+                  ease: 'easeOut',
+                },
+              },
+            }}
+          >
+            {char === ' ' ? '\u00A0' : char}
+          </motion.span>
+        ))}
+      </motion.span>
+    );
+  };
 
   return (
     <span
@@ -151,8 +219,8 @@ export default function TextCategory({
           ˙
         </motion.span>
       </span>
-      <span style={{ display: 'block' }}>{displayTitle}</span>
-      <span style={{ display: 'block', fontSize: 'var(--font-size-sm)' }}>{displayDescription}</span>
+      {renderAnimatedText(displayTitle)}
+      {renderAnimatedText(displayDescription, 'var(--font-size-sm)')}
     </span>
   );
 }
