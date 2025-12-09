@@ -92,9 +92,16 @@ export default function HomePage() {
     setSelectedExhibitionCategoryId(categoryId);
   };
 
-  // 작품 선택 시 상세 페이지로 이동
+  // 작품 선택 시 상세 페이지로 이동 (현재 선택된 카테고리 정보 전달)
   const handleWorkSelect = (workId: string) => {
-    router.push(`/works/${workId}`);
+    const params = new URLSearchParams();
+    if (selectedKeywordId) {
+      params.set('keywordId', selectedKeywordId);
+    } else if (selectedExhibitionCategoryId) {
+      params.set('exhibitionId', selectedExhibitionCategoryId);
+    }
+    const queryString = params.toString();
+    router.push(`/works/${workId}${queryString ? `?${queryString}` : ''}`);
   };
 
   if (isLoading) {

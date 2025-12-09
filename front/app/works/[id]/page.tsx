@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -572,7 +572,12 @@ function WorkModal({
 export default function WorkDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const workId = params.id as string;
+
+  // URL에서 전달받은 카테고리 정보
+  const urlKeywordId = searchParams.get('keywordId');
+  const urlExhibitionId = searchParams.get('exhibitionId');
 
   const [work, setWork] = useState<Work | null>(null);
   const [relatedWorks, setRelatedWorks] = useState<Work[]>([]);
@@ -705,9 +710,9 @@ export default function WorkDetailPage() {
     };
   }, [hoveredWorkId]);
 
-  // 데이터 로드
+  // 초기 데이터 로드 (카테고리 목록만 - 최초 1회)
   useEffect(() => {
-    const loadData = async () => {
+    const loadInitialData = async () => {
       setIsLoading(true);
       try {
         const [workData, sentences, exhibitions] = await Promise.all([
@@ -726,18 +731,29 @@ export default function WorkDetailPage() {
         setExhibitionCategories(exhibitions);
         setSelectedWorkId(workId);
 
-        // 관련 작품 가져오기 (첫 번째 카테고리 기준)
-        if (workData.sentenceCategoryIds.length > 0) {
+        // URL에서 전달받은 카테고리가 있으면 그것을 사용, 없으면 작품의 첫 번째 카테고리 사용
+        if (urlKeywordId) {
+          // URL에서 키워드 카테고리 전달받음
+          const allWorks = await getWorksByKeywordId(urlKeywordId);
+          setRelatedWorks(allWorks);
+          setSelectedKeywordId(urlKeywordId);
+          setSelectedExhibitionCategoryId(null);
+        } else if (urlExhibitionId) {
+          // URL에서 전시명 카테고리 전달받음
+          const allWorks = await getWorksByExhibitionCategoryId(urlExhibitionId);
+          setRelatedWorks(allWorks);
+          setSelectedExhibitionCategoryId(urlExhibitionId);
+          setSelectedKeywordId(null);
+        } else if (workData.sentenceCategoryIds.length > 0) {
+          // URL 파라미터 없으면 작품의 첫 번째 카테고리 사용
           const keywordId = workData.sentenceCategoryIds[0];
           const allWorks = await getWorksByKeywordId(keywordId);
-          // 전체 작업 목록 저장 (Sidebar에서 사용)
           setRelatedWorks(allWorks);
           setSelectedKeywordId(keywordId);
           setSelectedExhibitionCategoryId(null);
         } else if (workData.exhibitionCategoryIds.length > 0) {
           const categoryId = workData.exhibitionCategoryIds[0];
           const allWorks = await getWorksByExhibitionCategoryId(categoryId);
-          // 전체 작업 목록 저장 (Sidebar에서 사용)
           setRelatedWorks(allWorks);
           setSelectedExhibitionCategoryId(categoryId);
           setSelectedKeywordId(null);
@@ -756,8 +772,9 @@ export default function WorkDetailPage() {
       }
     };
 
-    loadData();
-  }, [workId, router]);
+    loadInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Intersection Observer로 현재 보이는 이미지 감지
   useEffect(() => {
