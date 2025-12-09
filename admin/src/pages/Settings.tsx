@@ -9,6 +9,7 @@ import {
   Avatar,
   Space,
   message,
+  notification,
   Divider,
   Popconfirm,
   Spin,
@@ -90,7 +91,11 @@ const Settings = () => {
         footerText: values.footerText,
       });
 
-      message.success('사이트 설정이 저장되었습니다.');
+      notification.success({
+        message: '저장 완료',
+        description: '사이트 설정이 성공적으로 저장되었습니다.',
+        placement: 'topRight',
+      });
     } catch (error) {
       console.error('저장 실패:', error);
       message.error('저장에 실패했습니다.');
