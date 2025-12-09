@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Nanum_Myeongjo } from "next/font/google";
 import "./globals.css";
+import { getSiteSettings } from "@/lib/services/settingsService";
 
 const nanumMyeongjo = Nanum_Myeongjo({
   weight: ['400', '700'],
@@ -9,10 +10,17 @@ const nanumMyeongjo = Nanum_Myeongjo({
   variable: "--font-nanum-myeongjo",
 });
 
-export const metadata: Metadata = {
-  title: "Portfolio | 작품 갤러리",
-  description: "여백의 미를 살린 미니멀한 디지털 갤러리",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSiteSettings();
+
+  return {
+    title: settings.browserTitle,
+    description: settings.browserDescription,
+    icons: settings.faviconUrl ? {
+      icon: settings.faviconUrl,
+    } : undefined,
+  };
+}
 
 export default function RootLayout({
   children,
