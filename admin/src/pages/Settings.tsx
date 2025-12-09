@@ -227,6 +227,11 @@ const Settings = () => {
         <Form
           form={siteForm}
           layout="vertical"
+          initialValues={{
+            browserTitle: 'Portfolio | 작품 갤러리',
+            browserDescription: '여백의 미를 살린 미니멀한 디지털 갤러리',
+            footerText: '나혜빈, hyebinnaa@gmail.com, 82)10-8745-1728',
+          }}
         >
           <Form.Item
             name="browserTitle"
