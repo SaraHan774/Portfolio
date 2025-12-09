@@ -3,6 +3,8 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
+  deleteField,
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
@@ -108,6 +110,10 @@ export const deleteFavicon = async (): Promise<void> => {
     // 파비콘이 없으면 무시
   }
 
-  // 설정에서 URL 제거
-  await updateSiteSettings({ faviconUrl: undefined });
+  // 설정에서 URL 필드 삭제
+  const docRef = doc(db, SETTINGS_COLLECTION, SETTINGS_DOC_ID);
+  await updateDoc(docRef, {
+    faviconUrl: deleteField(),
+    updatedAt: serverTimestamp(),
+  });
 };
