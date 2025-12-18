@@ -1754,6 +1754,23 @@ export default function WorkDetailPage() {
     );
   };
 
+  // 작품 선택 핸들러 - URL 업데이트 포함
+  const handleWorkSelect = (newWorkId: string) => {
+    setSelectedWorkId(newWorkId);
+
+    // URL 업데이트 (카테고리 정보 유지)
+    const params = new URLSearchParams();
+    if (selectedKeywordId) {
+      params.set('keywordId', selectedKeywordId);
+    } else if (selectedExhibitionCategoryId) {
+      params.set('exhibitionId', selectedExhibitionCategoryId);
+    }
+
+    const queryString = params.toString();
+    const newUrl = `/works/${newWorkId}${queryString ? `?${queryString}` : ''}`;
+    router.replace(newUrl, { scroll: false });
+  };
+
   // 카테고리 선택 핸들러 (상세 페이지에서는 네비게이션 용도)
   const handleKeywordSelect = async (keywordId: string) => {
     const allWorks = await getWorksByKeywordId(keywordId);
@@ -1763,6 +1780,10 @@ export default function WorkDetailPage() {
     setSelectedExhibitionCategoryId(null);
     // 카테고리 변경 시 썸네일 리스트만 표시 (첫 번째 작업 자동 선택하지 않음)
     setSelectedWorkId(null);
+
+    // URL 업데이트 (작품 ID는 유지, 카테고리만 변경)
+    const newUrl = `/works/${workId}?keywordId=${keywordId}`;
+    router.replace(newUrl, { scroll: false });
   };
 
   const handleExhibitionCategorySelect = async (categoryId: string) => {
@@ -1773,6 +1794,10 @@ export default function WorkDetailPage() {
     setSelectedKeywordId(null);
     // 카테고리 변경 시 썸네일 리스트만 표시 (첫 번째 작업 자동 선택하지 않음)
     setSelectedWorkId(null);
+
+    // URL 업데이트 (작품 ID는 유지, 카테고리만 변경)
+    const newUrl = `/works/${workId}?exhibitionId=${categoryId}`;
+    router.replace(newUrl, { scroll: false });
   };
 
   return (
@@ -1790,7 +1815,7 @@ export default function WorkDetailPage() {
           selectedWorkIds={selectedWorkIds}
           works={relatedWorks}
           selectedWorkId={selectedWorkId}
-          onWorkSelect={setSelectedWorkId}
+          onWorkSelect={handleWorkSelect}
           showThumbnail={selectedWorkId === null}
         />
         {/* 이미지 컨텐츠 영역 - 좌측 50% */}
@@ -1824,7 +1849,7 @@ export default function WorkDetailPage() {
                     style={{
                       position: 'fixed',
                       left: 'var(--category-margin-left)', // 카테고리, 작업 목록과 동일한 시작점 (48px)
-                      top: '60%',
+                      top: '70%',
                       transform: 'translateY(-50%)',
                       display: 'flex',
                       flexDirection: 'column',
@@ -1842,7 +1867,7 @@ export default function WorkDetailPage() {
 
                         // 동적 선 길이 계산: 활성 점 아래의 선은 길게, 나머지는 짧게
                         const getLineHeight = () => {
-                            return '100px';
+                            return '50px';
                         };
 
                       return (
