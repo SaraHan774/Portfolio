@@ -67,6 +67,21 @@ export interface WorkImage {
   uploadedFrom?: 'desktop' | 'mobile' | 'camera';
 }
 
+// 영상 (YouTube Embed)
+export interface WorkVideo {
+  id: string;
+  youtubeUrl: string;          // YouTube 원본 URL
+  youtubeVideoId: string;      // YouTube 영상 ID
+  embedUrl: string;            // Embed URL
+  title?: string;              // 영상 제목 (선택)
+  order: number;               // 미디어 순서 (이미지와 함께 정렬)
+}
+
+// 미디어 아이템 (이미지 또는 영상)
+export type MediaItem =
+  | { type: 'image'; data: WorkImage }
+  | { type: 'video'; data: WorkVideo };
+
 export interface Work {
   id: string;
   title: string;
@@ -75,6 +90,7 @@ export interface Work {
   fullDescription: string;
   thumbnailImageId: string;
   images: WorkImage[];
+  videos?: WorkVideo[];  // YouTube 영상 목록
   caption?: string;
   sentenceCategoryIds: string[];
   exhibitionCategoryIds: string[];

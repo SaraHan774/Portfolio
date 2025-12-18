@@ -10,6 +10,47 @@ import { useWorks } from '../hooks/useWorks';
 import type { Work } from '../types';
 import './CaptionEditor.css';
 
+// 확장들을 컴포넌트 외부에서 한 번만 생성하여 중복 방지
+const CustomLink = Link.extend({
+  name: 'link',
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      'data-work-id': {
+        default: null,
+        parseHTML: element => element.getAttribute('data-work-id'),
+        renderHTML: attributes => {
+          if (!attributes['data-work-id']) return {};
+          return { 'data-work-id': attributes['data-work-id'] };
+        },
+      },
+      'data-work-title': {
+        default: null,
+        parseHTML: element => element.getAttribute('data-work-title'),
+        renderHTML: attributes => {
+          if (!attributes['data-work-title']) return {};
+          return { 'data-work-title': attributes['data-work-title'] };
+        },
+      },
+    };
+  },
+}).configure({
+  openOnClick: false,
+  HTMLAttributes: {
+    class: 'caption-link',
+  },
+});
+
+const extensions = [
+  StarterKit.configure({
+    heading: false,
+    blockquote: false,
+    codeBlock: false,
+  }),
+  CustomLink,
+  Underline,
+];
+
 interface CaptionEditorProps {
   value?: string;
   onChange?: (html: string) => void;
@@ -26,42 +67,7 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
   const { data: works = [] } = useWorks();
 
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: false,
-        blockquote: false,
-        codeBlock: false,
-      }),
-      Link.extend({
-        addAttributes() {
-          return {
-            ...this.parent?.(),
-            'data-work-id': {
-              default: null,
-              parseHTML: element => element.getAttribute('data-work-id'),
-              renderHTML: attributes => {
-                if (!attributes['data-work-id']) return {};
-                return { 'data-work-id': attributes['data-work-id'] };
-              },
-            },
-            'data-work-title': {
-              default: null,
-              parseHTML: element => element.getAttribute('data-work-title'),
-              renderHTML: attributes => {
-                if (!attributes['data-work-title']) return {};
-                return { 'data-work-title': attributes['data-work-title'] };
-              },
-            },
-          };
-        },
-      }).configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'caption-link',
-        },
-      }),
-      Underline,
-    ],
+    extensions,
     content: value,
     editorProps: {
       attributes: {

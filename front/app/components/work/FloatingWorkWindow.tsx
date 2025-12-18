@@ -120,39 +120,22 @@ export default function FloatingWorkWindow({ workId, position, onClick }: Floati
         onMouseEnter={(e) => e.stopPropagation()}
         onMouseLeave={(e) => e.stopPropagation()}
       >
-        {/* 뭉게구름 배경 - 여러 레이어로 부드러운 페이드 효과 */}
+        {/* 회색 배경 + fade out 테두리 */}
         <div
-          style={{
-            position: 'absolute',
-            inset: '-20px',
-            background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 40%, rgba(255,255,255,0.4) 65%, rgba(255,255,255,0) 100%)',
-            filter: 'blur(8px)',
-            borderRadius: '50%',
-            transform: 'scale(1.1)',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            inset: '-10px',
-            background: 'radial-gradient(ellipse at center, rgba(255,255,255,1) 0%, rgba(255,255,255,0.9) 50%, rgba(255,255,255,0) 100%)',
-            filter: 'blur(4px)',
-            borderRadius: '50%',
-          }}
-        />
-
-        {/* 콘텐츠 */}
-        <div
-          onClick={() => onClick?.(workId)}
           style={{
             position: 'relative',
+            background: 'var(--color-gray-200)',
+            borderRadius: '4px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04)',
+            padding: '16px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             gap: '12px',
             cursor: 'pointer',
-            padding: '16px',
+            maxWidth: '200px',
           }}
+          onClick={() => onClick?.(workId)}
         >
           {/* 작품명 + 년도 */}
           <span
@@ -162,7 +145,6 @@ export default function FloatingWorkWindow({ workId, position, onClick }: Floati
               color: 'var(--color-text-primary)',
               textAlign: 'center',
               whiteSpace: 'nowrap',
-              textShadow: '0 0 20px rgba(255,255,255,1), 0 0 40px rgba(255,255,255,0.8)',
             }}
           >
             {`「'${work.title}'」, ${work.year || ''}`}
@@ -175,38 +157,19 @@ export default function FloatingWorkWindow({ workId, position, onClick }: Floati
                 width: '120px',
                 height: '120px',
                 position: 'relative',
-                overflow: 'visible',
+                overflow: 'hidden',
+                borderRadius: '4px',
               }}
             >
-              {/* 이미지 주변 뭉게구름 글로우 */}
-              <div
+              <Image
+                src={thumbnailImage?.thumbnailUrl || thumbnailImage?.url || ''}
+                alt={work.title}
+                fill
+                sizes="120px"
                 style={{
-                  position: 'absolute',
-                  inset: '-15px',
-                  background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.9) 30%, rgba(255,255,255,0) 70%)',
-                  filter: 'blur(10px)',
-                  borderRadius: '50%',
+                  objectFit: 'cover',
                 }}
               />
-              <div
-                style={{
-                  position: 'relative',
-                  width: '100%',
-                  height: '100%',
-                  borderRadius: '50%',
-                  overflow: 'hidden',
-                }}
-              >
-                <Image
-                  src={thumbnailImage?.thumbnailUrl || thumbnailImage?.url || ''}
-                  alt={work.title}
-                  fill
-                  sizes="120px"
-                  style={{
-                    objectFit: 'cover',
-                  }}
-                />
-              </div>
             </div>
           )}
         </div>

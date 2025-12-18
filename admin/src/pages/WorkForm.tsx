@@ -1,5 +1,5 @@
 // 작업 생성/수정 폼 페이지 컴포넌트
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Typography,
@@ -17,15 +17,28 @@ import {
   Spin,
   notification,
 } from 'antd';
-import { SaveOutlined, EyeOutlined, CloseOutlined, FileTextOutlined, EditOutlined, PlusOutlined, PictureOutlined, HighlightOutlined, FolderOutlined, ExclamationCircleOutlined, LoadingOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { SaveOutlined, EyeOutlined, CloseOutlined, FileTextOutlined, EditOutlined, PlusOutlined, PictureOutlined, HighlightOutlined, FolderOutlined, ExclamationCircleOutlined, LoadingOutlined, CheckCircleOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import { useWork, useCreateWork, useUpdateWork } from '../hooks/useWorks';
 import { useSentenceCategories, useExhibitionCategories } from '../hooks/useCategories';
-import type { WorkImage } from '../types';
+import type { WorkImage, WorkVideo } from '../types';
 import ImageUploader from '../components/ImageUploader';
+import VideoUploader from '../components/VideoUploader';
+import MediaOrderManager from '../components/MediaOrderManager';
 import CaptionEditor from '../components/CaptionEditor';
 import './WorkForm.css';
 
 const { Title } = Typography;
+
+// Firebase에 저장하기 전에 undefined 값을 제거하는 유틸리티 함수
+const removeUndefinedValues = <T extends Record<string, unknown>>(obj: T): T => {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      result[key] = value;
+    }
+  }
+  return result as T;
+};
 
 const WorkForm = () => {
   const navigate = useNavigate();
@@ -33,6 +46,7 @@ const WorkForm = () => {
   const [form] = Form.useForm();
   const isEditMode = !!id;
   const [images, setImages] = useState<WorkImage[]>([]);
+  const [videos, setVideos] = useState<WorkVideo[]>([]);
   const [thumbnailImageId, setThumbnailImageId] = useState<string>('');
   const [caption, setCaption] = useState<string>('');
   const [selectedSentenceCategoryIds, setSelectedSentenceCategoryIds] = useState<string[]>([]);
@@ -42,6 +56,7 @@ const WorkForm = () => {
   const [previewVisible, setPreviewVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [savingMessage, setSavingMessage] = useState('');
+  const isFormMounted = useRef(false);
 
   // 모바일 여부 확인
   useEffect(() => {
@@ -62,8 +77,23 @@ const WorkForm = () => {
   const createWorkMutation = useCreateWork();
   const updateWorkMutation = useUpdateWork();
 
+  // Form 마운트 상태 추적
+  useEffect(() => {
+    // 다음 틱에서 Form이 연결된 후 마운트 상태를 true로 설정
+    const timer = setTimeout(() => {
+      isFormMounted.current = true;
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      isFormMounted.current = false;
+    };
+  }, []);
+
   // 변경사항 추적
   useEffect(() => {
+    // Form이 마운트되기 전에는 실행하지 않음 (첫 렌더링 스킵)
+    if (!isFormMounted.current) return;
+
     if (isEditMode && work) {
       // 폼 값이나 이미지가 변경되었는지 확인
       const formValues = form.getFieldsValue();
@@ -99,6 +129,7 @@ const WorkForm = () => {
         year: work.year,
       });
       setImages(work.images);
+      setVideos(work.videos || []);
       setThumbnailImageId(work.thumbnailImageId);
       setCaption(work.caption || '');
       setSelectedSentenceCategoryIds(work.sentenceCategoryIds);
@@ -138,10 +169,15 @@ const WorkForm = () => {
 
       const formValues = form.getFieldsValue();
 
+      // Firebase에 저장할 때 undefined 값 제거
+      const sanitizedImages = images.map((img) => removeUndefinedValues(img));
+      const sanitizedVideos = videos.map((vid) => removeUndefinedValues(vid));
+
       const workData = {
         title: formValues.title,
-        year: formValues.year ? Number(formValues.year) : undefined,
-        images,
+        ...(formValues.year ? { year: Number(formValues.year) } : {}),
+        images: sanitizedImages,
+        videos: sanitizedVideos,
         thumbnailImageId,
         caption,
         sentenceCategoryIds: selectedSentenceCategoryIds,
@@ -218,10 +254,15 @@ const WorkForm = () => {
       setIsSaving(true);
       setSavingMessage('임시 저장하는 중...');
 
+      // Firebase에 저장할 때 undefined 값 제거
+      const sanitizedImages = images.map((img) => removeUndefinedValues(img));
+      const sanitizedVideos = videos.map((vid) => removeUndefinedValues(vid));
+
       const workData = {
         title: formValues.title,
-        year: formValues.year ? Number(formValues.year) : undefined,
-        images,
+        ...(formValues.year ? { year: Number(formValues.year) } : {}),
+        images: sanitizedImages,
+        videos: sanitizedVideos,
         thumbnailImageId: thumbnailImageId || (images.length > 0 ? images[0].id : ''),
         caption,
         sentenceCategoryIds: selectedSentenceCategoryIds,
@@ -435,6 +476,26 @@ const WorkForm = () => {
       key: '3',
       label: (
         <>
+          <VideoCameraOutlined /> 영상 관리 (YouTube)
+        </>
+      ),
+      children: (
+        <>
+          <VideoUploader
+            value={videos}
+            onChange={(newVideos) => setVideos(newVideos)}
+            maxCount={10}
+          />
+          <div style={{ marginTop: '12px', fontSize: '12px', color: '#8c8c8c' }}>
+            * YouTube URL을 입력하여 영상을 추가할 수 있습니다.
+          </div>
+        </>
+      ),
+    },
+    {
+      key: '4',
+      label: (
+        <>
           <HighlightOutlined /> 상세 페이지 캡션
         </>
       ),
@@ -452,7 +513,7 @@ const WorkForm = () => {
       ),
     },
     {
-      key: '4',
+      key: '5',
       label: (
         <>
           <FolderOutlined /> 카테고리 선택
@@ -636,6 +697,20 @@ const WorkForm = () => {
     </Card>
   );
 
+  // 영상 관리 섹션
+  const videoSection = (
+    <Card title={<><VideoCameraOutlined /> 영상 관리 (YouTube)</>} style={{ marginBottom: '24px' }}>
+      <VideoUploader
+        value={videos}
+        onChange={(newVideos) => setVideos(newVideos)}
+        maxCount={10}
+      />
+      <div style={{ marginTop: '12px', fontSize: '12px', color: '#8c8c8c' }}>
+        * YouTube URL을 입력하여 영상을 추가할 수 있습니다. 영상과 이미지의 순서는 상세 페이지에서 혼합되어 표시됩니다.
+      </div>
+    </Card>
+  );
+
   // 카테고리 선택 섹션
   const categorySection = (
     <Card title={<><FolderOutlined /> 카테고리 선택</>} style={{ marginBottom: '24px' }}>
@@ -756,6 +831,20 @@ const WorkForm = () => {
         <div className="desktop-sections">
           {basicInfoSection}
           {imageSection}
+          {videoSection}
+
+          {/* 미디어 순서 관리 - 이미지와 영상이 모두 있을 때만 표시 */}
+          {(images.length > 0 || videos.length > 0) && (
+            <MediaOrderManager
+              images={images}
+              videos={videos}
+              onOrderChange={(newImages, newVideos) => {
+                setImages(newImages);
+                setVideos(newVideos);
+              }}
+            />
+          )}
+
           <Card title={<><HighlightOutlined /> 상세 페이지 캡션</>} style={{ marginBottom: '24px' }}>
             {images.length === 0 ? (
               <p style={{ color: '#8c8c8c' }}>먼저 이미지를 업로드해주세요.</p>
@@ -770,7 +859,7 @@ const WorkForm = () => {
         </div>
 
         <div className="mobile-sections">
-          <Collapse defaultActiveKey={['1', '2', '3', '4']} items={collapseItems} />
+          <Collapse defaultActiveKey={['1', '2', '3', '4', '5']} items={collapseItems} />
         </div>
 
         {/* 하단 액션 버튼 */}
@@ -782,6 +871,7 @@ const WorkForm = () => {
             size={isMobile ? 'middle' : 'small'}
           >
             <Button
+              htmlType="button"
               icon={<FileTextOutlined />}
               onClick={() => void handleDraftSave(false)}
               block={isMobile}
@@ -791,6 +881,7 @@ const WorkForm = () => {
               임시저장
             </Button>
             <Button
+              htmlType="button"
               icon={<EyeOutlined />}
               onClick={handlePreview}
               block={isMobile}
@@ -799,6 +890,7 @@ const WorkForm = () => {
               미리보기
             </Button>
             <Button
+              htmlType="button"
               type="primary"
               icon={<SaveOutlined />}
               onClick={() => void handleSave()}
@@ -810,6 +902,7 @@ const WorkForm = () => {
               게시
             </Button>
             <Button
+              htmlType="button"
               icon={<CloseOutlined />}
               onClick={handleCancel}
               block={isMobile}

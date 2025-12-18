@@ -22,6 +22,10 @@ function WorkTitleButton({
   const [isHovered, setIsHovered] = useState(false);
   const thumbnailImage = work.images.find((img) => img.id === work.thumbnailImageId) || work.images[0];
 
+  // 상세페이지(showThumbnail=false)에서는 hover 시에만 썸네일 표시
+  // 홈페이지(showThumbnail=true)에서는 항상 썸네일 표시
+  const shouldShowThumbnail = showThumbnail || (isHovered && !isSelected);
+
   return (
     <button
       onClick={onClick}
@@ -71,15 +75,19 @@ function WorkTitleButton({
           textAlign: 'center',
           whiteSpace: 'nowrap',
           transition: 'color 0.2s ease-out, font-weight 0.2s ease-out',
-          marginBottom: showThumbnail ? '4px' : '0',
+          marginBottom: shouldShowThumbnail ? '4px' : '0',
         }}
       >
         {`「'${work.title}'」${work.year ? `, ${work.year}` : ''}`}
       </span>
 
-      {/* 썸네일: 홈에서만 표시 */}
-      {showThumbnail && thumbnailImage && (
-        <div
+      {/* 썸네일: 홈에서는 항상 표시, 상세페이지에서는 hover 시에만 표시 */}
+      {shouldShowThumbnail && thumbnailImage && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
           style={{
             width: '80px',
             height: '80px',
@@ -98,7 +106,7 @@ function WorkTitleButton({
             sizes="80px"
             style={{ objectFit: 'cover' }}
           />
-        </div>
+        </motion.div>
       )}
     </button>
   );
@@ -172,21 +180,48 @@ function WorkListScroller({
 
   return (
     <div style={{ position: 'relative', width: '100%' }}>
-      {/* 좌측 화살표 */}
+      {/* 좌측 인디케이터 - 텍스트 레벨 (...) */}
       {showLeftArrow && (
         <button
           onClick={() => scroll('left')}
           style={{
             position: 'absolute',
-            left: '-32px',
-            top: '50%',
-            transform: 'translateY(-50%)',
+            left: '-24px',
+            top: showThumbnail ? '12px' : '50%',
+            transform: showThumbnail ? 'none' : 'translateY(-50%)',
             background: 'var(--color-white)',
             border: 'none',
             cursor: 'pointer',
             padding: '4px',
             zIndex: 20,
-            fontSize: '16px',
+            fontSize: '12px',
+            color: 'var(--color-text-primary)',
+            opacity: 0.7,
+            transition: 'opacity 0.2s ease',
+            letterSpacing: '-1px',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
+          aria-label="왼쪽으로 스크롤"
+        >
+          ...
+        </button>
+      )}
+
+      {/* 좌측 인디케이터 - 썸네일 레벨 (<<) - 썸네일 모드에서만 표시 */}
+      {showLeftArrow && showThumbnail && (
+        <button
+          onClick={() => scroll('left')}
+          style={{
+            position: 'absolute',
+            left: '-32px',
+            bottom: '24px',
+            background: 'var(--color-white)',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px',
+            zIndex: 20,
+            fontSize: '14px',
             color: 'var(--color-text-primary)',
             opacity: 0.7,
             transition: 'opacity 0.2s ease',
@@ -195,7 +230,7 @@ function WorkListScroller({
           onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
           aria-label="왼쪽으로 스크롤"
         >
-          ←
+          {'<<'}
         </button>
       )}
 
@@ -258,21 +293,48 @@ function WorkListScroller({
         />
       )}
 
-      {/* 우측 화살표 */}
+      {/* 우측 인디케이터 - 텍스트 레벨 (...) */}
       {showRightArrow && (
         <button
           onClick={() => scroll('right')}
           style={{
             position: 'absolute',
-            right: '-32px',
-            top: '50%',
-            transform: 'translateY(-50%)',
+            right: '-24px',
+            top: showThumbnail ? '12px' : '50%',
+            transform: showThumbnail ? 'none' : 'translateY(-50%)',
             background: 'var(--color-white)',
             border: 'none',
             cursor: 'pointer',
             padding: '4px',
             zIndex: 20,
-            fontSize: '16px',
+            fontSize: '12px',
+            color: 'var(--color-text-primary)',
+            opacity: 0.7,
+            transition: 'opacity 0.2s ease',
+            letterSpacing: '-1px',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
+          aria-label="오른쪽으로 스크롤"
+        >
+          ...
+        </button>
+      )}
+
+      {/* 우측 인디케이터 - 썸네일 레벨 (>>) - 썸네일 모드에서만 표시 */}
+      {showRightArrow && showThumbnail && (
+        <button
+          onClick={() => scroll('right')}
+          style={{
+            position: 'absolute',
+            right: '-32px',
+            bottom: '24px',
+            background: 'var(--color-white)',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px',
+            zIndex: 20,
+            fontSize: '14px',
             color: 'var(--color-text-primary)',
             opacity: 0.7,
             transition: 'opacity 0.2s ease',
@@ -281,7 +343,7 @@ function WorkListScroller({
           onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
           aria-label="오른쪽으로 스크롤"
         >
-          →
+          {'>>'}
         </button>
       )}
     </div>

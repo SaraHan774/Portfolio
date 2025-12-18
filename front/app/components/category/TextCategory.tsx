@@ -112,30 +112,26 @@ export default function TextCategory({
   const displayTitle = `<${category.title}>`;
   const displayDescription = `${category.description.exhibitionType}, ${category.description.venue}, ${category.description.year}`;
 
-  // 글자 단위 애니메이션을 위한 렌더링 함수
-  // hover 시 좌→우 샤라락 bold 효과, selected 시 bold 유지
-  const renderAnimatedText = (text: string, fontSize?: string) => {
+  // Title 글자 단위 애니메이션 - hover/active 시 stroke + bold 효과
+  const renderTitleText = (text: string) => {
     const characters = text.split('');
-
-    // hover: 샤라락 효과로 bold 전환
-    // selected: 즉시 bold 유지
-    // normal: 일반 weight
     const animateState = isHovered ? 'hover' : (isSelected ? 'selected' : 'normal');
+    const isActive = isHovered || isSelected;
 
     return (
       <motion.span
-        style={{ display: 'block', fontSize }}
+        style={{ display: 'block' }}
         initial={false}
         animate={animateState}
         variants={{
           hover: {
             transition: {
-              staggerChildren: 0.02, // 각 글자 간 20ms 간격 (좌→우 샤라락)
+              staggerChildren: 0.02, // 좌→우 샤라락 효과
             },
           },
           selected: {
             transition: {
-              staggerChildren: 0, // 즉시 적용 (샤라락 없이 bold 유지)
+              staggerChildren: 0,
             },
           },
           normal: {
@@ -148,7 +144,12 @@ export default function TextCategory({
         {characters.map((char, index) => (
           <motion.span
             key={index}
-            style={{ display: 'inline-block' }}
+            style={{
+              display: 'inline-block',
+              color: isActive ? 'transparent' : 'var(--color-category-clickable)',
+              WebkitTextStroke: isActive ? '0.7px var(--color-category-hover-stroke)' : '0px transparent',
+              transition: 'color 0.1s ease-out, -webkit-text-stroke 0.1s ease-out',
+            }}
             variants={{
               hover: {
                 fontWeight: 700,
@@ -179,6 +180,22 @@ export default function TextCategory({
     );
   };
 
+  // Description 텍스트 - 항상 회색, bold 없음
+  const renderDescriptionText = (text: string) => {
+    return (
+      <span
+        style={{
+          display: 'block',
+          fontSize: 'var(--font-size-sm)',
+          color: 'var(--color-category-disabled)',
+          fontWeight: 400,
+        }}
+      >
+        {text}
+      </span>
+    );
+  };
+
   return (
     <span
       onClick={() => {
@@ -193,8 +210,12 @@ export default function TextCategory({
       }}
       onMouseLeave={() => onHover(null)}
       style={{
-        ...categoryStyle,
+        fontSize: 'var(--category-font-size)',
+        lineHeight: 'var(--line-height-relaxed)',
+        position: 'relative',
         display: 'inline-block',
+        whiteSpace: 'normal',
+        cursor: isClickable ? 'pointer' : 'default',
       }}
     >
       {/* 점 공간 - 항상 동일한 높이 차지 (들썩임 방지) */}
@@ -219,8 +240,8 @@ export default function TextCategory({
           ˙
         </motion.span>
       </span>
-      {renderAnimatedText(displayTitle)}
-      {renderAnimatedText(displayDescription, 'var(--font-size-sm)')}
+      {renderTitleText(displayTitle)}
+      {renderDescriptionText(displayDescription)}
     </span>
   );
 }

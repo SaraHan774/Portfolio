@@ -10,7 +10,60 @@ import Sidebar from '@/app/components/layout/Sidebar';
 import { getWorkById, getWorksByKeywordId, getWorksByExhibitionCategoryId } from '@/lib/services/worksService';
 import { getSentenceCategories, getExhibitionCategories } from '@/lib/services/categoriesService';
 import FloatingWorkWindow from '@/app/components/work/FloatingWorkWindow';
-import type { Work, WorkImage, ExhibitionCategory, SentenceCategory as SentenceCategoryType } from '@/types';
+import type { Work, WorkImage, WorkVideo, MediaItem, ExhibitionCategory, SentenceCategory as SentenceCategoryType } from '@/types';
+
+// 이미지와 영상을 통합 미디어 배열로 변환하는 헬퍼 함수
+function getMediaItems(work: Work): MediaItem[] {
+  const mediaItems: MediaItem[] = [];
+
+  // 이미지 추가
+  work.images.forEach((image) => {
+    mediaItems.push({ type: 'image', data: image });
+  });
+
+  // 영상 추가
+  if (work.videos) {
+    work.videos.forEach((video) => {
+      mediaItems.push({ type: 'video', data: video });
+    });
+  }
+
+  // order 기준으로 정렬
+  return mediaItems.sort((a, b) => a.data.order - b.data.order);
+}
+
+// YouTube 영상 Embed 컴포넌트
+function YouTubeEmbed({ video, isLast = false }: { video: WorkVideo; isLast?: boolean }) {
+  return (
+    <div
+      data-image-id={video.id}
+      style={{
+        marginBottom: isLast ? 0 : 'var(--space-10)',
+        position: 'relative',
+        width: '100%',
+        paddingBottom: '56.25%', // 16:9 비율
+        backgroundColor: '#000',
+        borderRadius: '4px',
+        overflow: 'hidden',
+      }}
+    >
+      <iframe
+        src={video.embedUrl}
+        title={video.title || 'YouTube 영상'}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          border: 'none',
+        }}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    </div>
+  );
+}
 
 // Fade In 이미지 컴포넌트 (스켈레톤 포함)
 function FadeInImage({
@@ -328,25 +381,25 @@ function WorkModal({
       className="modal-overlay"
     >
       <motion.div
-        initial={{ opacity: 0, y: 40 }}
+        initial={{ opacity: 0.8, scale: 0.4 }}
         animate={{
           opacity: 1,
-          y: 0,
+          scale: 1,
           transition: {
-            duration: 0.35,
-            ease: [0.16, 1, 0.3, 1],
+            duration: 0.3,
+            ease: [0.25, 0.1, 0.25, 1],
           }
         }}
         exit={{
           opacity: 0,
-          y: 30,
+          scale: 0.95,
           transition: {
-            duration: 0.25,
+            duration: 0.2,
             ease: [0.4, 0, 0.2, 1],
           }
         }}
         style={{
-          backgroundColor: 'var(--color-white)',
+          backgroundColor: 'var(--color-gray-200)',
           borderRadius: '8px',
           maxWidth: '1200px',
           maxHeight: '90vh',
@@ -355,6 +408,7 @@ function WorkModal({
           flexDirection: 'column',
           position: 'relative',
           overflow: 'hidden',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04)',
         }}
         onClick={(e) => e.stopPropagation()}
         className="modal-content"
@@ -426,7 +480,7 @@ function WorkModal({
             position: 'relative',
           }}
         >
-          {/* 좌측: 타임라인 + 이미지 영역 */}
+          {/* 좌측: 타임라인 + 미디어 영역 */}
           <div
             style={{
               width: '65%',
@@ -434,77 +488,81 @@ function WorkModal({
               position: 'relative',
             }}
           >
-            {/* 타임라인 UI - 이미지가 2개 이상일 때만 표시 */}
-            {modalWork.images.length > 1 && (
-              <div
-                style={{
-                  position: 'sticky',
-                  top: 'var(--space-6)',
-                  height: 'fit-content',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  paddingLeft: 'var(--space-4)',
-                  paddingRight: 'var(--space-2)',
-                  zIndex: 10,
-                }}
-              >
-                {(() => {
-                  const sortedImages = modalWork.images.sort((a, b) => a.order - b.order);
-                  const activeIndex = sortedImages.findIndex(img => img.id === modalCurrentImageId);
+            {/* 타임라인 UI - 미디어가 2개 이상일 때만 표시 */}
+            {(() => {
+              const modalMediaItems = getMediaItems(modalWork);
+              if (modalMediaItems.length <= 1) return null;
 
-                  return sortedImages.map((image, index) => {
-                    const isActive = modalCurrentImageId === image.id;
-                    const isLast = index === sortedImages.length - 1;
+              return (
+                <div
+                  style={{
+                    position: 'sticky',
+                    top: 'var(--space-6)',
+                    height: 'fit-content',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    paddingLeft: 'var(--space-4)',
+                    paddingRight: 'var(--space-2)',
+                    zIndex: 10,
+                  }}
+                >
+                  {(() => {
+                    const activeIndex = modalMediaItems.findIndex(item => item.data.id === modalCurrentImageId);
 
-                    const getLineHeight = () => {
-                      if (index === activeIndex) return '80px';
-                      else if (index === activeIndex - 1) return '50px';
-                      else return '25px';
-                    };
+                    return modalMediaItems.map((item, index) => {
+                      const isActive = modalCurrentImageId === item.data.id;
+                      const isLast = index === modalMediaItems.length - 1;
 
-                    return (
-                      <div key={image.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <button
-                          onClick={() => {
-                            const element = modalImageScrollContainerRef.current?.querySelector(`[data-image-id="${image.id}"]`);
-                            if (element) {
-                              element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }
-                          }}
-                          style={{
-                            width: isActive ? '8px' : '5px',
-                            height: isActive ? '8px' : '5px',
-                            borderRadius: '50%',
-                            backgroundColor: isActive ? 'var(--color-text-primary)' : 'var(--color-gray-400)',
-                            border: 'none',
-                            cursor: 'pointer',
-                            transition: 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                            padding: 0,
-                          }}
-                          aria-label={`이미지 ${index + 1}로 이동`}
-                        />
-                        {!isLast && (
-                          <div
-                            style={{
-                              width: '1px',
-                              height: getLineHeight(),
-                              backgroundImage: 'linear-gradient(var(--color-gray-300) 50%, transparent 50%)',
-                              backgroundSize: '1px 5px',
-                              backgroundRepeat: 'repeat-y',
-                              margin: '5px 0',
-                              transition: 'height 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                      const getLineHeight = () => {
+                        if (index === activeIndex) return '80px';
+                        else if (index === activeIndex - 1) return '50px';
+                        else return '25px';
+                      };
+
+                      return (
+                        <div key={item.data.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <button
+                            onClick={() => {
+                              const element = modalImageScrollContainerRef.current?.querySelector(`[data-image-id="${item.data.id}"]`);
+                              if (element) {
+                                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              }
                             }}
+                            style={{
+                              width: isActive ? '8px' : '5px',
+                              height: isActive ? '8px' : '5px',
+                              borderRadius: '50%',
+                              backgroundColor: isActive ? 'var(--color-text-primary)' : 'var(--color-gray-400)',
+                              border: 'none',
+                              cursor: 'pointer',
+                              transition: 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                              padding: 0,
+                            }}
+                            aria-label={`미디어 ${index + 1}로 이동`}
                           />
-                        )}
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            )}
+                          {!isLast && (
+                            <div
+                              style={{
+                                width: '1px',
+                                height: getLineHeight(),
+                                backgroundImage: 'linear-gradient(var(--color-gray-300) 50%, transparent 50%)',
+                                backgroundSize: '1px 5px',
+                                backgroundRepeat: 'repeat-y',
+                                margin: '5px 0',
+                                transition: 'height 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                              }}
+                            />
+                          )}
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              );
+            })()}
 
-            {/* 이미지 스크롤 영역 */}
+            {/* 미디어 스크롤 영역 (이미지 + 영상) */}
             <div
               ref={modalImageScrollContainerRef}
               className="image-scroll-container"
@@ -518,16 +576,33 @@ function WorkModal({
                 scrollbarColor: 'transparent transparent',
               }}
             >
-              {modalWork.images
-                .sort((a, b) => a.order - b.order)
-                .map((image, index) => (
-                  <ModalImage
-                    key={image.id}
-                    image={image}
-                    alt={modalWork.title}
-                    isLast={index === modalWork.images.length - 1}
-                  />
-                ))}
+              {(() => {
+                const mediaItems = getMediaItems(modalWork);
+                return mediaItems.map((item, index) => {
+                  const isLast = index === mediaItems.length - 1;
+
+                  // 영상인 경우
+                  if (item.type === 'video') {
+                    return (
+                      <YouTubeEmbed
+                        key={item.data.id}
+                        video={item.data}
+                        isLast={isLast}
+                      />
+                    );
+                  }
+
+                  // 이미지인 경우
+                  return (
+                    <ModalImage
+                      key={item.data.id}
+                      image={item.data}
+                      alt={modalWork.title}
+                      isLast={isLast}
+                    />
+                  );
+                });
+              })()}
             </div>
           </div>
 
@@ -1180,7 +1255,7 @@ export default function WorkDetailPage() {
             paddingTop: '220px', // 카테고리 영역(64px) + 작품 목록(~100px) + 여백(~56px)과 겹치지 않도록
           }}
         >
-          {/* 선택된 작품의 이미지들 표시 */}
+          {/* 선택된 작품의 미디어(이미지+영상) 표시 */}
           {selectedWorkId && (() => {
             // relatedWorks에서 선택된 작업 찾기 (카테고리 재선택 시에도 올바르게 동작)
             const selectedWork = relatedWorks.find((w) => w.id === selectedWorkId)
@@ -1190,12 +1265,15 @@ export default function WorkDetailPage() {
               return null;
             }
 
+            // 이미지와 영상을 통합하여 order 순으로 정렬
+            const sortedMedia = getMediaItems(selectedWork);
+            // 하위 호환성을 위해 sortedImages도 유지
             const sortedImages = selectedWork.images.sort((a, b) => a.order - b.order);
 
             return (
               <>
-                {/* 좌측 고정 타임라인 UI - 이미지가 2개 이상일 때만 표시 */}
-                {sortedImages.length > 1 && (
+                {/* 좌측 고정 타임라인 UI - 미디어가 2개 이상일 때만 표시 */}
+                {sortedMedia.length > 1 && (
                   <div
                     style={{
                       position: 'fixed',
@@ -1209,12 +1287,12 @@ export default function WorkDetailPage() {
                     }}
                   >
                   {(() => {
-                    // 현재 활성 이미지의 인덱스 찾기
-                    const activeIndex = sortedImages.findIndex(img => img.id === currentImageId);
+                    // 현재 활성 미디어의 인덱스 찾기
+                    const activeIndex = sortedMedia.findIndex(item => item.data.id === currentImageId);
 
-                    return sortedImages.map((image, index) => {
-                      const isActive = currentImageId === image.id;
-                      const isLast = index === sortedImages.length - 1;
+                    return sortedMedia.map((item, index) => {
+                      const isActive = currentImageId === item.data.id;
+                      const isLast = index === sortedMedia.length - 1;
 
                       // 동적 선 길이 계산: 활성 점 아래의 선은 길게, 나머지는 짧게
                       const getLineHeight = () => {
@@ -1231,11 +1309,11 @@ export default function WorkDetailPage() {
                       };
 
                       return (
-                        <div key={image.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <div key={item.data.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                           {/* 타임라인 점 */}
                           <button
                             onClick={() => {
-                              const element = document.querySelector(`[data-image-id="${image.id}"]`);
+                              const element = document.querySelector(`[data-image-id="${item.data.id}"]`);
                               if (element) {
                                 element.scrollIntoView({ behavior: 'smooth', block: 'start' });
                               }
@@ -1250,7 +1328,7 @@ export default function WorkDetailPage() {
                               transition: 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                               padding: 0,
                             }}
-                            aria-label={`이미지 ${index + 1}로 이동`}
+                            aria-label={`미디어 ${index + 1}로 이동`}
                           />
                           {/* 타임라인 점선 - 동적 길이 */}
                           {!isLast && (
@@ -1273,7 +1351,7 @@ export default function WorkDetailPage() {
                   </div>
                 )}
 
-                {/* 좌측: 이미지 영역 (50%) */}
+                {/* 좌측: 미디어 영역 (50%) */}
                 <div
                   style={{
                     width: '50%',
@@ -1283,21 +1361,68 @@ export default function WorkDetailPage() {
                     position: 'relative',
                   }}
                 >
-                  {/* 이미지들 세로 나열 */}
+                  {/* 미디어들 세로 나열 (이미지 + 영상) */}
                   <div
                     ref={imageScrollContainerRef}
                   >
-                    {sortedImages.map((image, index) => {
-                      const isLast = index === sortedImages.length - 1;
+                    {sortedMedia.map((item, index) => {
+                      const isLast = index === sortedMedia.length - 1;
                       const isFirst = index === 0;
 
+                      // 영상인 경우
+                      if (item.type === 'video') {
+                        const video = item.data;
+                        return (
+                          <div
+                            key={video.id}
+                            data-image-id={video.id}
+                            className="work-media-container"
+                            style={{
+                              marginBottom: isLast ? 0 : 'var(--space-10)',
+                              position: 'relative',
+                              width: '100%',
+                              scrollSnapAlign: 'start',
+                              scrollMarginTop: '280px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                position: 'relative',
+                                width: '100%',
+                                paddingBottom: '56.25%', // 16:9 비율
+                                backgroundColor: '#000',
+                                borderRadius: '4px',
+                                overflow: 'hidden',
+                              }}
+                            >
+                              <iframe
+                                src={video.embedUrl}
+                                title={video.title || 'YouTube 영상'}
+                                style={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  border: 'none',
+                                }}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                              />
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // 이미지인 경우
+                      const image = item.data;
                       return (
                         <div
                           key={image.id}
                           data-image-id={image.id}
                           className="work-image-container"
                           style={{
-                            marginBottom: isLast ? 0 : 'var(--space-10)', // 이미지 간 간격 80px
+                            marginBottom: isLast ? 0 : 'var(--space-10)', // 미디어 간 간격 80px
                             position: 'relative',
                             width: '100%',
                             scrollSnapAlign: 'start', // snap 효과
@@ -1322,16 +1447,16 @@ export default function WorkDetailPage() {
                   </div>
                 </div>
 
-                {/* 우측: 캡션 - 우측 하단에서 위로 확장 */}
+                {/* 우측: 캡션 - 오른쪽으로 10%, 아래로 10% 이동 */}
                 {selectedWork.caption && (
                   <div
                     className="work-caption"
                     style={{
                       position: 'fixed',
-                      left: 'calc(50% + var(--space-16))',
-                      bottom: 'var(--space-16)', // 하단에서 128px 위
+                      left: 'calc(50% + var(--space-16) + 5%)', // 기존보다 오른쪽으로 ~10% 이동
+                      bottom: 'calc(var(--space-16) - 5vh)', // 기존보다 아래로 ~10% 이동
                       width: '200px',
-                      maxWidth: 'calc(50% - var(--space-12))',
+                      maxWidth: 'calc(50% - var(--space-12) - 5%)',
                       maxHeight: 'calc(100vh - 200px)', // 상단 여백 확보
                       zIndex: 40,
                     }}
