@@ -75,6 +75,8 @@ export interface WorkVideo {
   embedUrl: string;            // Embed URL
   title?: string;              // 영상 제목 (선택)
   order: number;               // 미디어 순서 (이미지와 함께 정렬)
+  width?: number;              // 영상 원본 너비 (비율 계산용)
+  height?: number;             // 영상 원본 높이 (비율 계산용)
 }
 
 // 미디어 아이템 (이미지 또는 영상)

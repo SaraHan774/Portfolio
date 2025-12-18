@@ -32,8 +32,37 @@ function getMediaItems(work: Work): MediaItem[] {
   return mediaItems.sort((a, b) => a.data.order - b.data.order);
 }
 
+// YouTube embed URL에 컨트롤 최소화 파라미터를 추가하는 헬퍼 함수
+function getMinimalYouTubeEmbedUrl(embedUrl: string): string {
+  try {
+    const url = new URL(embedUrl);
+    
+    // 컨트롤 및 UI 요소 최소화를 위한 파라미터 추가
+    url.searchParams.set('controls', '0');           // 컨트롤 숨김
+    url.searchParams.set('modestbranding', '1');     // YouTube 로고 최소화
+    url.searchParams.set('rel', '0');                // 관련 영상 숨김
+    url.searchParams.set('iv_load_policy', '3');     // 주석 숨김
+    url.searchParams.set('disablekb', '1');          // 키보드 단축키 비활성화
+    url.searchParams.set('fs', '0');                 // 전체화면 버튼 숨김
+    url.searchParams.set('cc_load_policy', '0');     // 자막 관련 UI 최소화
+    url.searchParams.set('playsinline', '1');        // 모바일에서 인라인 재생
+    url.searchParams.set('showinfo', '0');           // 영상 정보 숨김 (deprecated이지만 일부 버튼 숨김에 도움)
+    
+    return url.toString();
+  } catch (error) {
+    // URL 파싱 실패 시 원본 URL 반환
+    console.error('YouTube embed URL 파싱 실패:', error);
+    return embedUrl;
+  }
+}
+
 // YouTube 영상 Embed 컴포넌트
 function YouTubeEmbed({ video, isLast = false }: { video: WorkVideo; isLast?: boolean }) {
+  // 원본 비율이 있으면 사용, 없으면 기본 16:9 (56.25%)
+  const aspectRatio = video.width && video.height 
+    ? (video.height / video.width) * 100 
+    : 56.25;
+
   return (
     <div
       data-image-id={video.id}
@@ -41,14 +70,14 @@ function YouTubeEmbed({ video, isLast = false }: { video: WorkVideo; isLast?: bo
         marginBottom: isLast ? 0 : 'var(--space-10)',
         position: 'relative',
         width: '100%',
-        paddingBottom: '56.25%', // 16:9 비율
+        paddingBottom: `${aspectRatio}%`, // 원본 비율 또는 기본 16:9
         backgroundColor: '#000',
         borderRadius: '4px',
         overflow: 'hidden',
       }}
     >
       <iframe
-        src={video.embedUrl}
+        src={getMinimalYouTubeEmbedUrl(video.embedUrl)}
         title={video.title || 'YouTube 영상'}
         style={{
           position: 'absolute',
@@ -834,10 +863,11 @@ export default function WorkDetailPage() {
           setSelectedKeywordId(null);
         }
 
-        // 첫 번째 이미지 ID 설정
-        if (workData.images.length > 0) {
-          const firstImage = workData.images.sort((a, b) => a.order - b.order)[0];
-          setCurrentImageId(firstImage.id);
+        // 첫 번째 미디어 ID 설정 (이미지 또는 영상)
+        const mediaItems = getMediaItems(workData);
+        if (mediaItems.length > 0) {
+          const firstMedia = mediaItems[0];
+          setCurrentImageId(firstMedia.data.id);
         }
       } catch (error) {
         console.error('데이터 로드 실패:', error);
@@ -861,9 +891,11 @@ export default function WorkDetailPage() {
 
     if (!selectedWork) return;
 
-    if (selectedWork.images && selectedWork.images.length > 0) {
-      const firstImage = selectedWork.images.sort((a, b) => a.order - b.order)[0];
-      setCurrentImageId(firstImage.id);
+    // 첫 번째 미디어 ID 설정 (이미지 또는 영상)
+    const mediaItems = getMediaItems(selectedWork);
+    if (mediaItems.length > 0) {
+      const firstMedia = mediaItems[0];
+      setCurrentImageId(firstMedia.data.id);
     }
 
     // 약간의 딜레이 후 observer 설정 (DOM 렌더링 완료 대기)
@@ -1212,10 +1244,8 @@ export default function WorkDetailPage() {
     setRelatedWorks(allWorks);
     setSelectedKeywordId(keywordId);
     setSelectedExhibitionCategoryId(null);
-    // 첫 번째 작업 선택
-    if (allWorks.length > 0) {
-      setSelectedWorkId(allWorks[0].id);
-    }
+    // 카테고리 변경 시 썸네일 리스트만 표시 (첫 번째 작업 자동 선택하지 않음)
+    setSelectedWorkId(null);
   };
 
   const handleExhibitionCategorySelect = async (categoryId: string) => {
@@ -1224,10 +1254,8 @@ export default function WorkDetailPage() {
     setRelatedWorks(allWorks);
     setSelectedExhibitionCategoryId(categoryId);
     setSelectedKeywordId(null);
-    // 첫 번째 작업 선택
-    if (allWorks.length > 0) {
-      setSelectedWorkId(allWorks[0].id);
-    }
+    // 카테고리 변경 시 썸네일 리스트만 표시 (첫 번째 작업 자동 선택하지 않음)
+    setSelectedWorkId(null);
   };
 
   return (
@@ -1246,13 +1274,14 @@ export default function WorkDetailPage() {
           works={relatedWorks}
           selectedWorkId={selectedWorkId}
           onWorkSelect={setSelectedWorkId}
+          showThumbnail={selectedWorkId === null}
         />
         {/* 이미지 컨텐츠 영역 - 좌측 50% */}
         <main
           style={{
             position: 'relative',
             minHeight: 'calc(100vh - 60px)',
-            paddingTop: '220px', // 카테고리 영역(64px) + 작품 목록(~100px) + 여백(~56px)과 겹치지 않도록
+            paddingTop: '320px', // 카테고리 영역(64px) + 작품 목록(~100px) + 썸네일 영역(~100px) + 여백(~56px)과 겹치지 않도록
           }}
         >
           {/* 선택된 작품의 미디어(이미지+영상) 표시 */}
@@ -1389,14 +1418,16 @@ export default function WorkDetailPage() {
                               style={{
                                 position: 'relative',
                                 width: '100%',
-                                paddingBottom: '56.25%', // 16:9 비율
+                                paddingBottom: video.width && video.height 
+                                  ? `${(video.height / video.width) * 100}%` // 원본 비율
+                                  : '56.25%', // 기본 16:9 비율
                                 backgroundColor: '#000',
                                 borderRadius: '4px',
                                 overflow: 'hidden',
                               }}
                             >
                               <iframe
-                                src={video.embedUrl}
+                                src={getMinimalYouTubeEmbedUrl(video.embedUrl)}
                                 title={video.title || 'YouTube 영상'}
                                 style={{
                                   position: 'absolute',

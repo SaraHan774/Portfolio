@@ -13,18 +13,20 @@ function WorkTitleButton({
   isSelected,
   onClick,
   showThumbnail = false,
+  anyWorkHovered = false,
 }: {
   work: Work;
   isSelected: boolean;
   onClick: () => void;
   showThumbnail?: boolean;
+  anyWorkHovered?: boolean; // 다른 작업 중 하나라도 hover 중인지 여부
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const thumbnailImage = work.images.find((img) => img.id === work.thumbnailImageId) || work.images[0];
 
-  // 상세페이지(showThumbnail=false)에서는 hover 시에만 썸네일 표시
+  // 상세페이지(showThumbnail=false)에서는 하나라도 hover되면 전체 썸네일 표시 (선택된 작품 포함)
   // 홈페이지(showThumbnail=true)에서는 항상 썸네일 표시
-  const shouldShowThumbnail = showThumbnail || (isHovered && !isSelected);
+  const shouldShowThumbnail = showThumbnail || anyWorkHovered;
 
   return (
     <button
@@ -75,39 +77,52 @@ function WorkTitleButton({
           textAlign: 'center',
           whiteSpace: 'nowrap',
           transition: 'color 0.2s ease-out, font-weight 0.2s ease-out',
-          marginBottom: shouldShowThumbnail ? '4px' : '0',
+          marginBottom: '4px', // 썸네일 공간을 항상 확보하여 들썩임 방지
         }}
       >
         {`「'${work.title}'」${work.year ? `, ${work.year}` : ''}`}
       </span>
 
-      {/* 썸네일: 홈에서는 항상 표시, 상세페이지에서는 hover 시에만 표시 */}
-      {shouldShowThumbnail && thumbnailImage && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.2, ease: 'easeOut' }}
-          style={{
-            width: '80px',
-            height: '80px',
-            position: 'relative',
-            borderRadius: '2px',
-            overflow: 'hidden',
-            border: isHovered ? '2px solid red' : '2px solid transparent',
-            transition: 'border-color 0.2s ease-out',
-            boxSizing: 'border-box',
-          }}
-        >
-          <Image
-            src={thumbnailImage.thumbnailUrl || thumbnailImage.url}
-            alt={work.title}
-            fill
-            sizes="80px"
-            style={{ objectFit: 'cover' }}
-          />
-        </motion.div>
-      )}
+      {/* 썸네일 공간 - 항상 확보하여 들썩임 방지 */}
+      <div
+        style={{
+          width: '80px',
+          height: '80px',
+          position: 'relative',
+          borderRadius: '2px',
+          boxSizing: 'border-box',
+        }}
+      >
+        {/* 썸네일: 홈에서는 항상 표시, 상세페이지에서는 hover 시에만 표시 */}
+        {shouldShowThumbnail && thumbnailImage && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              borderRadius: '2px',
+              overflow: 'hidden',
+              border: isHovered ? '2px solid red' : '2px solid transparent',
+              transition: 'border-color 0.2s ease-out',
+              boxSizing: 'border-box',
+            }}
+          >
+            <Image
+              src={thumbnailImage.thumbnailUrl || thumbnailImage.url}
+              alt={work.title}
+              fill
+              sizes="80px"
+              style={{ objectFit: 'cover' }}
+            />
+          </motion.div>
+        )}
+      </div>
     </button>
   );
 }
@@ -129,6 +144,8 @@ function WorkListScroller({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
+  // 하나라도 hover 중인지 추적 (상세페이지에서 전체 썸네일 표시용)
+  const [anyWorkHovered, setAnyWorkHovered] = useState(false);
 
   const checkScrollButtons = () => {
     if (!scrollContainerRef.current) return;
@@ -180,25 +197,24 @@ function WorkListScroller({
 
   return (
     <div style={{ position: 'relative', width: '100%' }}>
-      {/* 좌측 인디케이터 - 텍스트 레벨 (...) */}
+      {/* 좌측 인디케이터 - 텍스트 레벨 (...) - 텍스트 옆 고정 위치 */}
       {showLeftArrow && (
         <button
           onClick={() => scroll('left')}
           style={{
             position: 'absolute',
-            left: '-24px',
-            top: showThumbnail ? '12px' : '50%',
-            transform: showThumbnail ? 'none' : 'translateY(-50%)',
+            left: '-40px', // 리스트와 간격 확보
+            top: '12px', // 텍스트 레벨 고정 위치
             background: 'var(--color-white)',
             border: 'none',
             cursor: 'pointer',
             padding: '4px',
             zIndex: 20,
             fontSize: '12px',
-            color: 'var(--color-text-primary)',
+            color: '#B3B3B3',
             opacity: 0.7,
             transition: 'opacity 0.2s ease',
-            letterSpacing: '-1px',
+            letterSpacing: '2px',
           }}
           onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
           onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
@@ -208,21 +224,21 @@ function WorkListScroller({
         </button>
       )}
 
-      {/* 좌측 인디케이터 - 썸네일 레벨 (<<) - 썸네일 모드에서만 표시 */}
-      {showLeftArrow && showThumbnail && (
+      {/* 좌측 인디케이터 - 썸네일 레벨 (<<) - 썸네일 옆 고정 위치 */}
+      {showLeftArrow && (showThumbnail || anyWorkHovered) && (
         <button
           onClick={() => scroll('left')}
           style={{
             position: 'absolute',
-            left: '-32px',
-            bottom: '24px',
+            left: '-40px', // 리스트와 간격 확보
+            bottom: '24px', // 썸네일 하단 고정 위치
             background: 'var(--color-white)',
             border: 'none',
             cursor: 'pointer',
             padding: '4px',
             zIndex: 20,
             fontSize: '14px',
-            color: 'var(--color-text-primary)',
+            color: '#B3B3B3',
             opacity: 0.7,
             transition: 'opacity 0.2s ease',
           }}
@@ -234,15 +250,15 @@ function WorkListScroller({
         </button>
       )}
 
-      {/* 좌측 fading edge */}
+      {/* 좌측 fading edge - 인디케이터까지 확장 */}
       {showLeftArrow && (
         <div
           style={{
             position: 'absolute',
-            left: 0,
+            left: '-40px', // 인디케이터 위치까지 확장
             top: 0,
             bottom: 0,
-            width: '40px',
+            width: '80px', // 40px (기본) + 40px (인디케이터까지)
             background: 'linear-gradient(to right, var(--color-white) 0%, var(--color-white) 30%, transparent 100%)',
             pointerEvents: 'none',
             zIndex: 15,
@@ -253,10 +269,22 @@ function WorkListScroller({
       {/* 스크롤 컨테이너 */}
       <div
         ref={scrollContainerRef}
+        onMouseEnter={() => {
+          // 컨테이너 내부에 마우스가 들어오면 썸네일 표시
+          if (!showThumbnail) {
+            setAnyWorkHovered(true);
+          }
+        }}
+        onMouseLeave={() => {
+          // 컨테이너 밖으로 마우스가 나가면 썸네일 숨김
+          if (!showThumbnail) {
+            setAnyWorkHovered(false);
+          }
+        }}
         style={{
           display: 'flex',
           flexDirection: direction === 'rtl' ? 'row-reverse' : 'row',
-          gap: showThumbnail ? '32px' : 'var(--space-2)',
+          gap: '32px', // 썸네일 공간을 항상 확보하므로 gap도 항상 썸네일 기준
           alignItems: 'flex-start',
           overflowX: 'auto',
           scrollbarWidth: 'none',
@@ -273,19 +301,20 @@ function WorkListScroller({
             isSelected={selectedWorkId === w.id}
             onClick={() => onWorkSelect(w.id)}
             showThumbnail={showThumbnail}
+            anyWorkHovered={anyWorkHovered}
           />
         ))}
       </div>
 
-      {/* 우측 fading edge */}
+      {/* 우측 fading edge - 인디케이터까지 확장 */}
       {showRightArrow && (
         <div
           style={{
             position: 'absolute',
-            right: 0,
+            right: '-40px', // 인디케이터 위치까지 확장
             top: 0,
             bottom: 0,
-            width: '40px',
+            width: '80px', // 40px (기본) + 40px (인디케이터까지)
             background: 'linear-gradient(to left, var(--color-white) 0%, var(--color-white) 30%, transparent 100%)',
             pointerEvents: 'none',
             zIndex: 15,
@@ -293,25 +322,24 @@ function WorkListScroller({
         />
       )}
 
-      {/* 우측 인디케이터 - 텍스트 레벨 (...) */}
+      {/* 우측 인디케이터 - 텍스트 레벨 (...) - 텍스트 옆 고정 위치 */}
       {showRightArrow && (
         <button
           onClick={() => scroll('right')}
           style={{
             position: 'absolute',
-            right: '-24px',
-            top: showThumbnail ? '12px' : '50%',
-            transform: showThumbnail ? 'none' : 'translateY(-50%)',
+            right: '-40px', // 리스트와 간격 확보
+            top: '12px', // 텍스트 레벨 고정 위치
             background: 'var(--color-white)',
             border: 'none',
             cursor: 'pointer',
             padding: '4px',
             zIndex: 20,
             fontSize: '12px',
-            color: 'var(--color-text-primary)',
+            color: '#B3B3B3',
             opacity: 0.7,
             transition: 'opacity 0.2s ease',
-            letterSpacing: '-1px',
+            letterSpacing: '2px',
           }}
           onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
           onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
@@ -321,21 +349,21 @@ function WorkListScroller({
         </button>
       )}
 
-      {/* 우측 인디케이터 - 썸네일 레벨 (>>) - 썸네일 모드에서만 표시 */}
-      {showRightArrow && showThumbnail && (
+      {/* 우측 인디케이터 - 썸네일 레벨 (>>) - 썸네일 옆 고정 위치 */}
+      {showRightArrow && (showThumbnail || anyWorkHovered) && (
         <button
           onClick={() => scroll('right')}
           style={{
             position: 'absolute',
-            right: '-32px',
-            bottom: '24px',
+            right: '-40px', // 리스트와 간격 확보
+            bottom: '24px', // 썸네일 하단 고정 위치
             background: 'var(--color-white)',
             border: 'none',
             cursor: 'pointer',
             padding: '4px',
             zIndex: 20,
             fontSize: '14px',
-            color: 'var(--color-text-primary)',
+            color: '#B3B3B3',
             opacity: 0.7,
             transition: 'opacity 0.2s ease',
           }}
