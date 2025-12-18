@@ -82,11 +82,20 @@ export default function FloatingWorkWindow({ workId, position, onClick }: Floati
     return null;
   }
 
-  const thumbnailImage = work.images.find((img) => img.id === work.thumbnailImageId) || work.images[0];
-  const description = work.shortDescription || 
-    (work.fullDescription.length > 100 
-      ? work.fullDescription.substring(0, 100) + '...' 
-      : work.fullDescription);
+  // 썸네일 결정: 이미지가 있으면 이미지 썸네일, 없으면 YouTube 썸네일
+  const thumbnailImage = work.images?.find((img) => img.id === work.thumbnailImageId) || work.images?.[0];
+  const firstVideo = work.videos?.[0];
+  const youtubeVideoId = firstVideo?.youtubeVideoId?.split('?')[0]?.split('&')[0];
+  const youtubeThumbnailUrl = youtubeVideoId ? `https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg` : null;
+
+  // 썸네일 URL 결정 (이미지 우선, 없으면 YouTube 썸네일)
+  const thumbnailUrl = thumbnailImage?.thumbnailUrl || thumbnailImage?.url || youtubeThumbnailUrl;
+  const hasThumbnail = !!thumbnailUrl;
+
+  const description = work.shortDescription ||
+    (work.fullDescription?.length > 100
+      ? work.fullDescription.substring(0, 100) + '...'
+      : work.fullDescription || '');
 
   return (
     <AnimatePresence mode="wait">
@@ -151,7 +160,7 @@ export default function FloatingWorkWindow({ workId, position, onClick }: Floati
           </span>
 
           {/* 썸네일 */}
-          {thumbnailImage && (
+          {hasThumbnail && (
             <div
               style={{
                 width: '120px',
@@ -162,7 +171,7 @@ export default function FloatingWorkWindow({ workId, position, onClick }: Floati
               }}
             >
               <Image
-                src={thumbnailImage?.thumbnailUrl || thumbnailImage?.url || ''}
+                src={thumbnailUrl}
                 alt={work.title}
                 fill
                 sizes="120px"

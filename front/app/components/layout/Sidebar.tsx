@@ -22,7 +22,16 @@ function WorkTitleButton({
   anyWorkHovered?: boolean; // 다른 작업 중 하나라도 hover 중인지 여부
 }) {
   const [isHovered, setIsHovered] = useState(false);
-  const thumbnailImage = work.images.find((img) => img.id === work.thumbnailImageId) || work.images[0];
+
+  // 썸네일 결정: 이미지가 있으면 이미지 썸네일, 없으면 YouTube 썸네일
+  const thumbnailImage = work.images?.find((img) => img.id === work.thumbnailImageId) || work.images?.[0];
+  const firstVideo = work.videos?.[0];
+  const youtubeVideoId = firstVideo?.youtubeVideoId?.split('?')[0]?.split('&')[0];
+  const youtubeThumbnailUrl = youtubeVideoId ? `https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg` : null;
+
+  // 썸네일 URL 결정 (이미지 우선, 없으면 YouTube 썸네일)
+  const thumbnailUrl = thumbnailImage?.thumbnailUrl || thumbnailImage?.url || youtubeThumbnailUrl;
+  const hasThumbnail = !!thumbnailUrl;
 
   // 상세페이지(showThumbnail=false)에서는 하나라도 hover되면 전체 썸네일 표시 (선택된 작품 포함)
   // 홈페이지(showThumbnail=true)에서는 항상 썸네일 표시
@@ -94,7 +103,7 @@ function WorkTitleButton({
         }}
       >
         {/* 썸네일: 홈에서는 항상 표시, 상세페이지에서는 hover 시에만 표시 */}
-        {shouldShowThumbnail && thumbnailImage && (
+        {shouldShowThumbnail && hasThumbnail && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -114,7 +123,7 @@ function WorkTitleButton({
             }}
           >
             <Image
-              src={thumbnailImage.thumbnailUrl || thumbnailImage.url}
+              src={thumbnailUrl}
               alt={work.title}
               fill
               sizes="80px"

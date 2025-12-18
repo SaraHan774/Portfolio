@@ -749,9 +749,12 @@ function WorkModal({
     const loadModalWork = async () => {
       const work = await getWorkById(workId);
       setModalWork(work);
-      if (work && work.images.length > 0) {
-        const firstImage = work.images.sort((a, b) => a.order - b.order)[0];
-        setModalCurrentImageId(firstImage.id);
+      if (work) {
+        // 이미지와 영상을 통합하여 첫 번째 미디어 ID 설정
+        const mediaItems = getMediaItems(work);
+        if (mediaItems.length > 0) {
+          setModalCurrentImageId(mediaItems[0].data.id);
+        }
       }
       // 스크롤 초기화 (다른 작품으로 이동 시)
       if (modalImageScrollContainerRef.current) {
@@ -767,22 +770,22 @@ function WorkModal({
 
     const container = modalImageScrollContainerRef.current;
     const imageElements = container.querySelectorAll('[data-image-id]');
-    const sortedImages = modalWork.images.sort((a, b) => a.order - b.order);
+    const sortedMedia = getMediaItems(modalWork);
     let lastTrackedImageId: string | null = null;
 
-    // 스크롤 끝 감지 및 이미지 위치 기반 활성화
+    // 스크롤 끝 감지 및 미디어 위치 기반 활성화
     const updateCurrentImage = () => {
       const scrollTop = container.scrollTop;
       const scrollHeight = container.scrollHeight;
       const clientHeight = container.clientHeight;
       const isAtBottom = scrollTop + clientHeight >= scrollHeight - 30; // 30px 여유
 
-      // 맨 끝에 도달하면 마지막 이미지 활성화
-      if (isAtBottom && sortedImages.length > 0) {
-        const lastImage = sortedImages[sortedImages.length - 1];
-        if (lastImage.id !== lastTrackedImageId) {
-          lastTrackedImageId = lastImage.id;
-          setModalCurrentImageId(lastImage.id);
+      // 맨 끝에 도달하면 마지막 미디어 활성화
+      if (isAtBottom && sortedMedia.length > 0) {
+        const lastMedia = sortedMedia[sortedMedia.length - 1];
+        if (lastMedia.data.id !== lastTrackedImageId) {
+          lastTrackedImageId = lastMedia.data.id;
+          setModalCurrentImageId(lastMedia.data.id);
         }
         return;
       }
@@ -1117,7 +1120,7 @@ function WorkModal({
                 height: 'calc(90vh - 100px)',
                 overflowY: 'auto',
                 padding: 'var(--space-6)',
-                paddingLeft: modalWork.images.length > 1 ? 'var(--space-2)' : 'var(--space-6)',
+                paddingLeft: getMediaItems(modalWork).length > 1 ? 'var(--space-2)' : 'var(--space-6)',
                 scrollbarWidth: 'none',
                 scrollbarColor: 'transparent transparent',
               }}
@@ -1832,7 +1835,9 @@ export default function WorkDetailPage() {
             const selectedWork = relatedWorks.find((w) => w.id === selectedWorkId)
               || (selectedWorkId === workId ? work : null);
 
-            if (!selectedWork || !selectedWork.images || selectedWork.images.length === 0) {
+            // 이미지 또는 영상이 하나도 없으면 표시하지 않음
+            const hasMedia = (selectedWork?.images?.length || 0) > 0 || (selectedWork?.videos?.length || 0) > 0;
+            if (!selectedWork || !hasMedia) {
               return null;
             }
 

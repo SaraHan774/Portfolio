@@ -143,18 +143,18 @@ const WorkForm = () => {
       // 폼 유효성 검사
       await form.validateFields();
 
-      // 이미지 최소 1장 확인
-      if (images.length === 0) {
+      // 이미지 또는 영상 최소 1개 확인
+      if (images.length === 0 && videos.length === 0) {
         notification.warning({
-          message: '이미지 필요',
-          description: '게시하려면 최소 1장의 이미지를 업로드해주세요.',
+          message: '미디어 필요',
+          description: '게시하려면 최소 1개의 이미지 또는 영상을 업로드해주세요.',
           placement: 'topRight',
         });
         return;
       }
 
-      // 대표 썸네일 확인
-      if (!thumbnailImageId) {
+      // 대표 썸네일 확인 (이미지가 있는 경우에만)
+      if (images.length > 0 && !thumbnailImageId) {
         notification.warning({
           message: '썸네일 필요',
           description: '게시하려면 대표 썸네일을 선택해주세요.',
@@ -501,8 +501,8 @@ const WorkForm = () => {
       ),
       children: (
         <>
-          {images.length === 0 ? (
-            <p style={{ color: '#8c8c8c' }}>먼저 이미지를 업로드해주세요.</p>
+          {images.length === 0 && videos.length === 0 ? (
+            <p style={{ color: '#8c8c8c' }}>먼저 이미지 또는 영상을 업로드해주세요.</p>
           ) : (
             <CaptionEditor
               value={caption}
@@ -532,21 +532,26 @@ const WorkForm = () => {
                     <div style={{ marginBottom: '8px', color: '#8c8c8c', fontSize: '12px' }}>
                       "{sentenceCat.sentence}"
                     </div>
-                    <Checkbox.Group
-                      value={selectedSentenceCategoryIds}
-                      onChange={(checkedValues) =>
-                        setSelectedSentenceCategoryIds(checkedValues as string[])
-                      }
-                    >
-                      <Space direction="vertical" size="small">
-                        {sentenceCat.keywords.map((keyword) => (
-                          <Checkbox key={keyword.id} value={keyword.id}>
-                            {keyword.name}{' '}
-                            <span style={{ color: '#8c8c8c' }}>({sentenceCat.sentence})</span>
-                          </Checkbox>
-                        ))}
-                      </Space>
-                    </Checkbox.Group>
+                    <Space direction="vertical" size="small">
+                      {sentenceCat.keywords.map((keyword) => (
+                        <Checkbox
+                          key={keyword.id}
+                          checked={selectedSentenceCategoryIds.includes(keyword.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedSentenceCategoryIds([...selectedSentenceCategoryIds, keyword.id]);
+                            } else {
+                              setSelectedSentenceCategoryIds(
+                                selectedSentenceCategoryIds.filter((id) => id !== keyword.id)
+                              );
+                            }
+                          }}
+                        >
+                          {keyword.name}{' '}
+                          <span style={{ color: '#8c8c8c' }}>({sentenceCat.sentence})</span>
+                        </Checkbox>
+                      ))}
+                    </Space>
                   </div>
                 ))
               )}
@@ -725,21 +730,26 @@ const WorkForm = () => {
                 <div style={{ marginBottom: '8px', color: '#8c8c8c', fontSize: '12px' }}>
                   "{sentenceCat.sentence}"
                 </div>
-                <Checkbox.Group
-                  value={selectedSentenceCategoryIds}
-                  onChange={(checkedValues) =>
-                    setSelectedSentenceCategoryIds(checkedValues as string[])
-                  }
-                >
-                  <Space direction="vertical" size="small">
-                    {sentenceCat.keywords.map((keyword) => (
-                      <Checkbox key={keyword.id} value={keyword.id}>
-                        {keyword.name}{' '}
-                        <span style={{ color: '#8c8c8c' }}>({sentenceCat.sentence})</span>
-                      </Checkbox>
-                    ))}
-                  </Space>
-                </Checkbox.Group>
+                <Space direction="vertical" size="small">
+                  {sentenceCat.keywords.map((keyword) => (
+                    <Checkbox
+                      key={keyword.id}
+                      checked={selectedSentenceCategoryIds.includes(keyword.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedSentenceCategoryIds([...selectedSentenceCategoryIds, keyword.id]);
+                        } else {
+                          setSelectedSentenceCategoryIds(
+                            selectedSentenceCategoryIds.filter((id) => id !== keyword.id)
+                          );
+                        }
+                      }}
+                    >
+                      {keyword.name}{' '}
+                      <span style={{ color: '#8c8c8c' }}>({sentenceCat.sentence})</span>
+                    </Checkbox>
+                  ))}
+                </Space>
               </div>
             ))
           )}
@@ -846,8 +856,8 @@ const WorkForm = () => {
           )}
 
           <Card title={<><HighlightOutlined /> 상세 페이지 캡션</>} style={{ marginBottom: '24px' }}>
-            {images.length === 0 ? (
-              <p style={{ color: '#8c8c8c' }}>먼저 이미지를 업로드해주세요.</p>
+            {images.length === 0 && videos.length === 0 ? (
+              <p style={{ color: '#8c8c8c' }}>먼저 이미지 또는 영상을 업로드해주세요.</p>
             ) : (
               <CaptionEditor
                 value={caption}
