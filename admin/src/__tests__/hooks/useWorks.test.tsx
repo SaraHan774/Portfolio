@@ -16,8 +16,8 @@ import {
   createWork,
   updateWork,
   deleteWork,
-} from '../../services/worksService';
-import type { Work } from '../../types';
+} from '../../data/repository';
+import type { Work } from '../../core/types';
 
 // Get mocked functions
 const mockGetWorks = vi.mocked(getWorks);
@@ -78,7 +78,7 @@ describe('worksKeys', () => {
   it('should generate correct query keys', () => {
     expect(worksKeys.all).toEqual(['works']);
     expect(worksKeys.lists()).toEqual(['works', 'list']);
-    expect(worksKeys.list('active')).toEqual(['works', 'list', 'active']);
+    expect(worksKeys.list({ status: 'active' })).toEqual(['works', 'list', { status: 'active' }]);
     expect(worksKeys.details()).toEqual(['works', 'detail']);
     expect(worksKeys.detail('123')).toEqual(['works', 'detail', '123']);
   });

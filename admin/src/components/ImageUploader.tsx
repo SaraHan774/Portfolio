@@ -11,8 +11,8 @@ import {
   DownOutlined,
   BulbOutlined,
 } from '@ant-design/icons';
-import type { WorkImage } from '../types';
-import { uploadImage, deleteImage } from '../services/storageService';
+import type { WorkImage } from '../core/types';
+import { uploadImage, deleteImage } from '../data/repository';
 import './ImageUploader.css';
 
 const { Dragger } = Upload;

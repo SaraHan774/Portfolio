@@ -30,7 +30,7 @@ import {
   updateSiteSettings,
   uploadFavicon,
   deleteFavicon,
-} from '../services/settingsService';
+} from '../data/repository';
 import './Settings.css';
 
 const { Title, Text } = Typography;

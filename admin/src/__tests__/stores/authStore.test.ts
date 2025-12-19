@@ -5,8 +5,8 @@ import {
   logout as firebaseLogout,
   getCurrentUser,
   onAuthChange,
-} from '../../services/authService';
-import type { User } from '../../types';
+} from '../../data/repository';
+import type { User } from '../../core/types';
 
 // Get mocked functions
 const mockLoginWithGoogle = vi.mocked(loginWithGoogle);
@@ -188,7 +188,7 @@ describe('authStore', () => {
       let authChangeCallback: ((user: User | null) => void) | undefined;
 
       mockGetCurrentUser.mockResolvedValue(null);
-      mockOnAuthChange.mockImplementation((callback) => {
+      mockOnAuthChange.mockImplementation((callback: (user: User | null) => void) => {
         authChangeCallback = callback;
         return () => {};
       });
