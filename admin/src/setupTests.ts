@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { vi, afterEach } from 'vitest';
 
 // Mock Firebase
 vi.mock('./lib/firebase', () => ({
@@ -21,13 +21,13 @@ vi.mock('./services/authService', () => ({
   onAuthChange: vi.fn(),
 }));
 
-// Mock Firebase Works Service
+// Mock Firebase Works Service with default implementations
 vi.mock('./services/worksService', () => ({
-  getWorks: vi.fn(),
-  getWork: vi.fn(),
-  createWork: vi.fn(),
-  updateWork: vi.fn(),
-  deleteWork: vi.fn(),
+  getWorks: vi.fn().mockResolvedValue([]),
+  getWork: vi.fn().mockResolvedValue(null),
+  createWork: vi.fn().mockResolvedValue({}),
+  updateWork: vi.fn().mockResolvedValue({}),
+  deleteWork: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Clean up after each test

@@ -152,7 +152,7 @@ describe('authStore', () => {
   describe('initializeAuth', () => {
     it('should set user from getCurrentUser on initialization', async () => {
       mockGetCurrentUser.mockResolvedValue(mockUser);
-      mockOnAuthChange.mockImplementation(() => {});
+      mockOnAuthChange.mockImplementation(() => () => {});
 
       await useAuthStore.getState().initializeAuth();
 
@@ -164,7 +164,7 @@ describe('authStore', () => {
 
     it('should set not authenticated when no user exists', async () => {
       mockGetCurrentUser.mockResolvedValue(null);
-      mockOnAuthChange.mockImplementation(() => {});
+      mockOnAuthChange.mockImplementation(() => () => {});
 
       await useAuthStore.getState().initializeAuth();
 
@@ -176,7 +176,7 @@ describe('authStore', () => {
 
     it('should set up auth change listener', async () => {
       mockGetCurrentUser.mockResolvedValue(null);
-      mockOnAuthChange.mockImplementation(() => {});
+      mockOnAuthChange.mockImplementation(() => () => {});
 
       await useAuthStore.getState().initializeAuth();
 
@@ -190,6 +190,7 @@ describe('authStore', () => {
       mockGetCurrentUser.mockResolvedValue(null);
       mockOnAuthChange.mockImplementation((callback) => {
         authChangeCallback = callback;
+        return () => {};
       });
 
       await useAuthStore.getState().initializeAuth();

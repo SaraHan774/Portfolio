@@ -84,7 +84,7 @@ describe('CaptionEditor', () => {
       error: null,
       isSuccess: true,
       refetch: vi.fn(),
-    } as ReturnType<typeof useWorks>);
+    } as unknown as ReturnType<typeof useWorks>);
   });
 
   describe('Rendering', () => {
@@ -127,35 +127,66 @@ describe('CaptionEditor', () => {
   });
 
   describe('Toolbar Functionality', () => {
-    it('should toggle bold formatting on click', async () => {
+    // Note: TipTap/ProseMirror doesn't fully support jsdom for text editing.
+    // These tests verify button interactions and state changes.
+
+    it('should have bold button that responds to clicks', async () => {
       const user = userEvent.setup();
       render(<CaptionEditor />);
 
       const boldButton = screen.getByTitle('진하게 (Ctrl+B)');
+
+      // Button should be default (not primary) initially
+      expect(boldButton).toHaveClass('ant-btn-default');
+
       await user.click(boldButton);
 
-      // Button should be clickable without error
+      // After click, button should still exist and be interactive
       expect(boldButton).toBeInTheDocument();
+      expect(boldButton).not.toBeDisabled();
     });
 
-    it('should toggle italic formatting on click', async () => {
+    it('should have italic button that responds to clicks', async () => {
       const user = userEvent.setup();
       render(<CaptionEditor />);
 
       const italicButton = screen.getByTitle('기울임 (Ctrl+I)');
+
+      expect(italicButton).toHaveClass('ant-btn-default');
+
       await user.click(italicButton);
 
       expect(italicButton).toBeInTheDocument();
+      expect(italicButton).not.toBeDisabled();
     });
 
-    it('should toggle underline formatting on click', async () => {
+    it('should have underline button that responds to clicks', async () => {
       const user = userEvent.setup();
       render(<CaptionEditor />);
 
       const underlineButton = screen.getByTitle('밑줄 (Ctrl+U)');
+
+      expect(underlineButton).toHaveClass('ant-btn-default');
+
       await user.click(underlineButton);
 
       expect(underlineButton).toBeInTheDocument();
+      expect(underlineButton).not.toBeDisabled();
+    });
+
+    it('should render initial content with formatting preserved', async () => {
+      // Test that formatted content is rendered correctly
+      render(<CaptionEditor value="<p><strong>Bold</strong> and <em>italic</em></p>" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Bold')).toBeInTheDocument();
+        expect(screen.getByText('italic')).toBeInTheDocument();
+      });
+
+      // Verify the formatting elements exist
+      const editor = getEditorElement();
+      expect(editor?.querySelector('strong')).toBeInTheDocument();
+      expect(editor?.querySelector('em')).toBeInTheDocument();
     });
   });
 
@@ -246,7 +277,7 @@ describe('CaptionEditor', () => {
         error: null,
         isSuccess: true,
         refetch: vi.fn(),
-      } as ReturnType<typeof useWorks>);
+      } as unknown as ReturnType<typeof useWorks>);
 
       // Component should render without executing scripts
       expect(() => render(<CaptionEditor />)).not.toThrow();
