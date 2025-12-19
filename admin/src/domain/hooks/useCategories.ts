@@ -20,6 +20,19 @@ import {
 } from '../../data/repository';
 import type { SentenceCategory, ExhibitionCategory } from '../../core/types';
 
+// ============ Shared Utilities ============
+
+/**
+ * 활성화된 카테고리만 필터링하고 displayOrder로 정렬
+ * 문장형/전시명 카테고리 모두에서 재사용
+ */
+const filterActiveAndSort = <T extends { isActive: boolean; displayOrder: number }>(
+  categories: T[]
+): T[] =>
+  categories
+    .filter((cat) => cat.isActive)
+    .sort((a, b) => a.displayOrder - b.displayOrder);
+
 // ============ Sentence Categories Hooks ============
 
 /**
@@ -41,10 +54,7 @@ export const useActiveSentenceCategories = () => {
   return useQuery({
     queryKey: categoriesCacheKeys.sentence.all(),
     queryFn: getSentenceCategories,
-    select: (categories) =>
-      categories
-        .filter((cat) => cat.isActive)
-        .sort((a, b) => a.displayOrder - b.displayOrder),
+    select: filterActiveAndSort,
     ...categoriesCacheConfig,
   });
 };
@@ -140,10 +150,7 @@ export const useActiveExhibitionCategories = () => {
   return useQuery({
     queryKey: categoriesCacheKeys.exhibition.all(),
     queryFn: getExhibitionCategories,
-    select: (categories) =>
-      categories
-        .filter((cat) => cat.isActive)
-        .sort((a, b) => a.displayOrder - b.displayOrder),
+    select: filterActiveAndSort,
     ...categoriesCacheConfig,
   });
 };

@@ -2,7 +2,7 @@
  * Storage Domain Hook - 파일 업로드/삭제 관련 비즈니스 로직
  * Repository 레이어를 통해 데이터 접근
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
   uploadImage,
@@ -46,11 +46,13 @@ export const useUploadImages = () => {
     onSettled: () => setProgressMap({}),
   });
 
-  // 전체 진행률 계산
-  const totalProgress =
-    Object.keys(progressMap).length > 0
-      ? Object.values(progressMap).reduce((sum, p) => sum + p, 0) / Object.keys(progressMap).length
+  // 전체 진행률 계산 (메모이제이션으로 불필요한 재계산 방지)
+  const totalProgress = useMemo(() => {
+    const keys = Object.keys(progressMap);
+    return keys.length > 0
+      ? Object.values(progressMap).reduce((sum, p) => sum + p, 0) / keys.length
       : 0;
+  }, [progressMap]);
 
   return {
     ...mutation,
@@ -81,9 +83,14 @@ export const useDeleteWorkImages = () => {
 /**
  * 이미지 업로드 및 삭제를 관리하는 통합 Hook
  *
+ * @remarks
+ * 반환되는 함수들(addImage, addImages, removeImage)은 mutateAsync에 의존합니다.
+ * 이 함수들을 다른 훅의 dependency array에 사용할 경우 useCallback으로 감싸거나,
+ * 또는 ref를 사용하여 최신 함수를 참조하세요.
+ *
  * @example
  * ```tsx
- * const { images, addImage, removeImage, isUploading } = useImageManager();
+ * const { images, addImage, removeImage, isUploading, uploadError } = useImageManager();
  *
  * const handleUpload = async (file: File) => {
  *   try {
@@ -92,6 +99,13 @@ export const useDeleteWorkImages = () => {
  *     console.error('Upload failed:', error);
  *   }
  * };
+ *
+ * // 에러 처리
+ * useEffect(() => {
+ *   if (uploadError) {
+ *     message.error('업로드 실패');
+ *   }
+ * }, [uploadError]);
  * ```
  */
 export const useImageManager = () => {

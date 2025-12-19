@@ -38,6 +38,8 @@ export const useAuth = () => {
   const [error, setError] = useState<string | null>(null);
 
   // 인증 상태 변경 리스너 - 마운트 시 한 번만 실행
+  // Note: queryClient는 QueryClientProvider 컨텍스트에서 제공되는 stable reference
+  // Provider가 리마운트되면 전체 앱이 리마운트되므로 안전함
   useEffect(() => {
     const initialize = async () => {
       try {
@@ -61,8 +63,9 @@ export const useAuth = () => {
     });
 
     return unsubscribe;
+    // queryClient는 stable reference (QueryClientProvider 컨텍스트)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 마운트 시 한 번만 실행, queryClient는 stable reference
+  }, []);
 
   // 로그인
   const login = useCallback(async () => {
@@ -112,14 +115,21 @@ export const useAuth = () => {
 
 /**
  * 관리자 전용 역할 변경 Mutation
- * 캐시에서 최신 사용자 정보를 가져와서 권한 검사
+ *
+ * @remarks
+ * 캐시된 사용자 정보로 권한 검사를 수행합니다.
+ * 캐시가 stale할 수 있으므로, 중요한 권한 변경 전에는
+ * useCurrentUser().refetch()로 최신 데이터를 확보하세요.
+ *
+ * 서버측에서도 권한 검사가 이루어지므로 보안상 안전합니다.
  */
 export const useSetUserRole = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: 'admin' | 'viewer' }) => {
-      // 캐시에서 최신 사용자 정보 가져오기 (stale closure 방지)
+      // 캐시에서 사용자 정보 가져오기 (stale closure 방지)
+      // 참고: 서버측 authApi.setUserRole에서도 권한 검사 수행
       const currentUser = queryClient.getQueryData<User | null>(authCacheKeys.user()) ?? null;
       return setUserRole(userId, role, currentUser);
     },

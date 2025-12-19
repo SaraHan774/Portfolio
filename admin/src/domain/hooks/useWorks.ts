@@ -53,6 +53,7 @@ export const useWork = (id: string | undefined) => {
 
 /**
  * 작품 생성 Mutation
+ * Note: worksCacheKeys.all은 ['works'] 배열로, 모든 works 관련 쿼리를 무효화
  */
 export const useCreateWork = () => {
   const queryClient = useQueryClient();
