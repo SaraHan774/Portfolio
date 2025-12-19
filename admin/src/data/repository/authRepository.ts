@@ -41,13 +41,15 @@ export const onAuthChange = (callback: (user: User | null) => void): (() => void
 };
 
 /**
- * 사용자 역할 변경
+ * 사용자 역할 변경 (관리자 전용)
+ * @throws {AuthError} 권한이 없는 경우
  */
 export const setUserRole = async (
   userId: string,
-  role: 'admin' | 'viewer'
+  role: 'admin' | 'viewer',
+  currentUser: User | null
 ): Promise<void> => {
-  return authApi.setUserRole(userId, role);
+  return authApi.setUserRole(userId, role, currentUser);
 };
 
 /**

@@ -11,9 +11,39 @@ import {
 } from 'firebase/storage';
 import { storage } from './client';
 import { storagePaths } from '../../core/constants';
-import { resizeImage, getImageDimensions } from '../../core/utils';
+import { ValidationError, UploadError } from '../../core/errors';
+import { resizeImage, getImageDimensions, createLogger } from '../../core/utils';
 import { v4 as uuidv4 } from 'uuid';
 import type { WorkImage } from '../../core/types';
+
+const logger = createLogger('storageApi');
+
+/**
+ * 허용된 이미지 확장자
+ */
+const ALLOWED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'] as const;
+
+/**
+ * 동시 업로드 제한
+ */
+const UPLOAD_CONCURRENCY = 3;
+
+/**
+ * 파일 확장자 검증
+ */
+const validateFileExtension = (filename: string): string => {
+  const extension = filename.split('.').pop()?.toLowerCase();
+
+  if (!extension || !ALLOWED_IMAGE_EXTENSIONS.includes(extension as typeof ALLOWED_IMAGE_EXTENSIONS[number])) {
+    throw new ValidationError(
+      `지원하지 않는 파일 형식입니다. 허용: ${ALLOWED_IMAGE_EXTENSIONS.join(', ')}`,
+      'INVALID_FILE_EXTENSION',
+      { filename, extension }
+    );
+  }
+
+  return extension;
+};
 
 /**
  * 이미지 업로드 (진행률 콜백 포함)
@@ -22,60 +52,69 @@ export const uploadImage = async (
   file: File,
   onProgress?: (progress: number) => void
 ): Promise<WorkImage> => {
+  // 파일 확장자 검증
+  const extension = validateFileExtension(file.name);
+
   const imageId = uuidv4();
-  const extension = file.name.split('.').pop() || 'jpg';
   const fileName = `${imageId}.${extension}`;
 
   // 원본 이미지 업로드
   const originalRef = ref(storage, `${storagePaths.worksImages}/${fileName}`);
 
-  // 이미지 크기 정보 가져오기
-  const dimensions = await getImageDimensions(file);
+  try {
+    // 이미지 크기 정보 가져오기
+    const dimensions = await getImageDimensions(file);
 
-  if (onProgress) {
-    const uploadTask = uploadBytesResumable(originalRef, file);
+    if (onProgress) {
+      const uploadTask = uploadBytesResumable(originalRef, file);
 
-    await new Promise<void>((resolve, reject) => {
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          onProgress(progress);
-        },
-        reject,
-        () => resolve()
-      );
+      await new Promise<void>((resolve, reject) => {
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            onProgress(progress);
+          },
+          reject,
+          () => resolve()
+        );
+      });
+    } else {
+      await uploadBytes(originalRef, file);
+    }
+
+    const originalUrl = await getDownloadURL(originalRef);
+
+    // 썸네일 생성 및 업로드
+    const thumbnailBlob = await resizeImage(file, {
+      maxWidth: 300,
+      maxHeight: 300,
+      quality: 0.7,
     });
-  } else {
-    await uploadBytes(originalRef, file);
+    const thumbnailRef = ref(storage, `${storagePaths.worksThumbnails}/${fileName}`);
+    await uploadBytes(thumbnailRef, thumbnailBlob);
+    const thumbnailUrl = await getDownloadURL(thumbnailRef);
+
+    logger.info('이미지 업로드 성공', { action: 'uploadImage', imageId, fileName });
+
+    return {
+      id: imageId,
+      url: originalUrl,
+      thumbnailUrl,
+      order: 0,
+      width: dimensions.width,
+      height: dimensions.height,
+      fileSize: file.size,
+      uploadedFrom: 'desktop',
+    };
+  } catch (error) {
+    logger.error('이미지 업로드 실패', error, { action: 'uploadImage', fileName });
+    throw new UploadError('이미지 업로드에 실패했습니다.', { fileName });
   }
-
-  const originalUrl = await getDownloadURL(originalRef);
-
-  // 썸네일 생성 및 업로드
-  const thumbnailBlob = await resizeImage(file, {
-    maxWidth: 300,
-    maxHeight: 300,
-    quality: 0.7,
-  });
-  const thumbnailRef = ref(storage, `${storagePaths.worksThumbnails}/${fileName}`);
-  await uploadBytes(thumbnailRef, thumbnailBlob);
-  const thumbnailUrl = await getDownloadURL(thumbnailRef);
-
-  return {
-    id: imageId,
-    url: originalUrl,
-    thumbnailUrl,
-    order: 0,
-    width: dimensions.width,
-    height: dimensions.height,
-    fileSize: file.size,
-    uploadedFrom: 'desktop',
-  };
 };
 
 /**
- * 여러 이미지 업로드
+ * 여러 이미지 병렬 업로드 (동시성 제한)
  */
 export const uploadImages = async (
   files: File[],
@@ -83,15 +122,31 @@ export const uploadImages = async (
 ): Promise<WorkImage[]> => {
   const results: WorkImage[] = [];
 
-  for (let i = 0; i < files.length; i++) {
-    const image = await uploadImage(files[i], (progress) => {
-      if (onProgress) {
-        onProgress(i, progress);
-      }
-    });
-    image.order = i;
-    results.push(image);
+  // 동시성 제한을 두고 병렬 업로드
+  for (let i = 0; i < files.length; i += UPLOAD_CONCURRENCY) {
+    const batch = files.slice(i, i + UPLOAD_CONCURRENCY);
+
+    const batchResults = await Promise.all(
+      batch.map((file, batchIndex) =>
+        uploadImage(file, (progress) => {
+          onProgress?.(i + batchIndex, progress);
+        })
+      )
+    );
+
+    // 순서 할당
+    results.push(
+      ...batchResults.map((img, batchIndex) => ({
+        ...img,
+        order: i + batchIndex,
+      }))
+    );
   }
+
+  logger.info('다중 이미지 업로드 완료', {
+    action: 'uploadImages',
+    count: files.length,
+  });
 
   return results;
 };
@@ -107,7 +162,7 @@ export const deleteImage = async (imageId: string, extension = 'jpg'): Promise<v
     const originalRef = ref(storage, `${storagePaths.worksImages}/${fileName}`);
     await deleteObject(originalRef);
   } catch {
-    console.warn(`원본 이미지 삭제 실패: ${fileName}`);
+    logger.warn(`원본 이미지 삭제 실패: ${fileName}`, { action: 'deleteImage', imageId });
   }
 
   // 썸네일 삭제
@@ -115,7 +170,7 @@ export const deleteImage = async (imageId: string, extension = 'jpg'): Promise<v
     const thumbnailRef = ref(storage, `${storagePaths.worksThumbnails}/${fileName}`);
     await deleteObject(thumbnailRef);
   } catch {
-    console.warn(`썸네일 이미지 삭제 실패: ${fileName}`);
+    logger.warn(`썸네일 이미지 삭제 실패: ${fileName}`, { action: 'deleteImage', imageId });
   }
 };
 
@@ -167,10 +222,17 @@ export const uploadFavicon = async (file: File): Promise<string> => {
     // 기존 파비콘이 없으면 무시
   }
 
-  // 새 파비콘 업로드
-  const faviconRef = ref(storage, `${storagePaths.favicon}/favicon.ico`);
-  await uploadBytes(faviconRef, file);
-  return getDownloadURL(faviconRef);
+  try {
+    // 새 파비콘 업로드
+    const faviconRef = ref(storage, `${storagePaths.favicon}/favicon.ico`);
+    await uploadBytes(faviconRef, file);
+    const url = await getDownloadURL(faviconRef);
+    logger.info('파비콘 업로드 성공', { action: 'uploadFavicon' });
+    return url;
+  } catch (error) {
+    logger.error('파비콘 업로드 실패', error, { action: 'uploadFavicon' });
+    throw new UploadError('파비콘 업로드에 실패했습니다.');
+  }
 };
 
 /**
@@ -180,6 +242,7 @@ export const deleteFavicon = async (): Promise<void> => {
   try {
     const faviconRef = ref(storage, `${storagePaths.favicon}/favicon.ico`);
     await deleteObject(faviconRef);
+    logger.info('파비콘 삭제 성공', { action: 'deleteFavicon' });
   } catch {
     // 파비콘이 없으면 무시
   }

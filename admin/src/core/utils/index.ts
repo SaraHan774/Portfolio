@@ -3,3 +3,4 @@ export * from './image';
 export * from './string';
 export * from './date';
 export * from './validation';
+export * from './logger';

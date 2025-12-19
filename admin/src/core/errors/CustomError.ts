@@ -24,10 +24,10 @@ export class AppError extends Error {
 export class ValidationError extends AppError {
   public readonly field?: string;
 
-  constructor(message: string, field?: string, details?: Record<string, unknown>) {
-    super(message, 'VALIDATION_ERROR', details);
+  constructor(message: string, codeOrField?: string, details?: Record<string, unknown>) {
+    super(message, codeOrField || 'VALIDATION_ERROR', details);
     this.name = 'ValidationError';
-    this.field = field;
+    this.field = codeOrField;
   }
 }
 
@@ -48,8 +48,8 @@ export class NetworkError extends AppError {
  * 인증 에러
  */
 export class AuthError extends AppError {
-  constructor(message: string, details?: Record<string, unknown>) {
-    super(message, 'AUTH_ERROR', details);
+  constructor(message: string, code?: string, details?: Record<string, unknown>) {
+    super(message, code || 'AUTH_ERROR', details);
     this.name = 'AuthError';
   }
 }
@@ -68,15 +68,12 @@ export class PermissionError extends AppError {
  * 리소스 미발견 에러
  */
 export class NotFoundError extends AppError {
-  public readonly resource: string;
+  public readonly resource?: string;
 
-  constructor(resource: string, id?: string) {
-    const message = id
-      ? `${resource}을(를) 찾을 수 없습니다: ${id}`
-      : `${resource}을(를) 찾을 수 없습니다`;
-    super(message, 'NOT_FOUND_ERROR', { resource, id });
+  constructor(message: string, details?: Record<string, unknown>) {
+    super(message, 'NOT_FOUND_ERROR', details);
     this.name = 'NotFoundError';
-    this.resource = resource;
+    this.resource = details?.resource as string | undefined;
   }
 }
 
@@ -86,10 +83,10 @@ export class NotFoundError extends AppError {
 export class UploadError extends AppError {
   public readonly fileName?: string;
 
-  constructor(message: string, fileName?: string, details?: Record<string, unknown>) {
-    super(message, 'UPLOAD_ERROR', { ...details, fileName });
+  constructor(message: string, details?: Record<string, unknown>) {
+    super(message, 'UPLOAD_ERROR', details);
     this.name = 'UploadError';
-    this.fileName = fileName;
+    this.fileName = details?.fileName as string | undefined;
   }
 }
 

@@ -3,6 +3,12 @@
  * 모든 캐시 키를 중앙에서 관리하여 일관성 유지
  */
 
+/**
+ * 시간 상수 (milliseconds)
+ */
+const SECONDS = 1000;
+const MINUTES = 60 * SECONDS;
+
 export const cacheKeys = {
   // Works
   works: {
@@ -51,19 +57,19 @@ export const cacheKeys = {
 export const cacheConfig = {
   // 자주 변경되지 않는 데이터 (카테고리, 설정)
   static: {
-    staleTime: 5 * 60 * 1000, // 5분
-    gcTime: 30 * 60 * 1000, // 30분
+    staleTime: 5 * MINUTES,
+    gcTime: 30 * MINUTES,
   },
 
   // 자주 변경될 수 있는 데이터 (작품)
   dynamic: {
-    staleTime: 1 * 60 * 1000, // 1분
-    gcTime: 10 * 60 * 1000, // 10분
+    staleTime: 1 * MINUTES,
+    gcTime: 10 * MINUTES,
   },
 
   // 실시간 데이터 (인증 상태)
   realtime: {
     staleTime: 0,
-    gcTime: 5 * 60 * 1000, // 5분
+    gcTime: 5 * MINUTES,
   },
 } as const;
