@@ -1,6 +1,7 @@
 // 작업 생성/수정 폼 페이지 컴포넌트
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import {
   Typography,
   Form,
@@ -30,14 +31,14 @@ import './WorkForm.css';
 const { Title } = Typography;
 
 // Firebase에 저장하기 전에 undefined 값을 제거하는 유틸리티 함수
-const removeUndefinedValues = <T extends Record<string, unknown>>(obj: T): T => {
-  const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (value !== undefined) {
-      result[key] = value;
+const removeUndefinedValues = <T extends object>(obj: T): T => {
+  const result = {} as T;
+  for (const key of Object.keys(obj) as Array<keyof T>) {
+    if (obj[key] !== undefined) {
+      result[key] = obj[key];
     }
   }
-  return result as T;
+  return result;
 };
 
 const WorkForm = () => {
@@ -997,7 +998,7 @@ const WorkForm = () => {
             <div style={{ marginBottom: '24px' }}>
               <Typography.Title level={5}>캡션</Typography.Title>
               <div
-                dangerouslySetInnerHTML={{ __html: caption }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(caption) }}
                 style={{ padding: '12px', background: '#f5f5f5', borderRadius: '4px' }}
               />
             </div>

@@ -48,26 +48,26 @@ const Settings = () => {
 
   // 사이트 설정 로드
   useEffect(() => {
-    loadSiteSettings();
-  }, []);
+    const loadSiteSettings = async () => {
+      try {
+        setLoading(true);
+        const settings = await getSiteSettings();
+        setFaviconPreview(settings.faviconUrl || null);
+        siteForm.setFieldsValue({
+          browserTitle: settings.browserTitle,
+          browserDescription: settings.browserDescription,
+          footerText: settings.footerText,
+        });
+      } catch (error) {
+        console.error('설정 로드 실패:', error);
+        message.error('설정을 불러오는데 실패했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const loadSiteSettings = async () => {
-    try {
-      setLoading(true);
-      const settings = await getSiteSettings();
-      setFaviconPreview(settings.faviconUrl || null);
-      siteForm.setFieldsValue({
-        browserTitle: settings.browserTitle,
-        browserDescription: settings.browserDescription,
-        footerText: settings.footerText,
-      });
-    } catch (error) {
-      console.error('설정 로드 실패:', error);
-      message.error('설정을 불러오는데 실패했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    loadSiteSettings();
+  }, [siteForm]);
 
   // 프로필 수정
   const handleProfileSave = async () => {

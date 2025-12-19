@@ -5,29 +5,51 @@ import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import { Button, Space, Modal, Input, List, Avatar, message } from 'antd';
 import { BoldOutlined, ItalicOutlined, UnderlineOutlined, LinkOutlined } from '@ant-design/icons';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import DOMPurify from 'dompurify';
 import { useWorks } from '../hooks/useWorks';
 import type { Work } from '../types';
 import './CaptionEditor.css';
+
+// Helper function to extract plain text from HTML
+const getTextFromHtml = (html: string): string => {
+  if (!html) return '';
+  const temp = document.createElement('div');
+  temp.innerHTML = DOMPurify.sanitize(html);
+  return temp.textContent || temp.innerText || '';
+};
 
 // 확장들을 컴포넌트 외부에서 한 번만 생성하여 중복 방지
 const CustomLink = Link.extend({
   name: 'link',
   addAttributes() {
     return {
-      ...this.parent?.(),
+      // Link 기본 속성들
+      href: {
+        default: null,
+      },
+      target: {
+        default: this.options.HTMLAttributes?.target ?? null,
+      },
+      rel: {
+        default: this.options.HTMLAttributes?.rel ?? null,
+      },
+      class: {
+        default: this.options.HTMLAttributes?.class ?? null,
+      },
+      // 커스텀 속성들
       'data-work-id': {
         default: null,
-        parseHTML: element => element.getAttribute('data-work-id'),
-        renderHTML: attributes => {
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-work-id'),
+        renderHTML: (attributes: Record<string, unknown>) => {
           if (!attributes['data-work-id']) return {};
           return { 'data-work-id': attributes['data-work-id'] };
         },
       },
       'data-work-title': {
         default: null,
-        parseHTML: element => element.getAttribute('data-work-title'),
-        renderHTML: attributes => {
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-work-title'),
+        renderHTML: (attributes: Record<string, unknown>) => {
           if (!attributes['data-work-title']) return {};
           return { 'data-work-title': attributes['data-work-title'] };
         },
@@ -51,17 +73,19 @@ const extensions = [
   Underline,
 ];
 
+// Character limit for captions
+const MAX_CAPTION_LENGTH = 1000;
+
 interface CaptionEditorProps {
   value?: string;
   onChange?: (html: string) => void;
-  imageIndex?: number;
-  imageId?: string;
 }
 
 const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
   const [linkModalVisible, setLinkModalVisible] = useState(false);
   const [linkSearchText, setLinkSearchText] = useState('');
   const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null);
+  const warningShown = useRef(false);
 
   // Firebase에서 작업 목록 조회
   const { data: works = [] } = useWorks();
@@ -77,20 +101,24 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
       const textLength = editor.state.doc.textContent.length;
-      
-      // 1000자 제한
-      if (textLength > 1000) {
-        message.warning('캡션은 최대 1000자까지 입력 가능합니다.');
+
+      // Character limit check - show warning once, still allow onChange
+      if (textLength > MAX_CAPTION_LENGTH) {
+        if (!warningShown.current) {
+          message.warning(`캡션은 최대 ${MAX_CAPTION_LENGTH}자까지 입력 가능합니다.`);
+          warningShown.current = true;
+        }
+        onChange?.(html);
         return;
       }
-      
+      warningShown.current = false;
       onChange?.(html);
     },
   });
 
   // value가 변경될 때 에디터 내용 업데이트
   useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
+    if (editor && !editor.isDestroyed && value !== editor.getHTML()) {
       editor.commands.setContent(value);
     }
   }, [value, editor]);
@@ -162,10 +190,12 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
     }
   };
 
-  // 작업 검색 결과 필터링
-  const filteredWorks = works.filter((work) =>
-    work.title.toLowerCase().includes(linkSearchText.toLowerCase()) ||
-    work.shortDescription?.toLowerCase().includes(linkSearchText.toLowerCase())
+  // 작업 검색 결과 필터링 (memoized for performance)
+  const filteredWorks = useMemo(() =>
+    works.filter((work) =>
+      work.title.toLowerCase().includes(linkSearchText.toLowerCase()) ||
+      work.shortDescription?.toLowerCase().includes(linkSearchText.toLowerCase())
+    ), [works, linkSearchText]
   );
 
   if (!editor) {
@@ -216,9 +246,9 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
 
       {/* 글자 수 표시 */}
       <div className="caption-char-count" style={{
-        color: editor.state.doc.textContent.length > 1000 ? '#ff4d4f' : '#8c8c8c'
+        color: editor.state.doc.textContent.length > MAX_CAPTION_LENGTH ? '#ff4d4f' : '#8c8c8c'
       }}>
-        {editor.state.doc.textContent.length} / 1000자
+        {editor.state.doc.textContent.length} / {MAX_CAPTION_LENGTH}자
       </div>
 
       {/* 작업 링크 삽입 모달 */}
@@ -268,7 +298,7 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
                       />
                     }
                     title={work.title}
-                    description={(work.shortDescription || work.fullDescription || work.caption || '').substring(0, 50) + '...'}
+                    description={getTextFromHtml(work.caption || work.fullDescription || work.shortDescription || '').substring(0, 50) + '...'}
                   />
                 </List.Item>
               );
