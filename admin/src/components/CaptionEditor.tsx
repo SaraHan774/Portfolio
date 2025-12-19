@@ -15,19 +15,32 @@ const CustomLink = Link.extend({
   name: 'link',
   addAttributes() {
     return {
-      ...this.parent?.(),
+      // Link 기본 속성들
+      href: {
+        default: null,
+      },
+      target: {
+        default: this.options.HTMLAttributes?.target ?? null,
+      },
+      rel: {
+        default: this.options.HTMLAttributes?.rel ?? null,
+      },
+      class: {
+        default: this.options.HTMLAttributes?.class ?? null,
+      },
+      // 커스텀 속성들
       'data-work-id': {
         default: null,
-        parseHTML: element => element.getAttribute('data-work-id'),
-        renderHTML: attributes => {
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-work-id'),
+        renderHTML: (attributes: Record<string, unknown>) => {
           if (!attributes['data-work-id']) return {};
           return { 'data-work-id': attributes['data-work-id'] };
         },
       },
       'data-work-title': {
         default: null,
-        parseHTML: element => element.getAttribute('data-work-title'),
-        renderHTML: attributes => {
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-work-title'),
+        renderHTML: (attributes: Record<string, unknown>) => {
           if (!attributes['data-work-title']) return {};
           return { 'data-work-title': attributes['data-work-title'] };
         },
