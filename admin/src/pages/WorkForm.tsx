@@ -1,6 +1,7 @@
 // 작업 생성/수정 폼 페이지 컴포넌트
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import {
   Typography,
   Form,
@@ -997,7 +998,7 @@ const WorkForm = () => {
             <div style={{ marginBottom: '24px' }}>
               <Typography.Title level={5}>캡션</Typography.Title>
               <div
-                dangerouslySetInnerHTML={{ __html: caption }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(caption) }}
                 style={{ padding: '12px', background: '#f5f5f5', borderRadius: '4px' }}
               />
             </div>

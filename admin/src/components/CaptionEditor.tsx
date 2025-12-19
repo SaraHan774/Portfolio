@@ -64,11 +64,12 @@ const extensions = [
   Underline,
 ];
 
+// Character limit for captions
+const MAX_CAPTION_LENGTH = 1000;
+
 interface CaptionEditorProps {
   value?: string;
   onChange?: (html: string) => void;
-  imageIndex?: number;
-  imageId?: string;
 }
 
 const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
@@ -91,9 +92,9 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
       const html = editor.getHTML();
       const textLength = editor.state.doc.textContent.length;
       
-      // 1000자 제한
-      if (textLength > 1000) {
-        message.warning('캡션은 최대 1000자까지 입력 가능합니다.');
+      // Character limit check
+      if (textLength > MAX_CAPTION_LENGTH) {
+        message.warning(`캡션은 최대 ${MAX_CAPTION_LENGTH}자까지 입력 가능합니다.`);
         return;
       }
       
@@ -103,7 +104,7 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
 
   // value가 변경될 때 에디터 내용 업데이트
   useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
+    if (editor && !editor.isDestroyed && value !== editor.getHTML()) {
       editor.commands.setContent(value);
     }
   }, [value, editor]);
@@ -229,9 +230,9 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
 
       {/* 글자 수 표시 */}
       <div className="caption-char-count" style={{
-        color: editor.state.doc.textContent.length > 1000 ? '#ff4d4f' : '#8c8c8c'
+        color: editor.state.doc.textContent.length > MAX_CAPTION_LENGTH ? '#ff4d4f' : '#8c8c8c'
       }}>
-        {editor.state.doc.textContent.length} / 1000자
+        {editor.state.doc.textContent.length} / {MAX_CAPTION_LENGTH}자
       </div>
 
       {/* 작업 링크 삽입 모달 */}
