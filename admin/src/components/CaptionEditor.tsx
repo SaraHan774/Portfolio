@@ -5,10 +5,19 @@ import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import { Button, Space, Modal, Input, List, Avatar, message } from 'antd';
 import { BoldOutlined, ItalicOutlined, UnderlineOutlined, LinkOutlined } from '@ant-design/icons';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import DOMPurify from 'dompurify';
 import { useWorks } from '../hooks/useWorks';
 import type { Work } from '../types';
 import './CaptionEditor.css';
+
+// Helper function to extract plain text from HTML
+const getTextFromHtml = (html: string): string => {
+  if (!html) return '';
+  const temp = document.createElement('div');
+  temp.innerHTML = DOMPurify.sanitize(html);
+  return temp.textContent || temp.innerText || '';
+};
 
 // 확장들을 컴포넌트 외부에서 한 번만 생성하여 중복 방지
 const CustomLink = Link.extend({
@@ -76,6 +85,7 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
   const [linkModalVisible, setLinkModalVisible] = useState(false);
   const [linkSearchText, setLinkSearchText] = useState('');
   const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null);
+  const warningShown = useRef(false);
 
   // Firebase에서 작업 목록 조회
   const { data: works = [] } = useWorks();
@@ -91,13 +101,17 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
       const textLength = editor.state.doc.textContent.length;
-      
-      // Character limit check
+
+      // Character limit check - show warning once, still allow onChange
       if (textLength > MAX_CAPTION_LENGTH) {
-        message.warning(`캡션은 최대 ${MAX_CAPTION_LENGTH}자까지 입력 가능합니다.`);
+        if (!warningShown.current) {
+          message.warning(`캡션은 최대 ${MAX_CAPTION_LENGTH}자까지 입력 가능합니다.`);
+          warningShown.current = true;
+        }
+        onChange?.(html);
         return;
       }
-      
+      warningShown.current = false;
       onChange?.(html);
     },
   });
@@ -176,10 +190,12 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
     }
   };
 
-  // 작업 검색 결과 필터링
-  const filteredWorks = works.filter((work) =>
-    work.title.toLowerCase().includes(linkSearchText.toLowerCase()) ||
-    work.shortDescription?.toLowerCase().includes(linkSearchText.toLowerCase())
+  // 작업 검색 결과 필터링 (memoized for performance)
+  const filteredWorks = useMemo(() =>
+    works.filter((work) =>
+      work.title.toLowerCase().includes(linkSearchText.toLowerCase()) ||
+      work.shortDescription?.toLowerCase().includes(linkSearchText.toLowerCase())
+    ), [works, linkSearchText]
   );
 
   if (!editor) {
@@ -282,7 +298,7 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
                       />
                     }
                     title={work.title}
-                    description={(work.shortDescription || work.fullDescription || work.caption || '').substring(0, 50) + '...'}
+                    description={getTextFromHtml(work.caption || work.fullDescription || work.shortDescription || '').substring(0, 50) + '...'}
                   />
                 </List.Item>
               );

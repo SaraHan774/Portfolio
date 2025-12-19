@@ -271,7 +271,7 @@ describe('useDeleteWork', () => {
       expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(mockDeleteWork).toHaveBeenCalled();
+    expect(mockDeleteWork).toHaveBeenCalledTimes(1);
     expect(mockDeleteWork.mock.calls[0][0]).toBe('work-001');
   });
 
