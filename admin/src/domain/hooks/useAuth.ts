@@ -37,7 +37,7 @@ export const useAuth = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 인증 상태 변경 리스너
+  // 인증 상태 변경 리스너 - 마운트 시 한 번만 실행
   useEffect(() => {
     const initialize = async () => {
       try {
@@ -61,7 +61,8 @@ export const useAuth = () => {
     });
 
     return unsubscribe;
-  }, [queryClient]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 마운트 시 한 번만 실행, queryClient는 stable reference
 
   // 로그인
   const login = useCallback(async () => {
@@ -111,22 +112,27 @@ export const useAuth = () => {
 
 /**
  * 관리자 전용 역할 변경 Mutation
+ * 캐시에서 최신 사용자 정보를 가져와서 권한 검사
  */
 export const useSetUserRole = () => {
-  const { user: currentUser } = useAuth();
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ userId, role }: { userId: string; role: 'admin' | 'viewer' }) =>
-      setUserRole(userId, role, currentUser),
+    mutationFn: async ({ userId, role }: { userId: string; role: 'admin' | 'viewer' }) => {
+      // 캐시에서 최신 사용자 정보 가져오기 (stale closure 방지)
+      const currentUser = queryClient.getQueryData<User | null>(authCacheKeys.user()) ?? null;
+      return setUserRole(userId, role, currentUser);
+    },
   });
 };
 
 /**
  * 관리자 권한 확인 Hook
+ * useAuth().isAdmin을 직접 사용해도 되지만, 편의성을 위해 제공
  */
 export const useIsAdmin = () => {
-  const { user } = useAuth();
-  return isAdmin(user);
+  const { isAdmin: hasAdminRole } = useAuth();
+  return hasAdminRole;
 };
 
 /**

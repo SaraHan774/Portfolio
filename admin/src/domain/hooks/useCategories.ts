@@ -35,16 +35,16 @@ export const useSentenceCategories = () => {
 
 /**
  * 활성화된 문장형 카테고리만 조회
+ * select 옵션을 사용하여 동일한 캐시에서 파생 데이터 생성 (효율적)
  */
 export const useActiveSentenceCategories = () => {
   return useQuery({
-    queryKey: [...categoriesCacheKeys.sentence.all(), 'active'],
-    queryFn: async () => {
-      const categories = await getSentenceCategories();
-      return categories
+    queryKey: categoriesCacheKeys.sentence.all(),
+    queryFn: getSentenceCategories,
+    select: (categories) =>
+      categories
         .filter((cat) => cat.isActive)
-        .sort((a, b) => a.displayOrder - b.displayOrder);
-    },
+        .sort((a, b) => a.displayOrder - b.displayOrder),
     ...categoriesCacheConfig,
   });
 };
@@ -134,16 +134,16 @@ export const useExhibitionCategories = () => {
 
 /**
  * 활성화된 전시명 카테고리만 조회
+ * select 옵션을 사용하여 동일한 캐시에서 파생 데이터 생성 (효율적)
  */
 export const useActiveExhibitionCategories = () => {
   return useQuery({
-    queryKey: [...categoriesCacheKeys.exhibition.all(), 'active'],
-    queryFn: async () => {
-      const categories = await getExhibitionCategories();
-      return categories
+    queryKey: categoriesCacheKeys.exhibition.all(),
+    queryFn: getExhibitionCategories,
+    select: (categories) =>
+      categories
         .filter((cat) => cat.isActive)
-        .sort((a, b) => a.displayOrder - b.displayOrder);
-    },
+        .sort((a, b) => a.displayOrder - b.displayOrder),
     ...categoriesCacheConfig,
   });
 };

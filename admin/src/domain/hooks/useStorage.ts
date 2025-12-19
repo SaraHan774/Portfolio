@@ -80,34 +80,52 @@ export const useDeleteWorkImages = () => {
 
 /**
  * 이미지 업로드 및 삭제를 관리하는 통합 Hook
+ *
+ * @example
+ * ```tsx
+ * const { images, addImage, removeImage, isUploading } = useImageManager();
+ *
+ * const handleUpload = async (file: File) => {
+ *   try {
+ *     await addImage(file);
+ *   } catch (error) {
+ *     console.error('Upload failed:', error);
+ *   }
+ * };
+ * ```
  */
 export const useImageManager = () => {
-  const uploadSingle = useUploadImage();
-  const uploadMultiple = useUploadImages();
-  const deleteSingle = useDeleteImage();
-  const deleteMultiple = useDeleteWorkImages();
+  const uploadSingleHook = useUploadImage();
+  const uploadMultipleHook = useUploadImages();
+  const deleteSingleHook = useDeleteImage();
+  const deleteMultipleHook = useDeleteWorkImages();
+
+  // mutateAsync 직접 추출하여 안정적인 참조 확보
+  const { mutateAsync: uploadSingleAsync } = uploadSingleHook;
+  const { mutateAsync: uploadMultipleAsync } = uploadMultipleHook;
+  const { mutateAsync: deleteSingleAsync } = deleteSingleHook;
 
   const [images, setImages] = useState<WorkImage[]>([]);
 
-  // 이미지 추가
+  // 이미지 추가 (에러 발생 시 상태 변경 없음)
   const addImage = useCallback(async (file: File) => {
-    const newImage = await uploadSingle.mutateAsync(file);
+    const newImage = await uploadSingleAsync(file);
     setImages((prev) => [...prev, newImage]);
     return newImage;
-  }, [uploadSingle]);
+  }, [uploadSingleAsync]);
 
-  // 여러 이미지 추가
+  // 여러 이미지 추가 (에러 발생 시 상태 변경 없음)
   const addImages = useCallback(async (files: File[]) => {
-    const newImages = await uploadMultiple.mutateAsync(files);
+    const newImages = await uploadMultipleAsync(files);
     setImages((prev) => [...prev, ...newImages]);
     return newImages;
-  }, [uploadMultiple]);
+  }, [uploadMultipleAsync]);
 
-  // 이미지 제거
+  // 이미지 제거 (에러 발생 시 상태 변경 없음)
   const removeImage = useCallback(async (imageId: string, extension?: string) => {
-    await deleteSingle.mutateAsync({ imageId, extension });
+    await deleteSingleAsync({ imageId, extension });
     setImages((prev) => prev.filter((img) => img.id !== imageId));
-  }, [deleteSingle]);
+  }, [deleteSingleAsync]);
 
   // 이미지 순서 변경
   const reorderImages = useCallback((newOrder: WorkImage[]) => {
@@ -132,8 +150,11 @@ export const useImageManager = () => {
     reorderImages,
     initializeImages,
     clearImages,
-    isUploading: uploadSingle.isPending || uploadMultiple.isPending,
-    isDeleting: deleteSingle.isPending || deleteMultiple.isPending,
-    uploadProgress: uploadMultiple.totalProgress || uploadSingle.progress,
+    isUploading: uploadSingleHook.isPending || uploadMultipleHook.isPending,
+    isDeleting: deleteSingleHook.isPending || deleteMultipleHook.isPending,
+    uploadProgress: uploadMultipleHook.totalProgress || uploadSingleHook.progress,
+    // 에러 상태 노출 (소비자가 처리할 수 있도록)
+    uploadError: uploadSingleHook.error || uploadMultipleHook.error,
+    deleteError: deleteSingleHook.error || deleteMultipleHook.error,
   };
 };
