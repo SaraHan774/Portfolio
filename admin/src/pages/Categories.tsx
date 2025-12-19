@@ -185,11 +185,23 @@ const Categories = () => {
   const handleSentenceChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
     setSentenceText(newText);
-    // 문장이 변경되면 기존 키워드 중 유효하지 않은 것 제거
+    // 문장이 변경되면 기존 키워드의 위치를 새 문장에서 다시 찾기
     setKeywords((prevKeywords) =>
-      prevKeywords.filter(
-        (kw) => kw.startIndex < newText.length && kw.endIndex <= newText.length
-      )
+      prevKeywords
+        .map((kw) => {
+          // 키워드 이름으로 새 위치 찾기
+          const newStartIndex = newText.indexOf(kw.name);
+          if (newStartIndex === -1) {
+            // 키워드가 새 문장에 없으면 null 반환 (나중에 필터링)
+            return null;
+          }
+          return {
+            ...kw,
+            startIndex: newStartIndex,
+            endIndex: newStartIndex + kw.name.length,
+          };
+        })
+        .filter((kw): kw is KeywordCategory => kw !== null)
     );
   }, []);
 
@@ -207,11 +219,12 @@ const Categories = () => {
 
     const endIndex = startIndex + selectedText.length;
 
-    // 이미 존재하는 키워드인지 확인
-    const exists = keywords.some(
+    // 이미 존재하는 키워드인지 확인 (같은 텍스트 또는 같은 위치)
+    const existsByName = keywords.some((kw) => kw.name === selectedText);
+    const existsByPosition = keywords.some(
       (kw) => kw.startIndex === startIndex && kw.endIndex === endIndex
     );
-    if (exists) {
+    if (existsByName || existsByPosition) {
       void message.warning('이미 추가된 키워드입니다.');
       return;
     }
@@ -228,8 +241,13 @@ const Categories = () => {
       return;
     }
 
+    // 키워드 ID를 name 기반으로 생성 (문장 편집 후에도 같은 단어는 같은 ID 유지)
+    // 특수문자 제거하고 소문자로 변환하여 일관된 ID 생성
+    const normalizedName = selectedText.toLowerCase().replace(/[^a-z0-9가-힣]/g, '');
+    const keywordId = `kw-${normalizedName}`;
+
     const newKeyword: KeywordCategory = {
-      id: `kw-${Date.now()}`,
+      id: keywordId,
       name: selectedText,
       startIndex,
       endIndex,

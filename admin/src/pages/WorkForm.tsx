@@ -1,5 +1,5 @@
 // 작업 생성/수정 폼 페이지 컴포넌트
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Typography,
@@ -17,16 +17,28 @@ import {
   Spin,
   notification,
 } from 'antd';
-import { SaveOutlined, EyeOutlined, CloseOutlined, FileTextOutlined, EditOutlined, PlusOutlined, PictureOutlined, HighlightOutlined, FolderOutlined, ExclamationCircleOutlined, LoadingOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { SaveOutlined, EyeOutlined, CloseOutlined, FileTextOutlined, EditOutlined, PlusOutlined, PictureOutlined, HighlightOutlined, FolderOutlined, ExclamationCircleOutlined, LoadingOutlined, CheckCircleOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import { useWork, useCreateWork, useUpdateWork } from '../hooks/useWorks';
 import { useSentenceCategories, useExhibitionCategories } from '../hooks/useCategories';
-import type { WorkImage } from '../types';
+import type { WorkImage, WorkVideo } from '../types';
 import ImageUploader from '../components/ImageUploader';
+import VideoUploader from '../components/VideoUploader';
+import MediaOrderManager from '../components/MediaOrderManager';
 import CaptionEditor from '../components/CaptionEditor';
 import './WorkForm.css';
 
 const { Title } = Typography;
-const { TextArea } = Input;
+
+// Firebase에 저장하기 전에 undefined 값을 제거하는 유틸리티 함수
+const removeUndefinedValues = <T extends Record<string, unknown>>(obj: T): T => {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      result[key] = value;
+    }
+  }
+  return result as T;
+};
 
 const WorkForm = () => {
   const navigate = useNavigate();
@@ -34,6 +46,7 @@ const WorkForm = () => {
   const [form] = Form.useForm();
   const isEditMode = !!id;
   const [images, setImages] = useState<WorkImage[]>([]);
+  const [videos, setVideos] = useState<WorkVideo[]>([]);
   const [thumbnailImageId, setThumbnailImageId] = useState<string>('');
   const [caption, setCaption] = useState<string>('');
   const [selectedSentenceCategoryIds, setSelectedSentenceCategoryIds] = useState<string[]>([]);
@@ -43,6 +56,7 @@ const WorkForm = () => {
   const [previewVisible, setPreviewVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [savingMessage, setSavingMessage] = useState('');
+  const isFormMounted = useRef(false);
 
   // 모바일 여부 확인
   useEffect(() => {
@@ -63,22 +77,34 @@ const WorkForm = () => {
   const createWorkMutation = useCreateWork();
   const updateWorkMutation = useUpdateWork();
 
+  // Form 마운트 상태 추적
+  useEffect(() => {
+    // 다음 틱에서 Form이 연결된 후 마운트 상태를 true로 설정
+    const timer = setTimeout(() => {
+      isFormMounted.current = true;
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      isFormMounted.current = false;
+    };
+  }, []);
+
   // 변경사항 추적
   useEffect(() => {
+    // Form이 마운트되기 전에는 실행하지 않음 (첫 렌더링 스킵)
+    if (!isFormMounted.current) return;
+
     if (isEditMode && work) {
       // 폼 값이나 이미지가 변경되었는지 확인
       const formValues = form.getFieldsValue();
-      const hasFormChanges =
-        formValues.title !== work.title ||
-        formValues.shortDescription !== work.shortDescription ||
-        formValues.fullDescription !== work.fullDescription;
-      
+      const hasFormChanges = formValues.title !== work.title;
+
       const hasImageChanges =
         images.length !== work.images.length ||
         thumbnailImageId !== work.thumbnailImageId;
-      
+
       const hasCaptionChanges = caption !== (work.caption || '');
-      
+
       const hasCategoryChanges =
         JSON.stringify(selectedSentenceCategoryIds.sort()) !== JSON.stringify(work.sentenceCategoryIds.sort()) ||
         JSON.stringify(selectedExhibitionCategoryIds.sort()) !== JSON.stringify(work.exhibitionCategoryIds.sort());
@@ -89,8 +115,6 @@ const WorkForm = () => {
       const formValues = form.getFieldsValue();
       setHasChanges(
         !!formValues.title ||
-        !!formValues.shortDescription ||
-        !!formValues.fullDescription ||
         images.length > 0 ||
         !!caption
       );
@@ -102,10 +126,10 @@ const WorkForm = () => {
     if (work && isEditMode) {
       form.setFieldsValue({
         title: work.title,
-        shortDescription: work.shortDescription,
-        fullDescription: work.fullDescription,
+        year: work.year,
       });
       setImages(work.images);
+      setVideos(work.videos || []);
       setThumbnailImageId(work.thumbnailImageId);
       setCaption(work.caption || '');
       setSelectedSentenceCategoryIds(work.sentenceCategoryIds);
@@ -119,18 +143,18 @@ const WorkForm = () => {
       // 폼 유효성 검사
       await form.validateFields();
 
-      // 이미지 최소 1장 확인
-      if (images.length === 0) {
+      // 이미지 또는 영상 최소 1개 확인
+      if (images.length === 0 && videos.length === 0) {
         notification.warning({
-          message: '이미지 필요',
-          description: '게시하려면 최소 1장의 이미지를 업로드해주세요.',
+          message: '미디어 필요',
+          description: '게시하려면 최소 1개의 이미지 또는 영상을 업로드해주세요.',
           placement: 'topRight',
         });
         return;
       }
 
-      // 대표 썸네일 확인
-      if (!thumbnailImageId) {
+      // 대표 썸네일 확인 (이미지가 있는 경우에만)
+      if (images.length > 0 && !thumbnailImageId) {
         notification.warning({
           message: '썸네일 필요',
           description: '게시하려면 대표 썸네일을 선택해주세요.',
@@ -145,11 +169,15 @@ const WorkForm = () => {
 
       const formValues = form.getFieldsValue();
 
+      // Firebase에 저장할 때 undefined 값 제거
+      const sanitizedImages = images.map((img) => removeUndefinedValues(img));
+      const sanitizedVideos = videos.map((vid) => removeUndefinedValues(vid));
+
       const workData = {
         title: formValues.title,
-        shortDescription: formValues.shortDescription || '',
-        fullDescription: formValues.fullDescription,
-        images,
+        ...(formValues.year ? { year: Number(formValues.year) } : {}),
+        images: sanitizedImages,
+        videos: sanitizedVideos,
         thumbnailImageId,
         caption,
         sentenceCategoryIds: selectedSentenceCategoryIds,
@@ -183,8 +211,19 @@ const WorkForm = () => {
       setIsSaving(false);
       setSavingMessage('');
 
-      // 폼 유효성 검사 실패는 각 필드에 표시되므로 별도 알림 불필요
+      // 폼 유효성 검사 실패 시 토스트로 알림
       if (error && typeof error === 'object' && 'errorFields' in error) {
+        const errorFields = (error as { errorFields: Array<{ name: string[]; errors: string[] }> }).errorFields;
+        const firstError = errorFields[0];
+        if (firstError && firstError.errors.length > 0) {
+          notification.warning({
+            message: '입력 확인 필요',
+            description: firstError.errors[0],
+            placement: 'topRight',
+          });
+          // 첫 번째 에러 필드로 스크롤
+          form.scrollToField(firstError.name);
+        }
         return;
       }
 
@@ -215,11 +254,15 @@ const WorkForm = () => {
       setIsSaving(true);
       setSavingMessage('임시 저장하는 중...');
 
+      // Firebase에 저장할 때 undefined 값 제거
+      const sanitizedImages = images.map((img) => removeUndefinedValues(img));
+      const sanitizedVideos = videos.map((vid) => removeUndefinedValues(vid));
+
       const workData = {
         title: formValues.title,
-        shortDescription: formValues.shortDescription || '',
-        fullDescription: formValues.fullDescription || '',
-        images,
+        ...(formValues.year ? { year: Number(formValues.year) } : {}),
+        images: sanitizedImages,
+        videos: sanitizedVideos,
         thumbnailImageId: thumbnailImageId || (images.length > 0 ? images[0].id : ''),
         caption,
         sentenceCategoryIds: selectedSentenceCategoryIds,
@@ -340,16 +383,38 @@ const WorkForm = () => {
         </>
       ),
       children: (
-        <Form.Item
-          name="title"
-          label="제목"
-          rules={[
-            { required: true, message: '제목을 입력해주세요.' },
-            { max: 100, message: '제목은 100자 이하로 입력해주세요.' },
-          ]}
-        >
-          <Input placeholder="작업 제목을 입력하세요" maxLength={100} showCount />
-        </Form.Item>
+        <>
+          <Form.Item
+            name="title"
+            label="제목"
+            rules={[
+              { required: true, message: '제목을 입력해주세요.' },
+              { max: 100, message: '제목은 100자 이하로 입력해주세요.' },
+            ]}
+          >
+            <Input placeholder="작업 제목을 입력하세요" maxLength={100} showCount />
+          </Form.Item>
+          <Form.Item
+            name="year"
+            label="제작 년도"
+            rules={[
+              {
+                validator: (_, value) => {
+                  if (value && (value < 1900 || value > new Date().getFullYear() + 1)) {
+                    return Promise.reject(new Error('유효한 년도를 입력해주세요.'));
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
+          >
+            <Input
+              type="number"
+              placeholder={`예: ${new Date().getFullYear()}`}
+              style={{ width: '150px' }}
+            />
+          </Form.Item>
+        </>
       ),
     },
     {
@@ -411,13 +476,33 @@ const WorkForm = () => {
       key: '3',
       label: (
         <>
+          <VideoCameraOutlined /> 영상 관리 (YouTube)
+        </>
+      ),
+      children: (
+        <>
+          <VideoUploader
+            value={videos}
+            onChange={(newVideos) => setVideos(newVideos)}
+            maxCount={10}
+          />
+          <div style={{ marginTop: '12px', fontSize: '12px', color: '#8c8c8c' }}>
+            * YouTube URL을 입력하여 영상을 추가할 수 있습니다.
+          </div>
+        </>
+      ),
+    },
+    {
+      key: '4',
+      label: (
+        <>
           <HighlightOutlined /> 상세 페이지 캡션
         </>
       ),
       children: (
         <>
-          {images.length === 0 ? (
-            <p style={{ color: '#8c8c8c' }}>먼저 이미지를 업로드해주세요.</p>
+          {images.length === 0 && videos.length === 0 ? (
+            <p style={{ color: '#8c8c8c' }}>먼저 이미지 또는 영상을 업로드해주세요.</p>
           ) : (
             <CaptionEditor
               value={caption}
@@ -428,7 +513,7 @@ const WorkForm = () => {
       ),
     },
     {
-      key: '4',
+      key: '5',
       label: (
         <>
           <FolderOutlined /> 카테고리 선택
@@ -447,21 +532,26 @@ const WorkForm = () => {
                     <div style={{ marginBottom: '8px', color: '#8c8c8c', fontSize: '12px' }}>
                       "{sentenceCat.sentence}"
                     </div>
-                    <Checkbox.Group
-                      value={selectedSentenceCategoryIds}
-                      onChange={(checkedValues) =>
-                        setSelectedSentenceCategoryIds(checkedValues as string[])
-                      }
-                    >
-                      <Space direction="vertical" size="small">
-                        {sentenceCat.keywords.map((keyword) => (
-                          <Checkbox key={keyword.id} value={keyword.id}>
-                            {keyword.name}{' '}
-                            <span style={{ color: '#8c8c8c' }}>({sentenceCat.sentence})</span>
-                          </Checkbox>
-                        ))}
-                      </Space>
-                    </Checkbox.Group>
+                    <Space direction="vertical" size="small">
+                      {sentenceCat.keywords.map((keyword) => (
+                        <Checkbox
+                          key={keyword.id}
+                          checked={selectedSentenceCategoryIds.includes(keyword.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedSentenceCategoryIds([...selectedSentenceCategoryIds, keyword.id]);
+                            } else {
+                              setSelectedSentenceCategoryIds(
+                                selectedSentenceCategoryIds.filter((id) => id !== keyword.id)
+                              );
+                            }
+                          }}
+                        >
+                          {keyword.name}{' '}
+                          <span style={{ color: '#8c8c8c' }}>({sentenceCat.sentence})</span>
+                        </Checkbox>
+                      ))}
+                    </Space>
                   </div>
                 ))
               )}
@@ -513,30 +603,23 @@ const WorkForm = () => {
       </Form.Item>
 
       <Form.Item
-        name="shortDescription"
-        label="간단한 설명 (선택)"
-        rules={[{ max: 200, message: '간단한 설명은 200자 이하로 입력해주세요.' }]}
-      >
-        <Input
-          placeholder="카드에 표시될 간단한 설명"
-          maxLength={200}
-          showCount
-        />
-      </Form.Item>
-
-      <Form.Item
-        name="fullDescription"
-        label="상세 설명"
+        name="year"
+        label="제작 년도"
         rules={[
-          { required: true, message: '상세 설명을 입력해주세요.' },
-          { max: 5000, message: '상세 설명은 5000자 이하로 입력해주세요.' },
+          {
+            validator: (_, value) => {
+              if (value && (value < 1900 || value > new Date().getFullYear() + 1)) {
+                return Promise.reject(new Error('유효한 년도를 입력해주세요.'));
+              }
+              return Promise.resolve();
+            },
+          },
         ]}
       >
-        <TextArea
-          placeholder="작업에 대한 상세한 설명을 입력하세요"
-          rows={8}
-          maxLength={5000}
-          showCount
+        <Input
+          type="number"
+          placeholder={`예: ${new Date().getFullYear()}`}
+          style={{ width: '150px' }}
         />
       </Form.Item>
 
@@ -619,6 +702,20 @@ const WorkForm = () => {
     </Card>
   );
 
+  // 영상 관리 섹션
+  const videoSection = (
+    <Card title={<><VideoCameraOutlined /> 영상 관리 (YouTube)</>} style={{ marginBottom: '24px' }}>
+      <VideoUploader
+        value={videos}
+        onChange={(newVideos) => setVideos(newVideos)}
+        maxCount={10}
+      />
+      <div style={{ marginTop: '12px', fontSize: '12px', color: '#8c8c8c' }}>
+        * YouTube URL을 입력하여 영상을 추가할 수 있습니다. 영상과 이미지의 순서는 상세 페이지에서 혼합되어 표시됩니다.
+      </div>
+    </Card>
+  );
+
   // 카테고리 선택 섹션
   const categorySection = (
     <Card title={<><FolderOutlined /> 카테고리 선택</>} style={{ marginBottom: '24px' }}>
@@ -633,21 +730,26 @@ const WorkForm = () => {
                 <div style={{ marginBottom: '8px', color: '#8c8c8c', fontSize: '12px' }}>
                   "{sentenceCat.sentence}"
                 </div>
-                <Checkbox.Group
-                  value={selectedSentenceCategoryIds}
-                  onChange={(checkedValues) =>
-                    setSelectedSentenceCategoryIds(checkedValues as string[])
-                  }
-                >
-                  <Space direction="vertical" size="small">
-                    {sentenceCat.keywords.map((keyword) => (
-                      <Checkbox key={keyword.id} value={keyword.id}>
-                        {keyword.name}{' '}
-                        <span style={{ color: '#8c8c8c' }}>({sentenceCat.sentence})</span>
-                      </Checkbox>
-                    ))}
-                  </Space>
-                </Checkbox.Group>
+                <Space direction="vertical" size="small">
+                  {sentenceCat.keywords.map((keyword) => (
+                    <Checkbox
+                      key={keyword.id}
+                      checked={selectedSentenceCategoryIds.includes(keyword.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedSentenceCategoryIds([...selectedSentenceCategoryIds, keyword.id]);
+                        } else {
+                          setSelectedSentenceCategoryIds(
+                            selectedSentenceCategoryIds.filter((id) => id !== keyword.id)
+                          );
+                        }
+                      }}
+                    >
+                      {keyword.name}{' '}
+                      <span style={{ color: '#8c8c8c' }}>({sentenceCat.sentence})</span>
+                    </Checkbox>
+                  ))}
+                </Space>
               </div>
             ))
           )}
@@ -739,9 +841,23 @@ const WorkForm = () => {
         <div className="desktop-sections">
           {basicInfoSection}
           {imageSection}
+          {videoSection}
+
+          {/* 미디어 순서 관리 - 이미지와 영상이 모두 있을 때만 표시 */}
+          {(images.length > 0 || videos.length > 0) && (
+            <MediaOrderManager
+              images={images}
+              videos={videos}
+              onOrderChange={(newImages, newVideos) => {
+                setImages(newImages);
+                setVideos(newVideos);
+              }}
+            />
+          )}
+
           <Card title={<><HighlightOutlined /> 상세 페이지 캡션</>} style={{ marginBottom: '24px' }}>
-            {images.length === 0 ? (
-              <p style={{ color: '#8c8c8c' }}>먼저 이미지를 업로드해주세요.</p>
+            {images.length === 0 && videos.length === 0 ? (
+              <p style={{ color: '#8c8c8c' }}>먼저 이미지 또는 영상을 업로드해주세요.</p>
             ) : (
               <CaptionEditor
                 value={caption}
@@ -753,7 +869,7 @@ const WorkForm = () => {
         </div>
 
         <div className="mobile-sections">
-          <Collapse defaultActiveKey={['1', '2', '3', '4']} items={collapseItems} />
+          <Collapse defaultActiveKey={['1', '2', '3', '4', '5']} items={collapseItems} />
         </div>
 
         {/* 하단 액션 버튼 */}
@@ -765,6 +881,7 @@ const WorkForm = () => {
             size={isMobile ? 'middle' : 'small'}
           >
             <Button
+              htmlType="button"
               icon={<FileTextOutlined />}
               onClick={() => void handleDraftSave(false)}
               block={isMobile}
@@ -774,6 +891,7 @@ const WorkForm = () => {
               임시저장
             </Button>
             <Button
+              htmlType="button"
               icon={<EyeOutlined />}
               onClick={handlePreview}
               block={isMobile}
@@ -782,6 +900,7 @@ const WorkForm = () => {
               미리보기
             </Button>
             <Button
+              htmlType="button"
               type="primary"
               icon={<SaveOutlined />}
               onClick={() => void handleSave()}
@@ -793,6 +912,7 @@ const WorkForm = () => {
               게시
             </Button>
             <Button
+              htmlType="button"
               icon={<CloseOutlined />}
               onClick={handleCancel}
               block={isMobile}
@@ -817,9 +937,14 @@ const WorkForm = () => {
         width={800}
       >
         <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-          {/* 제목 */}
+          {/* 제목 및 년도 */}
           <Typography.Title level={3}>
             {form.getFieldValue('title') || '(제목 없음)'}
+            {form.getFieldValue('year') && (
+              <span style={{ fontWeight: 'normal', fontSize: '18px', color: '#8c8c8c', marginLeft: '12px' }}>
+                ({form.getFieldValue('year')})
+              </span>
+            )}
           </Typography.Title>
 
           {/* 게시 상태 */}
@@ -834,13 +959,6 @@ const WorkForm = () => {
               {(isEditMode && work?.isPublished) ? '게시됨' : '미게시 (임시저장하면 비공개, 게시하면 공개)'}
             </span>
           </div>
-
-          {/* 간단한 설명 */}
-          {form.getFieldValue('shortDescription') && (
-            <Typography.Paragraph type="secondary">
-              {form.getFieldValue('shortDescription')}
-            </Typography.Paragraph>
-          )}
 
           {/* 이미지 */}
           {images.length > 0 && (
@@ -871,16 +989,6 @@ const WorkForm = () => {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* 상세 설명 */}
-          {form.getFieldValue('fullDescription') && (
-            <div style={{ marginBottom: '24px' }}>
-              <Typography.Title level={5}>상세 설명</Typography.Title>
-              <Typography.Paragraph style={{ whiteSpace: 'pre-wrap' }}>
-                {form.getFieldValue('fullDescription')}
-              </Typography.Paragraph>
             </div>
           )}
 

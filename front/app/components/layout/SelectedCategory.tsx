@@ -1,10 +1,16 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import type { KeywordCategory, SentenceCategory } from '@/types';
+import type { KeywordCategory } from '@/types';
+
+// SelectedCategory는 문장과 키워드만 필요하므로 간소화된 타입 사용
+interface SentenceData {
+  sentence: string;
+  keywords: KeywordCategory[];
+}
 
 interface SelectedCategoryProps {
-  sentence: SentenceCategory | null;
+  sentence: SentenceData | null;
   keyword: KeywordCategory | null;
 }
 

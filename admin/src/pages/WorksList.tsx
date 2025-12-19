@@ -117,7 +117,8 @@ const WorksList = () => {
         (work) =>
           work.title.toLowerCase().includes(lowerSearch) ||
           work.shortDescription?.toLowerCase().includes(lowerSearch) ||
-          work.fullDescription.toLowerCase().includes(lowerSearch)
+          work.fullDescription?.toLowerCase().includes(lowerSearch) ||
+          work.caption?.toLowerCase().includes(lowerSearch)
       );
     }
 
@@ -313,9 +314,11 @@ const WorksList = () => {
       render: (text, record) => (
         <Space direction="vertical" size="small">
           <strong>{text}</strong>
-          <span style={{ color: '#8c8c8c', fontSize: '12px' }}>
-            {record.shortDescription || record.fullDescription.substring(0, 50)}...
-          </span>
+          {(record.shortDescription || record.fullDescription || record.caption) && (
+            <span style={{ color: '#8c8c8c', fontSize: '12px' }}>
+              {(record.shortDescription || record.fullDescription || record.caption || '').substring(0, 50)}...
+            </span>
+          )}
         </Space>
       ),
     },
@@ -691,7 +694,7 @@ const WorksList = () => {
                     title={work.title}
                     description={
                       <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                        <span>{work.shortDescription || work.fullDescription.substring(0, 50)}...</span>
+                        <span>{(work.shortDescription || work.fullDescription || work.caption || '').substring(0, 50)}...</span>
                         <Space wrap>
                           {categories.map((cat, idx) => (
                             <Tag key={idx} color="blue" style={{ fontSize: '11px' }}>

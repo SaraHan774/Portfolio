@@ -66,13 +66,32 @@ export interface WorkImage {
   uploadedFrom?: 'desktop' | 'mobile' | 'camera';
 }
 
+// 영상 (YouTube Embed)
+export interface WorkVideo {
+  id: string;
+  youtubeUrl: string;          // YouTube 원본 URL (예: https://www.youtube.com/watch?v=xxx)
+  youtubeVideoId: string;      // YouTube 영상 ID (예: xxx)
+  embedUrl: string;            // Embed URL (예: https://www.youtube.com/embed/xxx)
+  title?: string;              // 영상 제목 (선택)
+  order: number;               // 미디어 순서 (이미지와 함께 정렬)
+}
+
+// 미디어 아이템 (이미지 또는 영상)
+export type MediaItem =
+  | { type: 'image'; data: WorkImage }
+  | { type: 'video'; data: WorkVideo };
+
 export interface Work {
   id: string;
   title: string;
+  year?: number;  // 작품 제작 년도
+  /** @deprecated 사용하지 않음 - 캡션으로 대체 */
   shortDescription?: string;
-  fullDescription: string;
+  /** @deprecated 사용하지 않음 - 캡션으로 대체 */
+  fullDescription?: string;
   thumbnailImageId: string;
   images: WorkImage[];
+  videos?: WorkVideo[];        // YouTube 영상 목록
   caption?: string;
   sentenceCategoryIds: string[];
   exhibitionCategoryIds: string[];
@@ -83,5 +102,15 @@ export interface Work {
   createdAt: Date;
   updatedAt: Date;
   publishedAt?: Date;
+}
+
+// 사이트 설정
+export interface SiteSettings {
+  id: string;
+  browserTitle: string;        // 브라우저 탭 제목
+  browserDescription: string;  // 메타 설명
+  faviconUrl?: string;         // 파비콘 URL (Firebase Storage)
+  footerText: string;          // Footer에 표시할 텍스트
+  updatedAt: Date;
 }
 

@@ -28,15 +28,25 @@ export interface SentenceCategory {
   updatedAt: Date;
 }
 
-export interface TextCategory {
+// 전시명 카테고리: 통으로 클릭 (작업명 + 간단 설명)
+export interface ExhibitionCategory {
   id: string;
-  name: string;
+  title: string;              // 작업명 (예: "Cushioning Attack")
+  description: {              // 간단 설명 (구조화된 형태)
+    exhibitionType: string;   // 전시 유형 (예: "2인전", "개인전", "그룹전")
+    venue: string;            // 공간 (예: "YPCSpace")
+    year: number;             // 년도 (예: 2023)
+  };
   displayOrder: number;
   workOrders: WorkOrder[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
+
+// 하위 호환성을 위한 별칭 (deprecated)
+/** @deprecated Use ExhibitionCategory instead */
+export type TextCategory = ExhibitionCategory;
 
 export interface WorkOrder {
   workId: string;
@@ -51,22 +61,43 @@ export interface WorkImage {
   mediumUrl?: string;
   webpUrl?: string;
   order: number;
-  caption?: string;
   width: number;
   height: number;
   fileSize?: number;
   uploadedFrom?: 'desktop' | 'mobile' | 'camera';
 }
 
+// 영상 (YouTube Embed)
+export interface WorkVideo {
+  id: string;
+  youtubeUrl: string;          // YouTube 원본 URL
+  youtubeVideoId: string;      // YouTube 영상 ID
+  embedUrl: string;            // Embed URL
+  title?: string;              // 영상 제목 (선택)
+  order: number;               // 미디어 순서 (이미지와 함께 정렬)
+  width?: number;              // 영상 원본 너비 (비율 계산용)
+  height?: number;             // 영상 원본 높이 (비율 계산용)
+}
+
+// 미디어 아이템 (이미지 또는 영상)
+export type MediaItem =
+  | { type: 'image'; data: WorkImage }
+  | { type: 'video'; data: WorkVideo };
+
 export interface Work {
   id: string;
   title: string;
+  year?: number;  // 작품 제작 년도
   shortDescription?: string;
   fullDescription: string;
   thumbnailImageId: string;
   images: WorkImage[];
+  videos?: WorkVideo[];  // YouTube 영상 목록
+  caption?: string;
   sentenceCategoryIds: string[];
-  textCategoryIds: string[];
+  exhibitionCategoryIds: string[];
+  /** @deprecated Use exhibitionCategoryIds instead */
+  textCategoryIds?: string[];
   isPublished: boolean;
   viewCount?: number;
   createdAt: Date;
@@ -74,3 +105,15 @@ export interface Work {
   publishedAt?: Date;
 }
 
+// 카테고리 상태 타입 정의
+export type CategoryState = 'basic' | 'clickable' | 'hover' | 'active' | 'disabled';
+
+// 사이트 설정
+export interface SiteSettings {
+  id: string;
+  browserTitle: string;        // 브라우저 탭 제목
+  browserDescription: string;  // 메타 설명
+  faviconUrl?: string;         // 파비콘 URL
+  footerText: string;          // Footer에 표시할 텍스트
+  updatedAt: Date;
+}

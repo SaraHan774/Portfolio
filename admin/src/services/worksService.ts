@@ -15,7 +15,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { deleteWorkImages } from './storageService';
-import type { Work, WorkImage } from '../types';
+import type { Work, WorkImage, WorkVideo } from '../types';
 
 const COLLECTION_NAME = 'works';
 
@@ -23,10 +23,12 @@ const COLLECTION_NAME = 'works';
 const mapFirestoreToWork = (id: string, data: Record<string, unknown>): Work => ({
   id,
   title: data.title as string || '',
+  year: data.year as number | undefined,
   shortDescription: data.shortDescription as string | undefined,
-  fullDescription: data.fullDescription as string || '',
+  fullDescription: data.fullDescription as string | undefined,
   thumbnailImageId: data.thumbnailImageId as string || '',
   images: (data.images as WorkImage[]) || [],
+  videos: (data.videos as WorkVideo[]) || [],
   caption: data.caption as string | undefined,
   sentenceCategoryIds: (data.sentenceCategoryIds as string[]) || [],
   exhibitionCategoryIds: (data.exhibitionCategoryIds as string[]) || [],

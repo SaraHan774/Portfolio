@@ -1,4 +1,5 @@
 // 설정 페이지 컴포넌트
+import { useState, useEffect, useRef } from 'react';
 import {
   Typography,
   Card,
@@ -8,8 +9,10 @@ import {
   Avatar,
   Space,
   message,
+  notification,
   Divider,
   Popconfirm,
+  Spin,
 } from 'antd';
 import {
   UserOutlined,
@@ -18,11 +21,19 @@ import {
   DeleteOutlined,
   SaveOutlined,
   SettingOutlined,
+  GlobalOutlined,
+  FileImageOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../stores/authStore';
+import {
+  getSiteSettings,
+  updateSiteSettings,
+  uploadFavicon,
+  deleteFavicon,
+} from '../services/settingsService';
 import './Settings.css';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 const Settings = () => {
@@ -30,11 +41,38 @@ const Settings = () => {
   const [siteForm] = Form.useForm();
   const { user } = useAuthStore();
 
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
+
+  // 사이트 설정 로드
+  useEffect(() => {
+    loadSiteSettings();
+  }, []);
+
+  const loadSiteSettings = async () => {
+    try {
+      setLoading(true);
+      const settings = await getSiteSettings();
+      setFaviconPreview(settings.faviconUrl || null);
+      siteForm.setFieldsValue({
+        browserTitle: settings.browserTitle,
+        browserDescription: settings.browserDescription,
+        footerText: settings.footerText,
+      });
+    } catch (error) {
+      console.error('설정 로드 실패:', error);
+      message.error('설정을 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 프로필 수정
   const handleProfileSave = async () => {
     try {
       await profileForm.validateFields();
-      // 실제 구현 시 values를 사용하여 서버에 전송
       message.success('프로필이 수정되었습니다.');
     } catch (error) {
       console.error('저장 실패:', error);
@@ -44,31 +82,109 @@ const Settings = () => {
   // 사이트 설정 저장
   const handleSiteSave = async () => {
     try {
-      await siteForm.validateFields();
-      // 실제 구현 시 values를 사용하여 서버에 전송
-      message.success('사이트 설정이 저장되었습니다.');
+      const values = await siteForm.validateFields();
+      setSaving(true);
+
+      await updateSiteSettings({
+        browserTitle: values.browserTitle,
+        browserDescription: values.browserDescription,
+        footerText: values.footerText,
+      });
+
+      notification.success({
+        message: '저장 완료',
+        description: '사이트 설정이 성공적으로 저장되었습니다.',
+        placement: 'topRight',
+      });
     } catch (error) {
       console.error('저장 실패:', error);
+      message.error('저장에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 파비콘 업로드 처리
+  const handleFaviconUpload = async (file: File) => {
+    try {
+      setSaving(true);
+      const faviconUrl = await uploadFavicon(file);
+      setFaviconPreview(faviconUrl);
+      message.success('파비콘이 업로드되었습니다.');
+    } catch (error) {
+      console.error('파비콘 업로드 실패:', error);
+      message.error('파비콘 업로드에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 파비콘 삭제
+  const handleFaviconDelete = async () => {
+    try {
+      setSaving(true);
+      await deleteFavicon();
+      setFaviconPreview(null);
+      message.success('파비콘이 삭제되었습니다.');
+    } catch (error) {
+      console.error('파비콘 삭제 실패:', error);
+      message.error('파비콘 삭제에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 파비콘 파일 선택 핸들러
+  const handleFaviconFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // .ico 또는 이미지 파일만 허용
+      const isValidType = file.type === 'image/x-icon' ||
+                          file.type === 'image/vnd.microsoft.icon' ||
+                          file.type === 'image/png' ||
+                          file.type === 'image/jpeg' ||
+                          file.name.endsWith('.ico');
+
+      if (!isValidType) {
+        message.error('ICO, PNG, JPEG 파일만 업로드 가능합니다.');
+        return;
+      }
+
+      if (file.size > 1024 * 1024) { // 1MB 제한
+        message.error('파일 크기는 1MB 이하여야 합니다.');
+        return;
+      }
+
+      handleFaviconUpload(file);
+    }
+    // 같은 파일 다시 선택 가능하도록 초기화
+    if (faviconInputRef.current) {
+      faviconInputRef.current.value = '';
     }
   };
 
   // 데이터 내보내기
   const handleExportData = () => {
     message.info('데이터 내보내기 기능은 향후 구현 예정입니다.');
-    // 실제 구현 시 JSON 파일로 다운로드
   };
 
   // 데이터 가져오기
   const handleImportData = () => {
     message.info('데이터 가져오기 기능은 향후 구현 예정입니다.');
-    // 실제 구현 시 파일 업로드 및 파싱
   };
 
   // 모든 데이터 삭제
   const handleDeleteAllData = () => {
     message.warning('모든 데이터 삭제 기능은 향후 구현 예정입니다.');
-    // 실제 구현 시 확인 후 삭제
   };
+
+  if (loading) {
+    return (
+      <div className="settings" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
     <div className="settings">
@@ -109,23 +225,112 @@ const Settings = () => {
       </Card>
 
       {/* 사이트 설정 섹션 */}
-      <Card title="사이트 설정" style={{ marginBottom: '24px' }}>
+      <Card
+        title={<><GlobalOutlined /> 사이트 설정</>}
+        style={{ marginBottom: '24px' }}
+      >
         <Form
           form={siteForm}
           layout="vertical"
           initialValues={{
-            siteTitle: '민지의 포트폴리오',
-            siteDescription: '조각 작품을 전시합니다',
+            browserTitle: 'Portfolio | 작품 갤러리',
+            browserDescription: '여백의 미를 살린 미니멀한 디지털 갤러리',
+            footerText: '나혜빈, hyebinnaa@gmail.com, 82)10-8745-1728',
           }}
         >
-          <Form.Item name="siteTitle" label="사이트 제목">
-            <Input placeholder="사이트 제목을 입력하세요" />
+          <Form.Item
+            name="browserTitle"
+            label="브라우저 탭 제목"
+            rules={[{ required: true, message: '브라우저 탭 제목을 입력하세요' }]}
+            extra="브라우저 탭에 표시되는 사이트 제목입니다."
+          >
+            <Input placeholder="Portfolio | 작품 갤러리" />
           </Form.Item>
-          <Form.Item name="siteDescription" label="사이트 설명">
-            <TextArea rows={3} placeholder="사이트 설명을 입력하세요" />
+
+          <Form.Item
+            name="browserDescription"
+            label="사이트 설명 (SEO)"
+            rules={[{ required: true, message: '사이트 설명을 입력하세요' }]}
+            extra="검색엔진에 표시되는 사이트 설명입니다."
+          >
+            <TextArea rows={2} placeholder="여백의 미를 살린 미니멀한 디지털 갤러리" />
           </Form.Item>
+
+          <Divider />
+
+          <Form.Item
+            label="파비콘"
+            extra="브라우저 탭에 표시되는 작은 아이콘입니다. ICO, PNG, JPEG 파일 (1MB 이하)"
+          >
+            <Space direction="vertical" size="middle">
+              {faviconPreview ? (
+                <Space>
+                  <img
+                    src={faviconPreview}
+                    alt="파비콘 미리보기"
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      border: '1px solid #d9d9d9',
+                      borderRadius: '4px',
+                      objectFit: 'contain',
+                    }}
+                  />
+                  <Text type="secondary">현재 파비콘</Text>
+                  <Popconfirm
+                    title="파비콘을 삭제하시겠습니까?"
+                    onConfirm={handleFaviconDelete}
+                    okText="삭제"
+                    cancelText="취소"
+                  >
+                    <Button
+                      size="small"
+                      danger
+                      icon={<DeleteOutlined />}
+                      loading={saving}
+                    >
+                      삭제
+                    </Button>
+                  </Popconfirm>
+                </Space>
+              ) : (
+                <Text type="secondary">파비콘이 설정되지 않았습니다.</Text>
+              )}
+              <input
+                ref={faviconInputRef}
+                type="file"
+                accept=".ico,.png,.jpeg,.jpg,image/x-icon,image/vnd.microsoft.icon,image/png,image/jpeg"
+                onChange={handleFaviconFileChange}
+                style={{ display: 'none' }}
+              />
+              <Button
+                icon={<FileImageOutlined />}
+                onClick={() => faviconInputRef.current?.click()}
+                loading={saving}
+              >
+                {faviconPreview ? '파비콘 변경' : '파비콘 업로드'}
+              </Button>
+            </Space>
+          </Form.Item>
+
+          <Divider />
+
+          <Form.Item
+            name="footerText"
+            label="푸터 텍스트"
+            rules={[{ required: true, message: '푸터 텍스트를 입력하세요' }]}
+            extra="웹사이트 하단에 표시되는 텍스트입니다. (예: 이름, 이메일, 전화번호)"
+          >
+            <Input placeholder="나혜빈, hyebinnaa@gmail.com, 82)10-8745-1728" />
+          </Form.Item>
+
           <Form.Item>
-            <Button type="primary" icon={<SaveOutlined />} onClick={handleSiteSave}>
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              onClick={handleSiteSave}
+              loading={saving}
+            >
               저장
             </Button>
           </Form.Item>

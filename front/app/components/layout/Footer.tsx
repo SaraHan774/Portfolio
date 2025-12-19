@@ -1,4 +1,19 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { getSiteSettings } from '@/lib/services/settingsService';
+
 export default function Footer() {
+  const [footerText, setFooterText] = useState('');
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      const settings = await getSiteSettings();
+      setFooterText(settings.footerText);
+    };
+    loadSettings();
+  }, []);
+
   return (
     <footer
       style={{
@@ -10,8 +25,7 @@ export default function Footer() {
         color: 'var(--color-text-muted)',
       }}
     >
-      © 2025 Portfolio | Contact: email@example.com
+      {footerText}
     </footer>
   );
 }
-

@@ -1,5 +1,5 @@
 // 이미지 업로드 및 관리 컴포넌트
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Upload, Image, Button, Space, Card, message, Progress, Spin } from 'antd';
 import { DragOutlined, LoadingOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
@@ -36,16 +36,24 @@ const ImageUploader = ({ value = [], onChange, maxCount = 50 }: ImageUploaderPro
   const [images, setImages] = useState<WorkImage[]>(value);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [uploadingImages, setUploadingImages] = useState<UploadingImage[]>([]);
+  // 업로드 중인지 추적하여 외부 value 동기화 방지
+  const isUploadingRef = useRef(false);
 
-  // value가 변경되면 images도 업데이트
+  // value가 변경되면 images도 업데이트 (단, 업로드 중이 아닐 때만)
   useEffect(() => {
-    setImages(value);
+    // 업로드 중에는 외부 value로 덮어쓰지 않음
+    if (!isUploadingRef.current) {
+      setImages(value);
+    }
   }, [value]);
 
   // 파일 업로드 핸들러 (Firebase Storage에 실제 업로드)
   const handleUpload: UploadProps['customRequest'] = async ({ file, onSuccess, onError, onProgress }) => {
     const uploadFile = file as File;
     const uploadId = `uploading-${Date.now()}-${Math.random()}`;
+
+    // 업로드 시작 표시
+    isUploadingRef.current = true;
 
     // 로컬 미리보기 URL 생성
     const previewUrl = URL.createObjectURL(uploadFile);
@@ -74,25 +82,41 @@ const ImageUploader = ({ value = [], onChange, maxCount = 50 }: ImageUploaderPro
       });
 
       // 업로드 완료 - 업로드 중 목록에서 제거
-      setUploadingImages((prev) => prev.filter((img) => img.id !== uploadId));
+      setUploadingImages((prev) => {
+        const newUploadingImages = prev.filter((img) => img.id !== uploadId);
+        // 모든 업로드가 완료되면 플래그 해제
+        if (newUploadingImages.length === 0) {
+          isUploadingRef.current = false;
+        }
+        return newUploadingImages;
+      });
       URL.revokeObjectURL(previewUrl);
 
-      // 업로드된 이미지에 순서 추가
-      const newImage: WorkImage = {
-        ...uploadedImage,
-        order: images.length + 1,
-      };
-
-      const newImages = [...images, newImage];
-      setImages(newImages);
-      onChange?.(newImages);
+      // 업로드된 이미지에 순서 추가 - 함수형 업데이트 사용으로 동시 업로드 버그 해결
+      setImages((prevImages) => {
+        const newImage: WorkImage = {
+          ...uploadedImage,
+          order: prevImages.length + 1,
+        };
+        const newImages = [...prevImages, newImage];
+        // onChange는 setTimeout으로 다음 틱에 호출하여 상태 업데이트 완료 후 실행
+        setTimeout(() => onChange?.(newImages), 0);
+        return newImages;
+      });
 
       message.success('이미지가 업로드되었습니다.');
-      onSuccess?.(newImage);
+      onSuccess?.(uploadedImage);
     } catch (error) {
       console.error('이미지 업로드 실패:', error);
       // 업로드 실패 - 업로드 중 목록에서 제거
-      setUploadingImages((prev) => prev.filter((img) => img.id !== uploadId));
+      setUploadingImages((prev) => {
+        const newUploadingImages = prev.filter((img) => img.id !== uploadId);
+        // 모든 업로드가 완료되면 플래그 해제
+        if (newUploadingImages.length === 0) {
+          isUploadingRef.current = false;
+        }
+        return newUploadingImages;
+      });
       URL.revokeObjectURL(previewUrl);
       message.error('이미지 업로드에 실패했습니다.');
       onError?.(error as Error);
