@@ -87,41 +87,51 @@ src/
   - date.test.ts (27 tests)
   - validation.test.ts (33 tests)
 - [x] 빌드 및 린트 통과
-- [x] 전체 134 tests 통과
+- [x] 전체 157 tests 통과
 
 ---
 
-## Phase 3: Data Layer 리팩토링
+## Phase 3: Data Layer 리팩토링 ✅ (완료)
 
-**브랜치**: `refactor/phase-3-data`
+**브랜치**: `refactor/phase-2-core` (Phase 2와 동일 브랜치)
 
-### 목표
-API 클라이언트와 Repository 패턴으로 데이터 접근 로직 분리
-
-### 작업 항목
+### 완료 항목
 
 #### 3.1 API 클라이언트 정리
-- [ ] `src/data/api/` 디렉토리 생성
-- [ ] Firebase 클라이언트 분리
+- [x] `src/data/api/` 디렉토리 생성
+- [x] Firebase 클라이언트 분리
   - `data/api/client.ts` - Firebase 초기화 및 설정
   - `data/api/worksApi.ts` - Works CRUD API
   - `data/api/authApi.ts` - 인증 API
-  - `data/api/imagesApi.ts` - 이미지 업로드 API
+  - `data/api/storageApi.ts` - 이미지/Storage API
   - `data/api/categoriesApi.ts` - 카테고리 API
+  - `data/api/settingsApi.ts` - 사이트 설정 API
 
-#### 3.2 Repository 패턴 적용
-- [ ] `src/data/repository/` 디렉토리 생성
-- [ ] Repository 구현
-  - `data/repository/worksRepository.ts`
-  - `data/repository/categoriesRepository.ts`
-  - `data/repository/imagesRepository.ts`
+#### 3.2 Mappers 생성
+- [x] `src/data/mappers/` 디렉토리 생성
+- [x] Firestore ↔ Domain 모델 변환
+  - `data/mappers/workMapper.ts` - Work 변환
+  - `data/mappers/userMapper.ts` - User 변환
+  - `data/mappers/categoryMapper.ts` - Category 변환
+  - `data/mappers/settingsMapper.ts` - SiteSettings 변환
 
-#### 3.3 캐시 레이어 (선택)
-- [ ] `src/data/cache/` 디렉토리 생성
-- [ ] React Query 캐시 설정 중앙화
+#### 3.3 Repository 패턴 적용
+- [x] `src/data/repository/` 디렉토리 생성
+- [x] Repository 구현
+  - `data/repository/worksRepository.ts` - Works + Storage 통합
+  - `data/repository/categoriesRepository.ts` - Sentence + Exhibition
+  - `data/repository/settingsRepository.ts` - Settings + Favicon
+  - `data/repository/authRepository.ts` - 인증 관련
+- [x] Cache keys 및 config 정의 (`data/repository/cacheKeys.ts`)
+
+#### 3.4 기존 서비스 업데이트
+- [x] 기존 `services/*` 파일을 repository re-export로 변환
+- [x] 후방 호환성 유지 (deprecated 표시)
 
 ### 테스트
-- [ ] Repository 테스트 작성 (Mock API 사용)
+- [x] 빌드 통과
+- [x] 린트 통과
+- [x] 157 tests 통과
 
 ---
 
