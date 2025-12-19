@@ -1,12 +1,12 @@
 // 인증 상태 관리 (Zustand + Firebase)
 import { create } from 'zustand';
-import type { User } from '../types';
+import type { User } from '../core/types';
 import {
   loginWithGoogle,
   logout as firebaseLogout,
   getCurrentUser,
   onAuthChange,
-} from '../services/authService';
+} from '../data/repository';
 
 interface AuthState {
   user: User | null;
