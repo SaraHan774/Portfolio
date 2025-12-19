@@ -1,7 +1,11 @@
 // 유효성 검사 순수 유틸리티 함수
+import { extractYouTubeVideoId } from './string';
 
 /**
- * 이메일 유효성 검사
+ * 이메일 유효성 검사 (기본 형식 검증)
+ *
+ * Note: This is a simple validation for basic format checking.
+ * For strict RFC 5322 compliance, use a dedicated library.
  */
 export const isValidEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -22,15 +26,10 @@ export const isValidUrl = (url: string): boolean => {
 
 /**
  * YouTube URL 유효성 검사
+ * Uses extractYouTubeVideoId for consistent URL parsing
  */
 export const isValidYouTubeUrl = (url: string): boolean => {
-  const patterns = [
-    /^https?:\/\/(www\.)?youtube\.com\/watch\?v=[\w-]+/,
-    /^https?:\/\/youtu\.be\/[\w-]+/,
-    /^https?:\/\/(www\.)?youtube\.com\/embed\/[\w-]+/,
-  ];
-
-  return patterns.some((pattern) => pattern.test(url));
+  return extractYouTubeVideoId(url) !== null;
 };
 
 /**

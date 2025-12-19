@@ -29,7 +29,14 @@ export const capitalize = (str: string): string => {
 };
 
 /**
- * HTML 태그 제거
+ * HTML 태그 제거 (텍스트 추출용)
+ *
+ * ⚠️ WARNING: NOT SAFE for XSS prevention!
+ * This is only for display purposes (e.g., character counting).
+ * For sanitization, use DOMPurify instead.
+ *
+ * @example
+ * stripHtml('<p>Hello <strong>World</strong></p>') // 'Hello World'
  */
 export const stripHtml = (html: string): string => {
   return html.replace(/<[^>]*>/g, '');
@@ -67,10 +74,17 @@ export const createYouTubeEmbedUrl = (videoId: string): string => {
 };
 
 /**
- * 안전한 ID 생성 (UUID 대용, 간단한 용도)
+ * 간단한 고유 ID 생성 (클라이언트 사이드 전용)
+ *
+ * ⚠️ WARNING: Not cryptographically secure!
+ * Use UUID v4 or crypto.randomUUID() for security-sensitive IDs.
+ * This is suitable for: UI keys, temporary identifiers, non-sensitive ordering.
+ *
+ * @example
+ * generateSimpleId() // 'lxyz123-abc456789'
  */
 export const generateSimpleId = (): string => {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 11)}`;
 };
 
 /**
