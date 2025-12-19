@@ -46,46 +46,48 @@ src/
 
 ---
 
-## Phase 2: Core Layer 생성
+## Phase 2: Core Layer 생성 ✅ (완료)
 
 **브랜치**: `refactor/phase-2-core`
 
-### 목표
-기본 타입, 상수, 유틸리티 함수를 `core/` 레이어로 분리
-
-### 작업 항목
+### 완료 항목
 
 #### 2.1 Types 마이그레이션
-- [ ] `src/core/types/` 디렉토리 생성
-- [ ] `types/index.ts` → `core/types/` 분리
-  - `core/types/api.ts` - API 모델 (Work, User, Image 등)
-  - `core/types/domain.ts` - 도메인 모델
-  - `core/types/common.ts` - 공통 타입 (Pagination, Error)
-- [ ] 기존 import 경로 업데이트
+- [x] `src/core/types/` 디렉토리 생성
+- [x] `types/index.ts` → `core/types/` 분리
+  - `core/types/api.ts` - API 모델 (Work, User, WorkImage 등)
+  - `core/types/common.ts` - 공통 타입 (Pagination, ImageDimensions 등)
+- [x] 기존 import 경로 업데이트 (backward compatibility 유지)
 
 #### 2.2 Constants 생성
-- [ ] `src/core/constants/` 디렉토리 생성
-- [ ] `config/` → `core/constants/` 이동
-  - `core/constants/api.ts` - API 엔드포인트, 타임아웃
-  - `core/constants/config.ts` - 환경 설정 (Firebase 등)
-- [ ] 기존 import 경로 업데이트
+- [x] `src/core/constants/` 디렉토리 생성
+- [x] `config/` → `core/constants/` 이동
+  - `core/constants/api.ts` - 컬렉션 이름, Storage 경로, 캐시 설정
+  - `core/constants/config.ts` - Firebase 설정, 앱 설정
+- [x] firebase.ts에서 새 constants 사용
 
 #### 2.3 Utils 생성
-- [ ] `src/core/utils/` 디렉토리 생성
-- [ ] 순수 함수 추출 (services에서 분리)
-  - `core/utils/date.ts` - 날짜 포맷팅
-  - `core/utils/string.ts` - 문자열 처리
+- [x] `src/core/utils/` 디렉토리 생성
+- [x] 순수 함수 추출
+  - `core/utils/image.ts` - 이미지 리사이즈, 크기 정보
+  - `core/utils/date.ts` - 날짜 포맷팅, 상대 시간
+  - `core/utils/string.ts` - 문자열 처리, YouTube URL 파싱
   - `core/utils/validation.ts` - 유효성 검사
 
 #### 2.4 Errors 생성
-- [ ] `src/core/errors/` 디렉토리 생성
-- [ ] 커스텀 에러 클래스 정의
-  - `ValidationError`
-  - `NetworkError`
-  - `AuthError`
+- [x] `src/core/errors/` 디렉토리 생성
+- [x] 커스텀 에러 클래스 정의
+  - `AppError`, `ValidationError`, `NetworkError`
+  - `AuthError`, `PermissionError`, `NotFoundError`, `UploadError`
+  - 타입 가드 함수들 (`isAppError`, `isValidationError` 등)
 
 ### 테스트
-- [ ] `core/utils/` 순수 함수 테스트 작성
+- [x] `core/utils/` 순수 함수 테스트 작성 (91 tests)
+  - string.test.ts (31 tests)
+  - date.test.ts (27 tests)
+  - validation.test.ts (33 tests)
+- [x] 빌드 및 린트 통과
+- [x] 전체 134 tests 통과
 
 ---
 
