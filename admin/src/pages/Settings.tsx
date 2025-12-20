@@ -24,7 +24,7 @@ import {
   GlobalOutlined,
   FileImageOutlined,
 } from '@ant-design/icons';
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore } from '../state';
 import {
   getSiteSettings,
   updateSiteSettings,
