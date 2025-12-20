@@ -12,6 +12,8 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.12",
+    "@tanstack/react-query-devtools": "^5.91.1",
     "firebase": "^12.6.0",
     "framer-motion": "^12.23.24",
     "next": "^16.0.7",
