@@ -1,5 +1,17 @@
 import '@testing-library/jest-dom';
-import { vi, afterEach } from 'vitest';
+import { vi, afterEach, beforeAll } from 'vitest';
+
+// Suppress TipTap duplicate extension warnings in test environment
+// This is a known issue with TipTap's extension handling in jsdom
+const originalWarn = console.warn;
+beforeAll(() => {
+  console.warn = (...args: unknown[]) => {
+    if (typeof args[0] === 'string' && args[0].includes('Duplicate extension names found')) {
+      return;
+    }
+    originalWarn.apply(console, args);
+  };
+});
 
 // Mock Firebase client
 vi.mock('./data/api/client', () => ({

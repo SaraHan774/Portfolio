@@ -19,24 +19,11 @@ const getTextFromHtml = (html: string): string => {
   return temp.textContent || temp.innerText || '';
 };
 
-// 확장들을 컴포넌트 외부에서 한 번만 생성하여 중복 방지
+// 커스텀 Link 확장 정의
 const CustomLink = Link.extend({
-  name: 'link',
   addAttributes() {
     return {
-      // Link 기본 속성들
-      href: {
-        default: null,
-      },
-      target: {
-        default: this.options.HTMLAttributes?.target ?? null,
-      },
-      rel: {
-        default: this.options.HTMLAttributes?.rel ?? null,
-      },
-      class: {
-        default: this.options.HTMLAttributes?.class ?? null,
-      },
+      ...this.parent?.(),
       // 커스텀 속성들
       'data-work-id': {
         default: null,
@@ -56,21 +43,22 @@ const CustomLink = Link.extend({
       },
     };
   },
-}).configure({
-  openOnClick: false,
-  HTMLAttributes: {
-    class: 'caption-link',
-  },
 });
 
-const extensions = [
+// 확장 생성 팩토리 함수 - 매 에디터 인스턴스마다 새로운 확장 생성
+const createExtensions = () => [
   StarterKit.configure({
     heading: false,
     blockquote: false,
     codeBlock: false,
   }),
-  CustomLink,
-  Underline,
+  CustomLink.configure({
+    openOnClick: false,
+    HTMLAttributes: {
+      class: 'caption-link',
+    },
+  }),
+  Underline.configure({}),
 ];
 
 // Character limit for captions
@@ -89,6 +77,9 @@ const CaptionEditor = ({ value = '', onChange }: CaptionEditorProps) => {
 
   // Firebase에서 작업 목록 조회
   const { data: works = [] } = useWorks();
+
+  // 에디터 인스턴스마다 새로운 확장 생성 (중복 방지)
+  const extensions = useMemo(() => createExtensions(), []);
 
   const editor = useEditor({
     extensions,
