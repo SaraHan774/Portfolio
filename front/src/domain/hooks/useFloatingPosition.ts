@@ -51,6 +51,9 @@ export const useFloatingPosition = ({
     y: position.y,
   });
 
+  // Destructure offset to avoid object identity issues
+  const { x: offsetX, y: offsetY } = offset;
+
   useEffect(() => {
     const calculatePosition = () => {
       const windowWidth = window.innerWidth;
@@ -58,7 +61,7 @@ export const useFloatingPosition = ({
 
       // Start with center-aligned position below the target
       let x = position.x - dimensions.width / 2; // Center align
-      let y = position.y + offset.y; // Below target with offset
+      let y = position.y + offsetY; // Below target with offset
 
       // Right boundary check: If overflows right edge, align to right
       if (x + dimensions.width > windowWidth - edgePadding) {
@@ -67,7 +70,7 @@ export const useFloatingPosition = ({
 
       // Bottom boundary check: If overflows bottom, position above target
       if (y + dimensions.height > windowHeight - edgePadding) {
-        y = position.y - dimensions.height - offset.y; // Above target
+        y = position.y - dimensions.height - offsetY; // Above target
       }
 
       // Left boundary check
@@ -91,7 +94,7 @@ export const useFloatingPosition = ({
     return () => {
       window.removeEventListener('resize', calculatePosition);
     };
-  }, [position, dimensions, offset, edgePadding]);
+  }, [position.x, position.y, dimensions.width, dimensions.height, offsetX, offsetY, edgePadding]);
 
   return adjustedPosition;
 };

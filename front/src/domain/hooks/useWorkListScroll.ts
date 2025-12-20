@@ -1,6 +1,6 @@
 // Custom hook for work list horizontal scroll logic
 
-import { useState, useEffect, useRef, RefObject } from 'react';
+import { useState, useEffect, useRef, useCallback, RefObject } from 'react';
 
 export interface UseWorkListScrollOptions {
   /** Scroll direction */
@@ -40,7 +40,8 @@ export const useWorkListScroll = ({
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
 
-  const checkScrollButtons = () => {
+  // Memoize checkScrollButtons to prevent stale closure issues
+  const checkScrollButtons = useCallback(() => {
     if (!scrollContainerRef.current) return;
 
     const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
@@ -62,7 +63,7 @@ export const useWorkListScroll = ({
       setShowLeftArrow(scrollLeft > 1);
       setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 1);
     }
-  };
+  }, [direction]);
 
   useEffect(() => {
     checkScrollButtons();
@@ -77,7 +78,7 @@ export const useWorkListScroll = ({
         window.removeEventListener('resize', checkScrollButtons);
       };
     }
-  }, [itemCount, direction]);
+  }, [itemCount, checkScrollButtons]);
 
   const scroll = (dir: 'left' | 'right') => {
     if (!scrollContainerRef.current) return;

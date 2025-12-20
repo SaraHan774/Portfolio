@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import { useThumbnailUrl } from '@/domain';
 import type { Work } from '@/types';
 
 interface WorkTitleButtonProps {
@@ -29,11 +30,8 @@ export default function WorkTitleButton({
 }: WorkTitleButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
 
-  // Determine thumbnail to display
-  const thumbnailImage =
-    work.images?.find((img) => img.id === work.thumbnailImageId) ||
-    work.images?.[0];
-  const thumbnailUrl = thumbnailImage?.thumbnailUrl || thumbnailImage?.url;
+  // Use hook for thumbnail URL (includes YouTube fallback)
+  const thumbnailUrl = useThumbnailUrl(work);
   const hasThumbnail = !!thumbnailUrl;
 
   // Show thumbnail logic:
