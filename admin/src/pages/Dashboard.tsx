@@ -2,7 +2,7 @@
 import { Card, Row, Col, Typography, Space, Button, List, Avatar } from 'antd';
 import { DashboardOutlined, FileTextOutlined, CheckCircleOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { useWorks } from '../hooks/useWorks';
+import { useWorks } from '../domain';
 import './Dashboard.css';
 
 const { Title } = Typography;

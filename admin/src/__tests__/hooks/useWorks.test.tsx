@@ -8,8 +8,8 @@ import {
   useCreateWork,
   useUpdateWork,
   useDeleteWork,
-  worksKeys,
-} from '../../hooks/useWorks';
+} from '../../domain';
+import { worksCacheKeys as worksKeys } from '../../data/repository';
 import {
   getWorks,
   getWork,
