@@ -19,9 +19,9 @@ import {
   notification,
 } from 'antd';
 import { SaveOutlined, EyeOutlined, CloseOutlined, FileTextOutlined, EditOutlined, PlusOutlined, PictureOutlined, HighlightOutlined, FolderOutlined, ExclamationCircleOutlined, LoadingOutlined, CheckCircleOutlined, VideoCameraOutlined } from '@ant-design/icons';
-import { useWork, useCreateWork, useUpdateWork } from '../hooks/useWorks';
-import { useSentenceCategories, useExhibitionCategories } from '../hooks/useCategories';
-import type { WorkImage, WorkVideo } from '../types';
+import { useWork, useCreateWork, useUpdateWork } from '../domain';
+import { useSentenceCategories, useExhibitionCategories } from '../domain';
+import type { WorkImage, WorkVideo } from '../core/types';
 import ImageUploader from '../components/ImageUploader';
 import VideoUploader from '../components/VideoUploader';
 import MediaOrderManager from '../components/MediaOrderManager';

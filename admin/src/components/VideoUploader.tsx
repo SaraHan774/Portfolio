@@ -10,7 +10,7 @@ import {
   DownOutlined,
   YoutubeOutlined,
 } from '@ant-design/icons';
-import type { WorkVideo } from '../types';
+import type { WorkVideo } from '../core/types';
 
 // YouTube URL 패턴
 const YOUTUBE_URL_PATTERNS = [

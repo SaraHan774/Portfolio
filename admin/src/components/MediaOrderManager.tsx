@@ -6,7 +6,7 @@ import {
   PictureOutlined,
   PlayCircleOutlined,
 } from '@ant-design/icons';
-import type { WorkImage, WorkVideo, MediaItem } from '../types';
+import type { WorkImage, WorkVideo, MediaItem } from '../core/types';
 
 interface MediaOrderManagerProps {
   images: WorkImage[];

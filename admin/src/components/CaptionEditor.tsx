@@ -7,8 +7,8 @@ import { Button, Space, Modal, Input, List, Avatar, message } from 'antd';
 import { BoldOutlined, ItalicOutlined, UnderlineOutlined, LinkOutlined } from '@ant-design/icons';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import DOMPurify from 'dompurify';
-import { useWorks } from '../hooks/useWorks';
-import type { Work } from '../types';
+import { useWorks } from '../domain';
+import type { Work } from '../core/types';
 import './CaptionEditor.css';
 
 // Helper function to extract plain text from HTML
