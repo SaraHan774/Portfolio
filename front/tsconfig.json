@@ -22,6 +22,7 @@
       "@/*": ["./*"],
       "@/core/*": ["./src/core/*"],
       "@/data/*": ["./src/data/*"],
+      "@/domain": ["./src/domain"],
       "@/domain/*": ["./src/domain/*"],
       "@/presentation/*": ["./src/presentation/*"],
       "@/state/*": ["./src/state/*"],
