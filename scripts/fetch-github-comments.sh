@@ -2,35 +2,19 @@
 set -euo pipefail
 
 # Usage:
-#   pr_review_comments_json.sh <pr-number> [owner/repo]
-#
-# Example:
-#   ./pr_review_comments_json.sh 123
-#   ./pr_review_comments_json.sh 123 my-org/my-repo
-#
-# Requirements: gh, jq
-# Auth: gh auth login (must have access to the repo)
+#   ./pr_reviews_comments.sh        # uses current branch's PR
+#   ./pr_reviews_comments.sh 11     # uses PR #11 explicitly
 
-PR_NUMBER="${1:?Usage: $0 <pr-number> [owner/repo]}"
-REPO="${2:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}"
+PR_NUMBER="${1:-}"
 
-gh api --paginate \
-  -H "Accept: application/vnd.github+json" \
-  "repos/${REPO}/pulls/${PR_NUMBER}/comments" \
-| jq '[
-    .[] | {
-      id,
-      file: (.path // null),
-      content: .body,
-      df: (.diff_hunk // null),
-      line: (.line // null),
-      originalLine: (.original_line // null),
-      side: (.side // null),
-      position: (.position // null),
-      commitId: .commit_id,
-      author: (.user.login // null),
-      createdAt: .created_at,
-      updatedAt: .updated_at,
-      url: .html_url
-    }
-  ]'
+if [[ -z "${PR_NUMBER}" ]]; then
+  # gh pr view (no number) targets the current branch's PR
+  PR_NUMBER="$(gh pr view --json number -q '.number' 2>/dev/null || true)"
+fi
+
+if [[ -z "${PR_NUMBER}" ]]; then
+  echo "No PR found for the current branch (or you lack access)." >&2
+  exit 1
+fi
+
+gh pr view "${PR_NUMBER}" --json reviews,comments --jq '.'
