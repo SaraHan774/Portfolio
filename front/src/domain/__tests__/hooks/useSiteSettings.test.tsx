@@ -5,11 +5,15 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React, { ReactNode } from 'react';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
-import * as settingsRepository from '../../../data/repository/SettingsRepository';
+import { SettingsRepository } from '../../../data/repository/SettingsRepository';
 import type { SiteSettings } from '@/core/types';
 
 // Mock the repository
-vi.mock('../../../data/repository/SettingsRepository');
+vi.mock('../../../data/repository/SettingsRepository', () => ({
+  SettingsRepository: {
+    getSiteSettings: vi.fn(),
+  },
+}));
 
 const mockSettings: SiteSettings = {
   id: 'site-settings',
@@ -39,7 +43,7 @@ describe('useSiteSettings', () => {
   });
 
   it('should fetch site settings successfully', async () => {
-    vi.spyOn(settingsRepository, 'getSiteSettings').mockResolvedValue(
+    vi.mocked(SettingsRepository.getSiteSettings).mockResolvedValue(
       mockSettings
     );
 
@@ -50,12 +54,12 @@ describe('useSiteSettings', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toEqual(mockSettings);
-    expect(settingsRepository.getSiteSettings).toHaveBeenCalledTimes(1);
+    expect(SettingsRepository.getSiteSettings).toHaveBeenCalledTimes(1);
   });
 
   it('should handle errors when fetching site settings', async () => {
     const error = new Error('Failed to fetch settings');
-    vi.spyOn(settingsRepository, 'getSiteSettings').mockRejectedValue(error);
+    vi.mocked(SettingsRepository.getSiteSettings).mockRejectedValue(error);
 
     const { result } = renderHook(() => useSiteSettings(), {
       wrapper: createWrapper(),
@@ -67,7 +71,7 @@ describe('useSiteSettings', () => {
   });
 
   it('should use long stale time for settings', async () => {
-    vi.spyOn(settingsRepository, 'getSiteSettings').mockResolvedValue(
+    vi.mocked(SettingsRepository.getSiteSettings).mockResolvedValue(
       mockSettings
     );
 
@@ -77,13 +81,13 @@ describe('useSiteSettings', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    const firstCallCount = vi.mocked(settingsRepository.getSiteSettings).mock
+    const firstCallCount = vi.mocked(SettingsRepository.getSiteSettings).mock
       .calls.length;
 
     // Rerender - should use cached data
     rerender();
 
-    expect(vi.mocked(settingsRepository.getSiteSettings).mock.calls.length).toBe(
+    expect(vi.mocked(SettingsRepository.getSiteSettings).mock.calls.length).toBe(
       firstCallCount
     );
   });

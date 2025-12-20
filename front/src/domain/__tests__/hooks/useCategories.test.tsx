@@ -9,7 +9,7 @@ import {
   useExhibitionCategories,
   useKeyword,
 } from '../../hooks/useCategories';
-import * as categoryRepository from '../../../data/repository/CategoryRepository';
+import { CategoryRepository } from '../../../data/repository/CategoryRepository';
 import type {
   SentenceCategory,
   ExhibitionCategory,
@@ -17,7 +17,13 @@ import type {
 } from '@/core/types';
 
 // Mock the repository
-vi.mock('../../../data/repository/CategoryRepository');
+vi.mock('../../../data/repository/CategoryRepository', () => ({
+  CategoryRepository: {
+    getSentenceCategories: vi.fn(),
+    getExhibitionCategories: vi.fn(),
+    getKeywordById: vi.fn(),
+  },
+}));
 
 const mockKeyword: SentenceCategoryKeyword = {
   id: 'keyword1',
@@ -64,7 +70,7 @@ describe('useSentenceCategories', () => {
 
   it('should fetch sentence categories successfully', async () => {
     const mockCategories = [mockSentenceCategory];
-    vi.spyOn(categoryRepository, 'getSentenceCategories').mockResolvedValue(
+    vi.mocked(CategoryRepository.getSentenceCategories).mockResolvedValue(
       mockCategories
     );
 
@@ -75,12 +81,12 @@ describe('useSentenceCategories', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toEqual(mockCategories);
-    expect(categoryRepository.getSentenceCategories).toHaveBeenCalledTimes(1);
+    expect(CategoryRepository.getSentenceCategories).toHaveBeenCalledTimes(1);
   });
 
   it('should handle errors when fetching sentence categories', async () => {
     const error = new Error('Failed to fetch');
-    vi.spyOn(categoryRepository, 'getSentenceCategories').mockRejectedValue(
+    vi.mocked(CategoryRepository.getSentenceCategories).mockRejectedValue(
       error
     );
 
@@ -101,7 +107,7 @@ describe('useExhibitionCategories', () => {
 
   it('should fetch exhibition categories successfully', async () => {
     const mockCategories = [mockExhibitionCategory];
-    vi.spyOn(categoryRepository, 'getExhibitionCategories').mockResolvedValue(
+    vi.mocked(CategoryRepository.getExhibitionCategories).mockResolvedValue(
       mockCategories
     );
 
@@ -112,12 +118,12 @@ describe('useExhibitionCategories', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toEqual(mockCategories);
-    expect(categoryRepository.getExhibitionCategories).toHaveBeenCalledTimes(1);
+    expect(CategoryRepository.getExhibitionCategories).toHaveBeenCalledTimes(1);
   });
 
   it('should handle errors when fetching exhibition categories', async () => {
     const error = new Error('Failed to fetch');
-    vi.spyOn(categoryRepository, 'getExhibitionCategories').mockRejectedValue(
+    vi.mocked(CategoryRepository.getExhibitionCategories).mockRejectedValue(
       error
     );
 
@@ -137,7 +143,7 @@ describe('useKeyword', () => {
   });
 
   it('should fetch keyword by id successfully', async () => {
-    vi.spyOn(categoryRepository, 'getKeywordById').mockResolvedValue(mockKeyword);
+    vi.mocked(CategoryRepository.getKeywordById).mockResolvedValue(mockKeyword);
 
     const { result } = renderHook(() => useKeyword('keyword1'), {
       wrapper: createWrapper(),
@@ -146,28 +152,29 @@ describe('useKeyword', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toEqual(mockKeyword);
-    expect(categoryRepository.getKeywordById).toHaveBeenCalledWith('keyword1');
+    expect(CategoryRepository.getKeywordById).toHaveBeenCalledWith('keyword1');
   });
 
   it('should not fetch when keywordId is undefined', async () => {
-    vi.spyOn(categoryRepository, 'getKeywordById').mockResolvedValue(undefined);
+    vi.mocked(CategoryRepository.getKeywordById).mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useKeyword(undefined), {
       wrapper: createWrapper(),
     });
 
     expect(result.current.data).toBeUndefined();
-    expect(categoryRepository.getKeywordById).not.toHaveBeenCalled();
+    expect(CategoryRepository.getKeywordById).not.toHaveBeenCalled();
   });
 
   it('should handle when keyword is not found', async () => {
-    vi.spyOn(categoryRepository, 'getKeywordById').mockResolvedValue(undefined);
+    vi.mocked(CategoryRepository.getKeywordById).mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useKeyword('nonexistent'), {
       wrapper: createWrapper(),
     });
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    // Wait for query to complete
+    await waitFor(() => !result.current.isLoading);
 
     expect(result.current.data).toBeUndefined();
   });

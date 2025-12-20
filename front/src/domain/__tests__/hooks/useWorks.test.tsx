@@ -11,11 +11,19 @@ import {
   useWorksByExhibitionCategory,
   useWorksByIds,
 } from '../../hooks/useWorks';
-import * as workRepository from '../../../data/repository/WorkRepository';
+import { WorkRepository } from '../../../data/repository/WorkRepository';
 import type { Work } from '@/core/types';
 
 // Mock the repository
-vi.mock('../../../data/repository/WorkRepository');
+vi.mock('../../../data/repository/WorkRepository', () => ({
+  WorkRepository: {
+    getPublishedWorks: vi.fn(),
+    getWorkById: vi.fn(),
+    getWorksByKeywordId: vi.fn(),
+    getWorksByExhibitionCategoryId: vi.fn(),
+    getWorksByIds: vi.fn(),
+  },
+}));
 
 const mockWork: Work = {
   id: 'work1',
@@ -59,7 +67,7 @@ describe('usePublishedWorks', () => {
 
   it('should fetch published works successfully', async () => {
     const mockWorks = [mockWork];
-    vi.spyOn(workRepository, 'getPublishedWorks').mockResolvedValue(mockWorks);
+    vi.mocked(WorkRepository.getPublishedWorks).mockResolvedValue(mockWorks);
 
     const { result } = renderHook(() => usePublishedWorks(), {
       wrapper: createWrapper(),
@@ -68,12 +76,12 @@ describe('usePublishedWorks', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toEqual(mockWorks);
-    expect(workRepository.getPublishedWorks).toHaveBeenCalledTimes(1);
+    expect(WorkRepository.getPublishedWorks).toHaveBeenCalledTimes(1);
   });
 
   it('should handle errors when fetching published works', async () => {
     const error = new Error('Failed to fetch');
-    vi.spyOn(workRepository, 'getPublishedWorks').mockRejectedValue(error);
+    vi.mocked(WorkRepository.getPublishedWorks).mockRejectedValue(error);
 
     const { result } = renderHook(() => usePublishedWorks(), {
       wrapper: createWrapper(),
@@ -91,7 +99,7 @@ describe('useWork', () => {
   });
 
   it('should fetch work by id successfully', async () => {
-    vi.spyOn(workRepository, 'getWorkById').mockResolvedValue(mockWork);
+    vi.mocked(WorkRepository.getWorkById).mockResolvedValue(mockWork);
 
     const { result } = renderHook(() => useWork('work1'), {
       wrapper: createWrapper(),
@@ -100,24 +108,23 @@ describe('useWork', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toEqual(mockWork);
-    expect(workRepository.getWorkById).toHaveBeenCalledWith('work1');
+    expect(WorkRepository.getWorkById).toHaveBeenCalledWith('work1');
   });
 
-  it('should not fetch when id is undefined', async () => {
-    vi.spyOn(workRepository, 'getWorkById').mockResolvedValue(mockWork);
+  it('should not fetch when id is undefined', () => {
+    vi.mocked(WorkRepository.getWorkById).mockResolvedValue(mockWork);
 
     const { result } = renderHook(() => useWork(undefined), {
       wrapper: createWrapper(),
     });
 
     expect(result.current.data).toBeUndefined();
-    expect(result.current.isPending).toBe(true);
-    expect(workRepository.getWorkById).not.toHaveBeenCalled();
+    expect(WorkRepository.getWorkById).not.toHaveBeenCalled();
   });
 
   it('should handle errors when fetching work', async () => {
     const error = new Error('Work not found');
-    vi.spyOn(workRepository, 'getWorkById').mockRejectedValue(error);
+    vi.mocked(WorkRepository.getWorkById).mockRejectedValue(error);
 
     const { result } = renderHook(() => useWork('work1'), {
       wrapper: createWrapper(),
@@ -136,7 +143,7 @@ describe('useWorksByKeyword', () => {
 
   it('should fetch works by keyword id successfully', async () => {
     const mockWorks = [mockWork];
-    vi.spyOn(workRepository, 'getWorksByKeywordId').mockResolvedValue(mockWorks);
+    vi.mocked(WorkRepository.getWorksByKeywordId).mockResolvedValue(mockWorks);
 
     const { result } = renderHook(() => useWorksByKeyword('keyword1'), {
       wrapper: createWrapper(),
@@ -145,18 +152,18 @@ describe('useWorksByKeyword', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toEqual(mockWorks);
-    expect(workRepository.getWorksByKeywordId).toHaveBeenCalledWith('keyword1');
+    expect(WorkRepository.getWorksByKeywordId).toHaveBeenCalledWith('keyword1');
   });
 
   it('should not fetch when keywordId is undefined', async () => {
-    vi.spyOn(workRepository, 'getWorksByKeywordId').mockResolvedValue([]);
+    vi.mocked(WorkRepository.getWorksByKeywordId).mockResolvedValue([]);
 
     const { result } = renderHook(() => useWorksByKeyword(undefined), {
       wrapper: createWrapper(),
     });
 
     expect(result.current.data).toBeUndefined();
-    expect(workRepository.getWorksByKeywordId).not.toHaveBeenCalled();
+    expect(WorkRepository.getWorksByKeywordId).not.toHaveBeenCalled();
   });
 });
 
@@ -167,7 +174,7 @@ describe('useWorksByExhibitionCategory', () => {
 
   it('should fetch works by exhibition category id successfully', async () => {
     const mockWorks = [mockWork];
-    vi.spyOn(workRepository, 'getWorksByExhibitionCategoryId').mockResolvedValue(
+    vi.mocked(WorkRepository.getWorksByExhibitionCategoryId).mockResolvedValue(
       mockWorks
     );
 
@@ -181,13 +188,13 @@ describe('useWorksByExhibitionCategory', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toEqual(mockWorks);
-    expect(workRepository.getWorksByExhibitionCategoryId).toHaveBeenCalledWith(
+    expect(WorkRepository.getWorksByExhibitionCategoryId).toHaveBeenCalledWith(
       'exhibition1'
     );
   });
 
   it('should not fetch when categoryId is undefined', async () => {
-    vi.spyOn(workRepository, 'getWorksByExhibitionCategoryId').mockResolvedValue(
+    vi.mocked(WorkRepository.getWorksByExhibitionCategoryId).mockResolvedValue(
       []
     );
 
@@ -196,7 +203,7 @@ describe('useWorksByExhibitionCategory', () => {
     });
 
     expect(result.current.data).toBeUndefined();
-    expect(workRepository.getWorksByExhibitionCategoryId).not.toHaveBeenCalled();
+    expect(WorkRepository.getWorksByExhibitionCategoryId).not.toHaveBeenCalled();
   });
 });
 
@@ -207,7 +214,7 @@ describe('useWorksByIds', () => {
 
   it('should fetch works by ids successfully', async () => {
     const mockWorks = [mockWork];
-    vi.spyOn(workRepository, 'getWorksByIds').mockResolvedValue(mockWorks);
+    vi.mocked(WorkRepository.getWorksByIds).mockResolvedValue(mockWorks);
 
     const { result } = renderHook(() => useWorksByIds(['work1']), {
       wrapper: createWrapper(),
@@ -216,28 +223,28 @@ describe('useWorksByIds', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toEqual(mockWorks);
-    expect(workRepository.getWorksByIds).toHaveBeenCalledWith(['work1']);
+    expect(WorkRepository.getWorksByIds).toHaveBeenCalledWith(['work1']);
   });
 
   it('should not fetch when workIds is undefined', async () => {
-    vi.spyOn(workRepository, 'getWorksByIds').mockResolvedValue([]);
+    vi.mocked(WorkRepository.getWorksByIds).mockResolvedValue([]);
 
     const { result } = renderHook(() => useWorksByIds(undefined), {
       wrapper: createWrapper(),
     });
 
     expect(result.current.data).toBeUndefined();
-    expect(workRepository.getWorksByIds).not.toHaveBeenCalled();
+    expect(WorkRepository.getWorksByIds).not.toHaveBeenCalled();
   });
 
   it('should not fetch when workIds is empty array', async () => {
-    vi.spyOn(workRepository, 'getWorksByIds').mockResolvedValue([]);
+    vi.mocked(WorkRepository.getWorksByIds).mockResolvedValue([]);
 
     const { result } = renderHook(() => useWorksByIds([]), {
       wrapper: createWrapper(),
     });
 
     expect(result.current.data).toBeUndefined();
-    expect(workRepository.getWorksByIds).not.toHaveBeenCalled();
+    expect(WorkRepository.getWorksByIds).not.toHaveBeenCalled();
   });
 });

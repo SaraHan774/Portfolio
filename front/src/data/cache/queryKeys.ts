@@ -7,30 +7,30 @@
 export const queryKeys = {
   // Works
   works: {
-    all: ['works'] as const,
-    published: () => [...queryKeys.works.all, 'published'] as const,
-    detail: (id: string) => [...queryKeys.works.all, 'detail', id] as const,
+    all: () => ['works'] as const,
+    published: () => [...queryKeys.works.all(), 'published'] as const,
+    detail: (id: string) => [...queryKeys.works.all(), 'detail', id] as const,
     byKeyword: (keywordId: string) =>
-      [...queryKeys.works.all, 'byKeyword', keywordId] as const,
+      [...queryKeys.works.all(), 'byKeyword', keywordId] as const,
     byExhibitionCategory: (categoryId: string) =>
-      [...queryKeys.works.all, 'byExhibitionCategory', categoryId] as const,
-    byIds: (ids: string[]) => [...queryKeys.works.all, 'byIds', ...ids] as const,
+      [...queryKeys.works.all(), 'byExhibitionCategory', categoryId] as const,
+    byIds: (ids: string[]) => [...queryKeys.works.all(), 'byIds', ...ids] as const,
   },
 
   // Categories
   categories: {
-    all: ['categories'] as const,
+    all: () => ['categories'] as const,
     sentence: {
-      all: () => [...queryKeys.categories.all, 'sentence'] as const,
+      all: () => [...queryKeys.categories.all(), 'sentence'] as const,
       detail: (id: string) =>
-        [...queryKeys.categories.all, 'sentence', 'detail', id] as const,
+        [...queryKeys.categories.all(), 'sentence', 'detail', id] as const,
       keyword: (keywordId: string) =>
-        [...queryKeys.categories.all, 'sentence', 'keyword', keywordId] as const,
+        [...queryKeys.categories.all(), 'sentence', 'keyword', keywordId] as const,
     },
     exhibition: {
-      all: () => [...queryKeys.categories.all, 'exhibition'] as const,
+      all: () => [...queryKeys.categories.all(), 'exhibition'] as const,
       detail: (id: string) =>
-        [...queryKeys.categories.all, 'exhibition', 'detail', id] as const,
+        [...queryKeys.categories.all(), 'exhibition', 'detail', id] as const,
     },
   },
 

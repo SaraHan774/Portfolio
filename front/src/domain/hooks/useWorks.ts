@@ -2,7 +2,7 @@
 
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import { queryKeys } from '../../data/cache/queryKeys';
-import { workRepository } from '../../data/repository/WorkRepository';
+import { WorkRepository } from '../../data/repository/WorkRepository';
 import type { Work } from '../../core/types';
 
 /**
@@ -12,7 +12,7 @@ import type { Work } from '../../core/types';
 export const usePublishedWorks = (): UseQueryResult<Work[], Error> => {
   return useQuery({
     queryKey: queryKeys.works.published(),
-    queryFn: () => workRepository.getPublishedWorks(),
+    queryFn: () => WorkRepository.getPublishedWorks(),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
@@ -22,10 +22,12 @@ export const usePublishedWorks = (): UseQueryResult<Work[], Error> => {
  * Fetch single work by ID
  * Only enabled when ID is provided
  */
-export const useWork = (id: string | undefined): UseQueryResult<Work, Error> => {
+export const useWork = (
+  id: string | undefined
+): UseQueryResult<Work | undefined, Error> => {
   return useQuery({
-    queryKey: queryKeys.works.detail(id || ''),
-    queryFn: () => workRepository.getWorkById(id!),
+    queryKey: id ? queryKeys.works.detail(id) : ['works', 'detail', 'disabled'],
+    queryFn: id ? () => WorkRepository.getWorkById(id) : async () => undefined,
     enabled: !!id,
     staleTime: 10 * 60 * 1000, // 10 minutes (detail pages change less frequently)
     gcTime: 15 * 60 * 1000, // 15 minutes
@@ -39,8 +41,12 @@ export const useWorksByKeyword = (
   keywordId: string | undefined
 ): UseQueryResult<Work[], Error> => {
   return useQuery({
-    queryKey: queryKeys.works.byKeyword(keywordId || ''),
-    queryFn: () => workRepository.getWorksByKeywordId(keywordId!),
+    queryKey: keywordId
+      ? queryKeys.works.byKeyword(keywordId)
+      : ['works', 'byKeyword', 'disabled'],
+    queryFn: keywordId
+      ? () => WorkRepository.getWorksByKeywordId(keywordId)
+      : async () => [],
     enabled: !!keywordId,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -54,8 +60,12 @@ export const useWorksByExhibitionCategory = (
   categoryId: string | undefined
 ): UseQueryResult<Work[], Error> => {
   return useQuery({
-    queryKey: queryKeys.works.byExhibitionCategory(categoryId || ''),
-    queryFn: () => workRepository.getWorksByExhibitionCategoryId(categoryId!),
+    queryKey: categoryId
+      ? queryKeys.works.byExhibitionCategory(categoryId)
+      : ['works', 'byExhibitionCategory', 'disabled'],
+    queryFn: categoryId
+      ? () => WorkRepository.getWorksByExhibitionCategoryId(categoryId)
+      : async () => [],
     enabled: !!categoryId,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -70,8 +80,14 @@ export const useWorksByIds = (
   workIds: string[] | undefined
 ): UseQueryResult<Work[], Error> => {
   return useQuery({
-    queryKey: queryKeys.works.byIds(workIds || []),
-    queryFn: () => workRepository.getWorksByIds(workIds!),
+    queryKey:
+      workIds && workIds.length > 0
+        ? queryKeys.works.byIds(workIds)
+        : ['works', 'byIds', 'disabled'],
+    queryFn:
+      workIds && workIds.length > 0
+        ? () => WorkRepository.getWorksByIds(workIds)
+        : async () => [],
     enabled: !!workIds && workIds.length > 0,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,

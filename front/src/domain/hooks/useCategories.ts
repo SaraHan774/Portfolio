@@ -2,7 +2,7 @@
 
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import { queryKeys } from '../../data/cache/queryKeys';
-import { categoryRepository } from '../../data/repository/CategoryRepository';
+import { CategoryRepository } from '../../data/repository/CategoryRepository';
 import type {
   SentenceCategory,
   ExhibitionCategory,
@@ -19,7 +19,7 @@ export const useSentenceCategories = (): UseQueryResult<
 > => {
   return useQuery({
     queryKey: queryKeys.categories.sentence.all(),
-    queryFn: () => categoryRepository.getSentenceCategories(),
+    queryFn: () => CategoryRepository.getSentenceCategories(),
     staleTime: 10 * 60 * 1000, // 10 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
   });
@@ -35,7 +35,7 @@ export const useExhibitionCategories = (): UseQueryResult<
 > => {
   return useQuery({
     queryKey: queryKeys.categories.exhibition.all(),
-    queryFn: () => categoryRepository.getExhibitionCategories(),
+    queryFn: () => CategoryRepository.getExhibitionCategories(),
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   });
@@ -49,8 +49,12 @@ export const useKeyword = (
   keywordId: string | undefined
 ): UseQueryResult<SentenceCategoryKeyword | undefined, Error> => {
   return useQuery({
-    queryKey: queryKeys.categories.sentence.keyword(keywordId || ''),
-    queryFn: () => categoryRepository.getKeywordById(keywordId!),
+    queryKey: keywordId
+      ? queryKeys.categories.sentence.keyword(keywordId)
+      : ['categories', 'sentence', 'keyword', 'disabled'],
+    queryFn: keywordId
+      ? () => CategoryRepository.getKeywordById(keywordId)
+      : async () => undefined,
     enabled: !!keywordId,
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
