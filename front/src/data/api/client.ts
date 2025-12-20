@@ -19,10 +19,32 @@ let db: Firestore;
 let storage: FirebaseStorage;
 
 /**
+ * Validate Firebase configuration
+ * Throws error if required environment variables are missing
+ */
+const validateFirebaseConfig = (): void => {
+  const requiredKeys = [
+    'NEXT_PUBLIC_FIREBASE_API_KEY',
+    'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
+    'NEXT_PUBLIC_FIREBASE_APP_ID',
+  ] as const;
+
+  const missing = requiredKeys.filter((key) => !process.env[key]);
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required Firebase environment variables: ${missing.join(', ')}. ` +
+        'Please check your .env file or environment configuration.'
+    );
+  }
+};
+
+/**
  * Get Firebase app instance (lazy initialization)
  */
 export const getFirebaseApp = (): FirebaseApp => {
   if (!app) {
+    validateFirebaseConfig();
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
   }
   return app;

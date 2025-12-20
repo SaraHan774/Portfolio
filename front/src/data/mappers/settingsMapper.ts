@@ -2,13 +2,16 @@
 
 import { Timestamp } from 'firebase/firestore';
 import type { SiteSettings } from '@/core/types';
-import { SETTINGS_DOC_ID } from '@/core/constants';
+import { SETTINGS_DOC_ID as FIRESTORE_SETTINGS_DOC_ID } from '../../core/constants/firebase.constants';
+
+// Re-export for convenience
+export { FIRESTORE_SETTINGS_DOC_ID as SETTINGS_DOC_ID };
 
 /**
  * Default site settings
  */
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
-  id: SETTINGS_DOC_ID,
+  id: FIRESTORE_SETTINGS_DOC_ID,
   browserTitle: 'Portfolio | 작품 갤러리',
   browserDescription: '여백의 미를 살린 미니멀한 디지털 갤러리',
   footerText: '나혜빈, hyebinnaa@gmail.com, 82)10-8745-1728',

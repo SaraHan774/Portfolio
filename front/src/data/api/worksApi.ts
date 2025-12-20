@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore';
 import { getDb } from './client';
 import { mapFirestoreToWork } from '../mappers';
-import { FIREBASE_COLLECTIONS } from '@/core/constants';
+import { FIREBASE_COLLECTIONS, FIRESTORE_BATCH_LIMIT } from '@/core/constants';
 import type { Work } from '@/core/types';
 import { NotFoundError, FirestoreError } from '@/core/errors';
 
@@ -111,26 +111,37 @@ export const fetchWorksByExhibitionCategoryId = async (
 
 /**
  * Fetch works by IDs (maintaining order)
+ * Uses batched queries to avoid N+1 problem
  */
 export const fetchWorksByIds = async (workIds: string[]): Promise<Work[]> => {
   if (workIds.length === 0) return [];
 
   try {
+    const db = getDb();
+    const worksRef = collection(db, FIREBASE_COLLECTIONS.WORKS);
     const works: Work[] = [];
 
-    // Fetch works individually to maintain order
-    // Note: Firestore 'in' query has a limit of 10 items
-    for (const workId of workIds) {
-      try {
-        const work = await fetchWorkById(workId);
-        works.push(work);
-      } catch (error) {
-        // Skip works that don't exist or aren't published
-        if (!(error instanceof NotFoundError)) {
-          console.warn(`Failed to fetch work ${workId}:`, error);
-        }
-      }
+    // Firestore 'in' query has a limit of 10 items, so batch the requests
+    const batches = [];
+    for (let i = 0; i < workIds.length; i += FIRESTORE_BATCH_LIMIT) {
+      const batchIds = workIds.slice(i, i + FIRESTORE_BATCH_LIMIT);
+      const q = query(
+        worksRef,
+        where('__name__', 'in', batchIds),
+        where('isPublished', '==', true)
+      );
+      batches.push(getDocs(q));
     }
+
+    // Execute all batches in parallel
+    const snapshots = await Promise.all(batches);
+
+    // Collect all works from snapshots
+    snapshots.forEach((snapshot) => {
+      snapshot.docs.forEach((doc) => {
+        works.push(mapFirestoreToWork(doc.id, doc.data()));
+      });
+    });
 
     // Maintain original order
     return workIds
