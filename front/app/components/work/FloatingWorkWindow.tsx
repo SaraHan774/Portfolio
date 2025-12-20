@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { useFloatingPosition, useThumbnailUrl } from '@/domain';
+import { FLOATING_WINDOW_ANIMATION } from '@/core/constants';
 import type { Work } from '@/types';
 
 interface FloatingWorkWindowProps {
@@ -36,23 +37,7 @@ export default function FloatingWorkWindow({ work, position, onClick }: Floating
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        initial={{ opacity: 0, y: -12, scale: 0.97 }}
-        animate={{
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          transition: {
-            duration: 0.3,
-            ease: [0.16, 1, 0.3, 1],
-          }
-        }}
-        exit={{
-          opacity: 0,
-          transition: {
-            duration: 0.5,
-            ease: [0.4, 0, 0.2, 1],
-          }
-        }}
+        {...FLOATING_WINDOW_ANIMATION}
         className="floating-work-window"
         data-floating-window="true"
         style={{

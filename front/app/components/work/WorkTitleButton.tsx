@@ -60,7 +60,7 @@ export default function WorkTitleButton({
         minWidth: '80px',
       }}
     >
-      {/* 작업 제목 */}
+      {/* 작업 제목 + 년도 */}
       <span
         style={{
           fontSize: 'var(--font-size-sm)',
@@ -71,7 +71,7 @@ export default function WorkTitleButton({
           transition: 'font-weight 0.2s ease-out, color 0.2s ease-out',
         }}
       >
-        {work.title}
+        {`「'${work.title}'」${work.year ? `, ${work.year}` : ''}`}
       </span>
 
       {/* 썸네일 공간 (항상 확보하여 레이아웃 안정성 유지) */}

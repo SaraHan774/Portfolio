@@ -32,6 +32,11 @@ export interface UseFloatingPositionOptions {
  * - If overflow bottom: Position above the target
  * - Always maintain edge padding from viewport boundaries
  *
+ * Performance Note:
+ * - Position recalculates when dependencies change (position, dimensions, offset, edgePadding)
+ * - To avoid unnecessary recalculations, memoize position/dimensions/offset objects in parent component
+ * - Use useMemo or stable object references to prevent recalculation on every render
+ *
  * @param options - Position calculation options
  * @returns Adjusted position that stays within viewport
  */
