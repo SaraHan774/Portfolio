@@ -37,9 +37,9 @@ import {
   useUpdateExhibitionCategory,
   useDeleteExhibitionCategory,
   useUpdateCategoryOrders,
-} from '../hooks/useCategories';
-import { useWorks } from '../hooks/useWorks';
-import type { SentenceCategory, ExhibitionCategory, KeywordCategory } from '../types';
+  useWorks,
+} from '../domain';
+import type { SentenceCategory, ExhibitionCategory, KeywordCategory } from '../core/types';
 import './Categories.css';
 
 const { Title } = Typography;

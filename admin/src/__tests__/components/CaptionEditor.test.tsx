@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CaptionEditor from '../../components/CaptionEditor';
-import { useWorks } from '../../hooks/useWorks';
-import type { Work } from '../../types';
+import { useWorks } from '../../domain';
+import type { Work } from '../../core/types';
 
 // Helper to get TipTap editor element
 const getEditorElement = () => {
@@ -11,7 +11,7 @@ const getEditorElement = () => {
 };
 
 // Mock useWorks hook
-vi.mock('../../hooks/useWorks');
+vi.mock('../../domain');
 const mockUseWorks = vi.mocked(useWorks);
 
 // Mock antd message

@@ -33,9 +33,9 @@ import {
   CheckCircleOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { useWorks, useUpdateWork, useDeleteWork } from '../hooks/useWorks';
-import { useSentenceCategories, useExhibitionCategories } from '../hooks/useCategories';
-import type { Work } from '../types';
+import { useWorks, useUpdateWork, useDeleteWork } from '../domain';
+import { useSentenceCategories, useExhibitionCategories } from '../domain';
+import type { Work } from '../core/types';
 import './WorksList.css';
 
 const { Title } = Typography;
