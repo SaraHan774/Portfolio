@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useAuthStore } from '../../stores/authStore';
+import { useAuthStore } from '../../state';
 import {
   loginWithGoogle,
   logout as firebaseLogout,

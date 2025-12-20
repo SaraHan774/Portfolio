@@ -10,7 +10,7 @@ import WorksList from './pages/WorksList';
 import WorkForm from './pages/WorkForm';
 import Categories from './pages/Categories';
 import Settings from './pages/Settings';
-import { useAuthStore } from './stores/authStore';
+import { useAuthStore } from './state';
 import './App.css';
 
 // React Query 클라이언트 설정

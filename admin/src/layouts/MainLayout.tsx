@@ -13,7 +13,7 @@ import {
   MenuOutlined,
   PlusOutlined,
 } from '@ant-design/icons';
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore } from '../state';
 import './MainLayout.css';
 
 const { Header, Sider, Content } = Layout;
