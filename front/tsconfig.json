@@ -20,6 +20,12 @@
     ],
     "paths": {
       "@/*": ["./*"],
+      "@/core/constants": ["./src/core/constants"],
+      "@/core/constants/*": ["./src/core/constants/*"],
+      "@/core/types": ["./src/core/types"],
+      "@/core/types/*": ["./src/core/types/*"],
+      "@/core/utils": ["./src/core/utils"],
+      "@/core/utils/*": ["./src/core/utils/*"],
       "@/core/*": ["./src/core/*"],
       "@/data/*": ["./src/data/*"],
       "@/domain": ["./src/domain"],
