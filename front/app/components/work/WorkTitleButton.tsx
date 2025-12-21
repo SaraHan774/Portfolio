@@ -105,7 +105,7 @@ export default function WorkTitleButton({
             {...DOT_ANIMATION}
             style={{
               position: 'absolute',
-              top: 'var(--dot-offset-top)', // -8px (center above text)
+              top: '0px', // At the top of the padded container
               left: '50%',
               transform: 'translateX(-50%)',
               fontSize: '14px',
