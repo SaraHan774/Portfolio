@@ -134,22 +134,20 @@ function AnimatedKeyword({
   onSelect: (keywordId: string) => void;
   onHover: (keywordId: string | null) => void;
 }) {
-  // Track state transitions to detect user clicks vs initial render
-  const prevIsSelected = useRef<boolean | null>(null);
-
   // Check if this keyword has ever been clicked (survives page navigation)
   const hasBeenClickedBefore = categoryAnimationStore.hasBeenClicked(keyword.id);
 
-  // Determine if this is a user-triggered transition (false → true)
-  const isUserClick = prevIsSelected.current === false && isSelected === true;
+  // Track if we just clicked (for dot animation)
+  const justClicked = useRef(false);
 
+  // Reset justClicked after render
   useEffect(() => {
-    if (isUserClick) {
-      // Mark as clicked in persistent store
-      categoryAnimationStore.markAsClicked(keyword.id);
+    if (justClicked.current && isSelected) {
+      setTimeout(() => {
+        justClicked.current = false;
+      }, 0);
     }
-    prevIsSelected.current = isSelected;
-  }, [isSelected, isUserClick, keyword.id]);
+  }, [isSelected]);
 
   // Use custom hooks for state and styling
   const state = useKeywordState({
@@ -171,16 +169,21 @@ function AnimatedKeyword({
   // On first page load with selected=true, show static bold without animation
   const animateState = isHovered ? 'hover' : (isSelected && hasBeenClickedBefore) ? 'selected' : 'normal';
 
-  // Only animate dot on user click transition
-  const shouldAnimateDot = isUserClick;
+  // Handle click - mark as clicked BEFORE calling onSelect
+  const handleClick = () => {
+    if (isClickable) {
+      if (!hasBeenClickedBefore) {
+        categoryAnimationStore.markAsClicked(keyword.id);
+        justClicked.current = true;
+        console.log(`✓ User clicked keyword ${keyword.id}`);
+      }
+      onSelect(keyword.id);
+    }
+  };
 
   return (
     <motion.span
-      onClick={() => {
-        if (isClickable) {
-          onSelect(keyword.id);
-        }
-      }}
+      onClick={handleClick}
       onMouseEnter={() => {
         if (state !== 'basic' && state !== 'disabled') {
           onHover(keyword.id);
@@ -213,9 +216,9 @@ function AnimatedKeyword({
       {/* Dot indicator for selected keyword */}
       {isSelected && (
         <motion.span
-          initial={{ opacity: shouldAnimateDot ? 0 : 1 }}
+          initial={{ opacity: justClicked.current ? 0 : 1 }}
           animate={{ opacity: 1 }}
-          transition={shouldAnimateDot ? { duration: 0.3, ease: 'easeOut', delay: 0.4 } : { duration: 0 }}
+          transition={justClicked.current ? { duration: 0.3, ease: 'easeOut', delay: 0.4 } : { duration: 0 }}
           style={{
             position: 'absolute',
             top: 'var(--dot-offset-top)', // -8px (center above text)

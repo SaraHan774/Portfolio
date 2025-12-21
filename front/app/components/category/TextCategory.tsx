@@ -24,22 +24,36 @@ const TextCategory = memo(function TextCategory({
 }: TextCategoryProps) {
   const isHovered = hoveredCategoryId === category.id;
 
-  // Track state transitions to detect user clicks vs initial render
-  const prevIsSelected = useRef<boolean | null>(null);
-
   // Check if this category has ever been clicked (survives page navigation)
   const hasBeenClickedBefore = categoryAnimationStore.hasBeenClicked(category.id);
 
-  // Determine if this is a user-triggered transition (false → true)
-  const isUserClick = prevIsSelected.current === false && isSelected === true;
+  // Track if we just clicked (for dot animation)
+  const justClicked = useRef(false);
 
-  useEffect(() => {
-    if (isUserClick) {
-      // Mark as clicked in persistent store
-      categoryAnimationStore.markAsClicked(category.id);
+  // Track actual DOM click events, not state transitions
+  const handleClick = () => {
+    const isClickable = getCategoryState() === 'clickable' || getCategoryState() === 'active' || getCategoryState() === 'hover';
+    if (isClickable) {
+      // Mark as clicked in persistent store BEFORE calling onSelect
+      // This ensures hasBeenClickedBefore is true when the component re-renders with selected=true
+      if (!hasBeenClickedBefore) {
+        categoryAnimationStore.markAsClicked(category.id);
+        justClicked.current = true; // Mark that we just clicked
+        console.log(`✓ User clicked exhibition ${category.id}`);
+      }
+      onSelect();
     }
-    prevIsSelected.current = isSelected;
-  }, [isSelected, isUserClick, category.id]);
+  };
+
+  // Reset justClicked after render
+  useEffect(() => {
+    if (justClicked.current && isSelected) {
+      // Next render, this will be false
+      setTimeout(() => {
+        justClicked.current = false;
+      }, 0);
+    }
+  }, [isSelected]);
 
   // 카테고리의 상태를 계산하는 함수
   const getCategoryState = (): CategoryState => {
@@ -222,11 +236,7 @@ const TextCategory = memo(function TextCategory({
 
   return (
     <span
-      onClick={() => {
-        if (isClickable) {
-          onSelect();
-        }
-      }}
+      onClick={handleClick}
       onMouseEnter={() => {
         if (state !== 'basic' && state !== 'disabled') {
           onHover(category.id);
@@ -254,10 +264,10 @@ const TextCategory = memo(function TextCategory({
         }}
       >
         <motion.span
-          initial={{ opacity: isUserClick ? 0 : (isSelected ? 1 : 0) }}
+          initial={{ opacity: justClicked.current ? 0 : (isSelected ? 1 : 0) }}
           animate={{ opacity: isSelected ? 1 : 0 }}
           transition={
-            isUserClick
+            justClicked.current
               ? { duration: 0.3, ease: 'easeOut', delay: 0.4 }
               : { duration: 0 }
           }
