@@ -95,7 +95,7 @@ export const useWorkListScroll = ({
   };
 
   return {
-    scrollContainerRef,
+    scrollContainerRef: scrollContainerRef as React.RefObject<HTMLDivElement>,
     showLeftArrow,
     showRightArrow,
     scroll,

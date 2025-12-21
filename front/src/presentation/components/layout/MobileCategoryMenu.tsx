@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import SentenceCategory from '@/app/components/category/SentenceCategory';
-import TextCategory from '@/app/components/category/TextCategory';
+import SentenceCategory from '../category/SentenceCategory';
+import TextCategory from '../category/TextCategory';
 import type { SentenceCategory as SentenceCategoryType, ExhibitionCategory } from '@/types';
 
 interface MobileCategoryMenuProps {

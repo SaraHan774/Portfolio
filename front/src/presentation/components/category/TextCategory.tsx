@@ -1,8 +1,8 @@
 'use client';
 
-import { memo, useRef, useEffect } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { categoryAnimationStore } from '@/app/utils/categoryAnimationStore';
+import { categoryAnimationStore } from '@/core/utils';
 import type { ExhibitionCategory, CategoryState } from '@/types';
 
 interface TextCategoryProps {
@@ -27,8 +27,8 @@ const TextCategory = memo(function TextCategory({
   // 이 카테고리가 사용자에 의해 클릭된 적이 있는지 확인 (페이지 이동 시에도 유지됨)
   const hasBeenClickedBefore = categoryAnimationStore.hasBeenClicked(category.id);
 
-  // 방금 클릭했는지 추적 (점 애니메이션용)
-  const justClicked = useRef(false);
+  // 방금 클릭했는지 추적 (점 애니메이션용) - state로 변경하여 render 중 접근 문제 해결
+  const [justClicked, setJustClicked] = useState(false);
 
   // Track actual DOM click events, not state transitions
   const handleClick = () => {
@@ -38,7 +38,7 @@ const TextCategory = memo(function TextCategory({
       // This ensures hasBeenClickedBefore is true when the component re-renders with selected=true
       if (!hasBeenClickedBefore) {
         categoryAnimationStore.markAsClicked(category.id);
-        justClicked.current = true; // Mark that we just clicked
+        setJustClicked(true); // Mark that we just clicked
         console.log(`✓ User clicked exhibition ${category.id}`);
       }
       onSelect();
@@ -47,13 +47,13 @@ const TextCategory = memo(function TextCategory({
 
   // Reset justClicked after render
   useEffect(() => {
-    if (justClicked.current && isSelected) {
+    if (justClicked && isSelected) {
       // Next render, this will be false
       setTimeout(() => {
-        justClicked.current = false;
+        setJustClicked(false);
       }, 0);
     }
-  }, [isSelected]);
+  }, [isSelected, justClicked]);
 
   // 애니메이션 상태 계산
   const animateState = isHovered ? 'hover' : (isSelected && hasBeenClickedBefore) ? 'selected' : 'normal';
@@ -268,10 +268,10 @@ const TextCategory = memo(function TextCategory({
         }}
       >
         <motion.span
-          initial={{ opacity: justClicked.current ? 0 : (isSelected ? 1 : 0) }}
+          initial={{ opacity: justClicked ? 0 : (isSelected ? 1 : 0) }}
           animate={{ opacity: isSelected ? 1 : 0 }}
           transition={
-            justClicked.current
+            justClicked
               ? { duration: 0.3, ease: 'easeOut', delay: 0.4 }
               : { duration: 0 }
           }

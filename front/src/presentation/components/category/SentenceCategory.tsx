@@ -3,8 +3,8 @@
 import { memo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useKeywordState, useKeywordStyle } from '@/domain';
-import { KEYWORD_ANIMATION_VARIANTS, DOT_ANIMATION } from '@/core/constants';
-import { categoryAnimationStore } from '@/app/utils/categoryAnimationStore';
+import { KEYWORD_ANIMATION_VARIANTS } from '@/core/constants';
+import { categoryAnimationStore } from '@/core/utils';
 import type { SentenceCategory as SentenceCategoryType, KeywordCategory } from '@/types';
 
 interface SentenceCategoryProps {

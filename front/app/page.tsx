@@ -3,22 +3,27 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import Header from '@/app/components/layout/Header';
-import Footer from '@/app/components/layout/Footer';
-import CategorySidebar from '@/app/components/layout/CategorySidebar';
-import WorkListScroller from '@/app/components/work/WorkListScroller';
-import MobileCategoryMenu from '@/app/components/layout/MobileCategoryMenu';
-import Spinner from '@/app/components/common/Spinner';
+import {
+  Header,
+  Footer,
+  CategorySidebar,
+  WorkListScroller,
+  MobileCategoryMenu,
+  Spinner
+} from '@/presentation';
 import { useCategories } from '@/app/contexts/CategoriesContext';
+import { useCategorySelection, useUIState } from '@/state';
 import { getWorksByKeywordId, getWorksByExhibitionCategoryId } from '@/lib/services/worksService';
 import type { Work } from '@/types';
 
 export default function HomePage() {
   const router = useRouter();
-  const [selectedKeywordId, setSelectedKeywordId] = useState<string | null>(null);
-  const [selectedExhibitionCategoryId, setSelectedExhibitionCategoryId] = useState<string | null>(null);
+
+  // Use global state contexts
+  const { selectedKeywordId, selectedExhibitionCategoryId, selectKeyword, selectExhibitionCategory } = useCategorySelection();
+  const { mobileMenuOpen, setMobileMenuOpen } = useUIState();
+
   const [works, setWorks] = useState<Work[]>([]);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Get categories from shared context (loaded once at app level)
   const { sentenceCategories, exhibitionCategories, isLoading } = useCategories();
@@ -33,7 +38,6 @@ export default function HomePage() {
         try {
           const filteredWorks = await getWorksByKeywordId(selectedKeywordId);
           setWorks(filteredWorks);
-          setSelectedExhibitionCategoryId(null);
         } catch (error) {
           console.error('작업 로드 실패:', error);
         }
@@ -49,7 +53,6 @@ export default function HomePage() {
         try {
           const filteredWorks = await getWorksByExhibitionCategoryId(selectedExhibitionCategoryId);
           setWorks(filteredWorks);
-          setSelectedKeywordId(null);
         } catch (error) {
           console.error('작업 로드 실패:', error);
         }
@@ -66,12 +69,12 @@ export default function HomePage() {
   }, [selectedKeywordId, selectedExhibitionCategoryId]);
 
   const handleKeywordSelect = useCallback((keywordId: string) => {
-    setSelectedKeywordId(keywordId);
-  }, []);
+    selectKeyword(keywordId);
+  }, [selectKeyword]);
 
   const handleExhibitionCategorySelect = useCallback((categoryId: string) => {
-    setSelectedExhibitionCategoryId(categoryId);
-  }, []);
+    selectExhibitionCategory(categoryId);
+  }, [selectExhibitionCategory]);
 
   // 작품 선택 시 상세 페이지로 이동 (현재 선택된 카테고리 정보 전달)
   const handleWorkSelect = useCallback((workId: string) => {

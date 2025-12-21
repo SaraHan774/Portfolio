@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import { Nanum_Myeongjo } from "next/font/google";
 import "./globals.css";
-import DynamicMetadata from "./components/DynamicMetadata";
+import { DynamicMetadata } from '@/presentation';
 import { CategoriesProvider } from "./contexts/CategoriesContext";
+import {
+  CategorySelectionProvider,
+  WorkSelectionProvider,
+  UIStateProvider
+} from '@/state';
 
 const nanumMyeongjo = Nanum_Myeongjo({
   weight: ['400', '700'],
@@ -30,7 +35,13 @@ export default function RootLayout({
       >
         <DynamicMetadata />
         <CategoriesProvider>
-          {children}
+          <CategorySelectionProvider>
+            <WorkSelectionProvider>
+              <UIStateProvider>
+                {children}
+              </UIStateProvider>
+            </WorkSelectionProvider>
+          </CategorySelectionProvider>
         </CategoriesProvider>
       </body>
     </html>
