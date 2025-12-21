@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { useKeywordState, useKeywordStyle } from '@/domain';
 import { KEYWORD_ANIMATION_VARIANTS, DOT_ANIMATION } from '@/core/constants';
@@ -21,8 +22,9 @@ interface SentenceCategoryProps {
  * - Character-by-character animation on hover
  * - State-based styling (active, hover, disabled, clickable)
  * - Dot indicator for selected keywords
+ * - Memoized to prevent re-renders when unrelated props change
  */
-export default function SentenceCategory({
+const SentenceCategory = memo(function SentenceCategory({
   category,
   selectedKeywordId,
   onKeywordSelect,
@@ -90,7 +92,17 @@ export default function SentenceCategory({
       {'\''}{renderSentence()}{'\''}
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Only re-render if these props change
+  return (
+    prevProps.category.id === nextProps.category.id &&
+    prevProps.selectedKeywordId === nextProps.selectedKeywordId &&
+    prevProps.hoveredKeywordId === nextProps.hoveredKeywordId &&
+    JSON.stringify(prevProps.selectedWorkIds) === JSON.stringify(nextProps.selectedWorkIds)
+  );
+});
+
+export default SentenceCategory;
 
 /**
  * Animated keyword component with character-by-character animation

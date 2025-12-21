@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import type { ExhibitionCategory, CategoryState } from '@/types';
 
@@ -12,7 +13,7 @@ interface TextCategoryProps {
   selectedWorkIds?: string[]; // 현재 선택된 카테고리의 작업 ID 목록 (disabled 상태 계산용)
 }
 
-export default function TextCategory({
+const TextCategory = memo(function TextCategory({
   category,
   isSelected,
   onSelect,
@@ -244,4 +245,14 @@ export default function TextCategory({
       {renderDescriptionText(displayDescription)}
     </span>
   );
-}
+}, (prevProps, nextProps) => {
+  // Only re-render if these props change
+  return (
+    prevProps.category.id === nextProps.category.id &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.hoveredCategoryId === nextProps.hoveredCategoryId &&
+    JSON.stringify(prevProps.selectedWorkIds) === JSON.stringify(nextProps.selectedWorkIds)
+  );
+});
+
+export default TextCategory;
