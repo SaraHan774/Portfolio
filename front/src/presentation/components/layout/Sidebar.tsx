@@ -1,8 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import CategorySidebar from '@/app/components/layout/CategorySidebar';
-import WorkListScroller from '@/app/components/work/WorkListScroller';
+import CategorySidebar from './CategorySidebar';
+import WorkListScroller from '../work/WorkListScroller';
 import type { SentenceCategory as SentenceCategoryType, ExhibitionCategory, Work } from '@/types';
 
 interface SidebarProps {
