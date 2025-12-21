@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import Header from '@/app/components/layout/Header';
 import Footer from '@/app/components/layout/Footer';
-import Sidebar from '@/app/components/layout/Sidebar';
+import CategorySidebar from '@/app/components/layout/CategorySidebar';
+import WorkListScroller from '@/app/components/work/WorkListScroller';
 import MobileCategoryMenu from '@/app/components/layout/MobileCategoryMenu';
 import Spinner from '@/app/components/common/Spinner';
 import { useCategories } from '@/app/contexts/CategoriesContext';
@@ -107,8 +109,8 @@ export default function HomePage() {
       />
       {/* 상단 영역 없음 - PRD 기준 */}
       <div className="flex-1 relative" style={{ paddingTop: '60px' }}>
-        {/* 좌우 카테고리 영역 + 작품 목록 (Sidebar에서 통합 관리) */}
-        <Sidebar
+        {/* 카테고리 영역 - 작품 선택과 완전히 독립적 */}
+        <CategorySidebar
           sentenceCategories={sentenceCategories}
           exhibitionCategories={exhibitionCategories}
           selectedKeywordId={selectedKeywordId}
@@ -116,10 +118,63 @@ export default function HomePage() {
           onKeywordSelect={handleKeywordSelect}
           onExhibitionCategorySelect={handleExhibitionCategorySelect}
           selectedWorkIds={selectedWorkIds}
-          works={works}
-          onWorkSelect={handleWorkSelect}
-          showThumbnail={true}
         />
+
+        {/* 작업 목록 영역 - 좌측 (문장형 카테고리 선택 시) */}
+        {works.length > 0 && selectedKeywordId && (
+          <div
+            className="hidden lg:block absolute"
+            style={{
+              left: 'var(--category-margin-left)',
+              top: 'var(--space-20)',
+              maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-left))',
+              zIndex: 100,
+            }}
+          >
+            <motion.div
+              initial={false}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            >
+              <WorkListScroller
+                works={works}
+                selectedWorkId={null}
+                onWorkSelect={handleWorkSelect}
+                showThumbnail={true}
+                direction="ltr"
+              />
+            </motion.div>
+          </div>
+        )}
+
+        {/* 작업 목록 영역 - 우측 (전시명 카테고리 선택 시) */}
+        {works.length > 0 && selectedExhibitionCategoryId && (
+          <div
+            className="hidden lg:block absolute"
+            style={{
+              right: 'var(--category-margin-right)',
+              top: 'var(--space-20)',
+              textAlign: 'right',
+              maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-right))',
+              zIndex: 100,
+            }}
+          >
+            <motion.div
+              initial={false}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            >
+              <WorkListScroller
+                works={works}
+                selectedWorkId={null}
+                onWorkSelect={handleWorkSelect}
+                showThumbnail={true}
+                direction="rtl"
+              />
+            </motion.div>
+          </div>
+        )}
+
         {/* 중앙 컨텐츠 영역 - 카테고리 선택 안내 메시지 */}
         <main
           style={{
