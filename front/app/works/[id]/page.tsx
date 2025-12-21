@@ -1821,7 +1821,7 @@ export default function WorkDetailPage() {
               justifyContent: 'center',
             }}
           >
-            <div style={{ color: 'var(--color-text-muted)' }}>로딩 중...</div>
+            <Spinner size={24} />
           </main>
         ) : (
         <main

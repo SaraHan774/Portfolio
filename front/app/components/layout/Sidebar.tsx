@@ -1,9 +1,7 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import SentenceCategory from '@/app/components/category/SentenceCategory';
-import TextCategory from '@/app/components/category/TextCategory';
+import CategorySidebar from '@/app/components/layout/CategorySidebar';
 import WorkListScroller from '@/app/components/work/WorkListScroller';
 import type { SentenceCategory as SentenceCategoryType, ExhibitionCategory, Work } from '@/types';
 
@@ -35,30 +33,6 @@ export default function Sidebar({
   onWorkSelect,
   showThumbnail = false,
 }: SidebarProps) {
-  const [hoveredKeywordId, setHoveredKeywordId] = useState<string | null>(null);
-  const [hoveredExhibitionCategoryId, setHoveredExhibitionCategoryId] = useState<string | null>(null);
-
-  // 문장형 카테고리만 필터링 및 정렬
-  const sortedSentenceCategories = useMemo(
-    () => sentenceCategories.filter((cat) => cat.isActive).sort((a, b) => a.displayOrder - b.displayOrder),
-    [sentenceCategories]
-  );
-
-  // 전시명 카테고리만 필터링 및 정렬
-  const sortedExhibitionCategories = useMemo(
-    () => exhibitionCategories.filter((cat) => cat.isActive).sort((a, b) => a.displayOrder - b.displayOrder),
-    [exhibitionCategories]
-  );
-
-  // Create stable handlers for exhibition categories
-  const exhibitionSelectHandlers = useMemo(() => {
-    const handlers: Record<string, () => void> = {};
-    sortedExhibitionCategories.forEach((category) => {
-      handlers[category.id] = () => onExhibitionCategorySelect(category.id);
-    });
-    return handlers;
-  }, [sortedExhibitionCategories, onExhibitionCategorySelect]);
-
   // 작업 목록 표시 여부 및 방향 결정
   const showWorkList = works.length > 0 && onWorkSelect;
   const isLeftAligned = selectedKeywordId !== null; // 문장형 카테고리 선택 시 좌측 정렬
@@ -66,39 +40,28 @@ export default function Sidebar({
 
   return (
     <>
-      {/* 좌측 문장형 카테고리 영역 (세로로 나열) */}
-      <div
-        className="hidden lg:block absolute"
-        style={{
-          left: 'var(--category-margin-left)', // 48px
-          top: 'var(--space-8)', // 헤더 바로 아래 (64px)
-          maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-left))', // 중앙 영역과 겹치지 않도록 간격 확보
-          zIndex: 100, // main 영역 위에 표시되도록
-        }}
-      >
-        {sortedSentenceCategories.map((category, index) => {
-          const isLast = index === sortedSentenceCategories.length - 1;
-          return (
-            <div
-              key={category.id}
-              style={{
-                marginBottom: isLast ? 0 : 'var(--category-spacing)', // 카테고리 간 간격
-              }}
-            >
-              <SentenceCategory
-                category={category}
-                selectedKeywordId={selectedKeywordId}
-                onKeywordSelect={onKeywordSelect}
-                hoveredKeywordId={hoveredKeywordId}
-                onKeywordHover={setHoveredKeywordId}
-                selectedWorkIds={selectedWorkIds}
-              />
-            </div>
-          );
-        })}
+      {/* 카테고리 영역 - selectedWorkId와 완전히 독립적 */}
+      <CategorySidebar
+        sentenceCategories={sentenceCategories}
+        exhibitionCategories={exhibitionCategories}
+        selectedKeywordId={selectedKeywordId}
+        selectedExhibitionCategoryId={selectedExhibitionCategoryId}
+        onKeywordSelect={onKeywordSelect}
+        onExhibitionCategorySelect={onExhibitionCategorySelect}
+        selectedWorkIds={selectedWorkIds}
+      />
 
-        {/* 문장형 카테고리 선택 시: 작업 목록 가로 스크롤 (좌 → 우) */}
-        {showWorkList && isLeftAligned && (
+      {/* 작업 목록 영역 - 좌측 (문장형 카테고리 선택 시) */}
+      {showWorkList && isLeftAligned && (
+        <div
+          className="hidden lg:block absolute"
+          style={{
+            left: 'var(--category-margin-left)',
+            top: 'calc(var(--space-8) + var(--space-4))', // 카테고리 아래
+            maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-left))',
+            zIndex: 100,
+          }}
+        >
           <motion.div
             initial={false}
             animate={{ opacity: 1, y: 0 }}
@@ -115,43 +78,21 @@ export default function Sidebar({
               direction="ltr"
             />
           </motion.div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* 우측 전시명 카테고리 영역 (세로로 나열) */}
-      <div
-        className="hidden lg:block absolute"
-        style={{
-          right: 'var(--category-margin-right)', // 48px
-          top: 'var(--space-8)', // 헤더 바로 아래 (64px)
-          textAlign: 'right',
-          maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-right))', // 중앙 영역과 겹치지 않도록 간격 확보
-          zIndex: 100, // main 영역 위에 표시되도록
-        }}
-      >
-        {sortedExhibitionCategories.map((category, index) => {
-          const isLast = index === sortedExhibitionCategories.length - 1;
-          return (
-            <div
-              key={category.id}
-              style={{
-                marginBottom: isLast ? 0 : 'var(--category-spacing)', // 카테고리 간 간격
-              }}
-            >
-              <TextCategory
-                category={category}
-                isSelected={selectedExhibitionCategoryId === category.id}
-                onSelect={exhibitionSelectHandlers[category.id]}
-                hoveredCategoryId={hoveredExhibitionCategoryId}
-                onHover={setHoveredExhibitionCategoryId}
-                selectedWorkIds={selectedWorkIds}
-              />
-            </div>
-          );
-        })}
-
-        {/* 전시명 카테고리 선택 시: 작업 목록 가로 스크롤 (우 → 좌) */}
-        {showWorkList && isRightAligned && (
+      {/* 작업 목록 영역 - 우측 (전시명 카테고리 선택 시) */}
+      {showWorkList && isRightAligned && (
+        <div
+          className="hidden lg:block absolute"
+          style={{
+            right: 'var(--category-margin-right)',
+            top: 'calc(var(--space-8) + var(--space-4))', // 카테고리 아래
+            textAlign: 'right',
+            maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-right))',
+            zIndex: 100,
+          }}
+        >
           <motion.div
             initial={false}
             animate={{ opacity: 1, y: 0 }}
@@ -168,8 +109,8 @@ export default function Sidebar({
               direction="rtl"
             />
           </motion.div>
-        )}
-      </div>
+        </div>
+      )}
     </>
   );
 }
