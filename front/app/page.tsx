@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Header from '@/app/components/layout/Header';
@@ -24,7 +24,7 @@ export default function HomePage() {
   const { sentenceCategories, exhibitionCategories, isLoading } = useCategories();
 
   // 선택된 카테고리의 작업 ID 목록 계산 (disabled 상태 계산용)
-  const selectedWorkIds = works.map(work => work.id);
+  const selectedWorkIds = useMemo(() => works.map(work => work.id), [works]);
 
   // 키워드 선택 시 작품 필터링
   useEffect(() => {
@@ -65,16 +65,16 @@ export default function HomePage() {
     }
   }, [selectedKeywordId, selectedExhibitionCategoryId]);
 
-  const handleKeywordSelect = (keywordId: string) => {
+  const handleKeywordSelect = useCallback((keywordId: string) => {
     setSelectedKeywordId(keywordId);
-  };
+  }, []);
 
-  const handleExhibitionCategorySelect = (categoryId: string) => {
+  const handleExhibitionCategorySelect = useCallback((categoryId: string) => {
     setSelectedExhibitionCategoryId(categoryId);
-  };
+  }, []);
 
   // 작품 선택 시 상세 페이지로 이동 (현재 선택된 카테고리 정보 전달)
-  const handleWorkSelect = (workId: string) => {
+  const handleWorkSelect = useCallback((workId: string) => {
     const params = new URLSearchParams();
     if (selectedKeywordId) {
       params.set('keywordId', selectedKeywordId);
@@ -83,7 +83,7 @@ export default function HomePage() {
     }
     const queryString = params.toString();
     router.push(`/works/${workId}${queryString ? `?${queryString}` : ''}`);
-  };
+  }, [selectedKeywordId, selectedExhibitionCategoryId, router]);
 
   if (isLoading) {
     return (

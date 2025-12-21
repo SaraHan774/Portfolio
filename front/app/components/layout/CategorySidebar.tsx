@@ -120,6 +120,31 @@ const CategorySidebar = memo(function CategorySidebar({
       </div>
     </>
   );
+}, (prevProps, nextProps) => {
+  // Custom comparison to prevent re-renders when work selection changes
+  // Return true if props are equal (don't re-render)
+
+  // Check array equality
+  const workIdsEqual =
+    prevProps.selectedWorkIds.length === nextProps.selectedWorkIds.length &&
+    prevProps.selectedWorkIds.every((id, index) => id === nextProps.selectedWorkIds[index]);
+
+  const sentenceCatsEqual =
+    prevProps.sentenceCategories.length === nextProps.sentenceCategories.length &&
+    prevProps.sentenceCategories.every((cat, index) => cat.id === nextProps.sentenceCategories[index].id);
+
+  const exhibitionCatsEqual =
+    prevProps.exhibitionCategories.length === nextProps.exhibitionCategories.length &&
+    prevProps.exhibitionCategories.every((cat, index) => cat.id === nextProps.exhibitionCategories[index].id);
+
+  return (
+    prevProps.selectedKeywordId === nextProps.selectedKeywordId &&
+    prevProps.selectedExhibitionCategoryId === nextProps.selectedExhibitionCategoryId &&
+    workIdsEqual &&
+    sentenceCatsEqual &&
+    exhibitionCatsEqual
+    // Intentionally NOT comparing callback functions - they're stable from useCallback
+  );
 });
 
 export default CategorySidebar;
