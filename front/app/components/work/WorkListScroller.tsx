@@ -34,8 +34,12 @@ export default function WorkListScroller({
     itemCount: works.length,
   });
 
-  // Track if any work is hovered (for thumbnail display in detail page)
-  const [anyWorkHovered, setAnyWorkHovered] = useState(false);
+  // Track if mouse is in the container (for thumbnail display)
+  // 마우스가 컨테이너 안에 있으면 썸네일 표시
+  const [isMouseInContainer, setIsMouseInContainer] = useState(false);
+  
+  // 썸네일 표시 여부: showThumbnail이 true이거나 마우스가 컨테이너 안에 있으면 표시
+  const anyWorkHovered = showThumbnail || isMouseInContainer;
 
   return (
     <div style={{ position: 'relative', width: '100%' }}>
@@ -113,16 +117,12 @@ export default function WorkListScroller({
       <div
         ref={scrollContainerRef}
         onMouseEnter={() => {
-          // Show thumbnails when mouse enters container
-          if (!showThumbnail) {
-            setAnyWorkHovered(true);
-          }
+          // 마우스가 컨테이너에 들어오면 썸네일 표시
+          setIsMouseInContainer(true);
         }}
         onMouseLeave={() => {
-          // Hide thumbnails when mouse leaves container
-          if (!showThumbnail) {
-            setAnyWorkHovered(false);
-          }
+          // 마우스가 컨테이너에서 나가면 썸네일 숨김 (showThumbnail이 false인 경우)
+          setIsMouseInContainer(false);
         }}
         style={{
           display: 'flex',
