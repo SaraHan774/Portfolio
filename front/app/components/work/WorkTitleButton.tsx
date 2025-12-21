@@ -92,7 +92,7 @@ export default function WorkTitleButton({
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'flex-start',
+        alignItems: 'center', // Center title and thumbnail horizontally
         gap: '8px',
         width: '150px', // Fixed width for entire button
       }}
