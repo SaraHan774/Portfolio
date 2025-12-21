@@ -1,14 +1,32 @@
 # State Layer
 
-The State layer manages global UI state. For server state, use React Query in the Data layer.
+The State layer manages global UI state using React Context with enhanced patterns. For server state, use React Query in the Data layer.
 
 ## Structure
 
 ```
 state/
-├── contexts/       # React Context providers
-└── stores/         # Zustand stores (if needed)
+├── contexts/       # React Context providers with State/Actions/Selectors pattern
+│   ├── CategorySelectionContext.tsx
+│   ├── WorkSelectionContext.tsx
+│   ├── UIStateContext.tsx
+│   └── index.ts
+└── stores/         # Zustand stores (if needed for complex state)
 ```
+
+## Architecture Pattern
+
+All contexts follow a consistent pattern with three interfaces:
+
+1. **State Interface**: Pure state shape (data only)
+2. **Actions Interface**: Functions that modify state
+3. **Selectors Interface**: Derived state (computed values)
+
+This separation provides:
+- Clear contracts for state management
+- Better TypeScript support
+- Easier testing and maintenance
+- Performance optimization opportunities
 
 ## Guidelines
 
@@ -32,42 +50,89 @@ state/
 
 ### Best Practices
 
-- Separate server state (React Query) from client state (Context/Zustand)
-- Keep contexts small and focused
-- Use multiple contexts instead of one large context
-- Provide TypeScript types for all state
+- **Separate Concerns**: Use State/Actions/Selectors pattern
+- **Memoization**: Use `useMemo` for selectors and context values
+- **Individual Hooks**: Export granular selector hooks for fine-grained updates
+- **Type Safety**: Provide explicit TypeScript interfaces
+- **Server vs Client**: Keep server state (React Query) separate from client state
+- **Context Size**: Keep contexts focused - multiple small contexts over one large
+- **Documentation**: Add JSDoc comments for interfaces and hooks
 
-## Usage Examples
+## Implementation Examples
 
-### React Context
+### Usage in Components
 
 ```typescript
-// contexts/CategorySelectionContext.tsx
-export const CategorySelectionContext = createContext<{
-  selectedKeywordId: string | null;
-  selectKeyword: (id: string) => void;
-}>({
-  selectedKeywordId: null,
-  selectKeyword: () => {},
-});
+// Use full context when you need multiple values
+function CategoryDisplay() {
+  const { selectedKeywordId, isKeywordSelected, selectKeyword } = useCategorySelection();
 
-// Usage in components
-const { selectedKeywordId, selectKeyword } = useCategorySelection();
+  return (
+    <div>
+      {isKeywordSelected && <p>Selected: {selectedKeywordId}</p>}
+      <button onClick={() => selectKeyword('new-id')}>Select</button>
+    </div>
+  );
+}
+
+// Use individual hooks for performance (component only re-renders when specific value changes)
+function KeywordBadge() {
+  const isKeywordSelected = useIsKeywordSelected(); // Only re-renders when this changes
+  return isKeywordSelected ? <Badge>Selected</Badge> : null;
+}
 ```
 
-### Zustand Store (if needed)
+## Performance Optimization
+
+### Memoization Strategy
+
+- **Context Value**: Always wrap in `useMemo` to prevent unnecessary re-renders
+- **Actions**: Use `useCallback` for stable function references
+- **Selectors**: Use `useMemo` to compute derived state only when dependencies change
+- **Granular Hooks**: Export individual selector hooks for fine-grained component updates
+
+### Example: Preventing Unnecessary Re-renders
 
 ```typescript
-// stores/useCategoryStore.ts
-export const useCategoryStore = create<CategoryStore>((set) => ({
-  selectedKeywordId: null,
-  selectKeyword: (id) => set({ selectedKeywordId: id }),
-}));
+// ❌ Bad: Component re-renders on any context change
+function WorkCount() {
+  const { selectedWorkId, selectedCategoryId } = useContext(SomeContext);
+  return <div>{selectedWorkId ? 1 : 0}</div>;
+}
+
+// ✅ Good: Component only re-renders when selectedWorkId changes
+function WorkCount() {
+  const isWorkSelected = useIsWorkSelected(); // Custom selector hook
+  return <div>{isWorkSelected ? 1 : 0}</div>;
+}
+```
+
+## Testing
+
+Each context should be testable in isolation:
+
+```typescript
+import { renderHook, act } from '@testing-library/react';
+import { CategorySelectionProvider, useCategorySelection } from './CategorySelectionContext';
+
+test('selecting keyword clears exhibition category', () => {
+  const { result } = renderHook(() => useCategorySelection(), {
+    wrapper: CategorySelectionProvider,
+  });
+
+  act(() => {
+    result.current.selectKeyword('keyword-1');
+  });
+
+  expect(result.current.selectedKeywordId).toBe('keyword-1');
+  expect(result.current.isKeywordSelected).toBe(true);
+  expect(result.current.selectedExhibitionCategoryId).toBeNull();
+});
 ```
 
 ## Dependencies
 
 - Can use Core layer (types)
-- React for contexts
+- React for contexts and hooks
 - Zustand (optional, install if needed)
-- No dependency on other layers
+- No dependency on Domain, Data, or Presentation layers

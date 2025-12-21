@@ -13,7 +13,7 @@ import {
   FloatingWorkWindow
 } from '@/presentation';
 import { getWorkById, getWorksByKeywordId, getWorksByExhibitionCategoryId } from '@/lib/services/worksService';
-import { useCategories } from '@/app/contexts/CategoriesContext';
+import { useCategories } from '@/state';
 import type { Work, WorkImage, WorkVideo, MediaItem } from '@/types';
 
 // 이미지와 영상을 통합 미디어 배열로 변환하는 헬퍼 함수
@@ -765,7 +765,7 @@ function WorkModal({
         modalImageScrollContainerRef.current.scrollTop = 0;
       }
     };
-    loadModalWork();
+    void loadModalWork();
   }, [workId]);
 
   // 모달 내 이미지 Intersection Observer + 스크롤 끝 감지
@@ -1397,7 +1397,7 @@ export default function WorkDetailPage() {
       }
     };
 
-    loadInitialData();
+    void loadInitialData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

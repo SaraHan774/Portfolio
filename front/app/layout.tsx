@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Nanum_Myeongjo } from "next/font/google";
 import "./globals.css";
-import { DynamicMetadata } from '@/presentation';
-import { CategoriesProvider } from "./contexts/CategoriesContext";
+import { DynamicMetadata, ErrorBoundary } from '@/presentation';
 import {
+  CategoriesProvider,
   CategorySelectionProvider,
   WorkSelectionProvider,
   UIStateProvider
@@ -34,15 +34,17 @@ export default function RootLayout({
         style={{ fontFamily: 'var(--font-nanum-myeongjo)' }}
       >
         <DynamicMetadata />
-        <CategoriesProvider>
-          <CategorySelectionProvider>
-            <WorkSelectionProvider>
-              <UIStateProvider>
-                {children}
-              </UIStateProvider>
-            </WorkSelectionProvider>
-          </CategorySelectionProvider>
-        </CategoriesProvider>
+        <ErrorBoundary>
+          <CategoriesProvider>
+            <CategorySelectionProvider>
+              <WorkSelectionProvider>
+                <UIStateProvider>
+                  {children}
+                </UIStateProvider>
+              </WorkSelectionProvider>
+            </CategorySelectionProvider>
+          </CategoriesProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

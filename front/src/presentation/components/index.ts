@@ -5,6 +5,12 @@ export { default as TextCategory } from './category/TextCategory';
 // Common components
 export { default as Spinner } from './common/Spinner';
 
+// Error components
+export * from './errors';
+
+// Loading components
+export * from './loading';
+
 // Layout components
 export { default as CategorySidebar } from './layout/CategorySidebar';
 export { default as Footer } from './layout/Footer';

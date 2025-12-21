@@ -11,8 +11,7 @@ import {
   MobileCategoryMenu,
   Spinner
 } from '@/presentation';
-import { useCategories } from '@/app/contexts/CategoriesContext';
-import { useCategorySelection, useUIState } from '@/state';
+import { useCategories, useCategorySelection, useUIState } from '@/state';
 import { getWorksByKeywordId, getWorksByExhibitionCategoryId } from '@/lib/services/worksService';
 import type { Work } from '@/types';
 
@@ -42,7 +41,7 @@ export default function HomePage() {
           console.error('작업 로드 실패:', error);
         }
       };
-      loadWorks();
+      void loadWorks();
     }
   }, [selectedKeywordId]);
 
@@ -57,14 +56,16 @@ export default function HomePage() {
           console.error('작업 로드 실패:', error);
         }
       };
-      loadWorks();
+      void loadWorks();
     }
   }, [selectedExhibitionCategoryId]);
 
   // 두 선택 모두 해제 시 작품 목록 초기화
   useEffect(() => {
     if (!selectedKeywordId && !selectedExhibitionCategoryId) {
-      setWorks([]);
+      // Use setTimeout to avoid synchronous setState in effect
+      const timer = setTimeout(() => setWorks([]), 0);
+      return () => clearTimeout(timer);
     }
   }, [selectedKeywordId, selectedExhibitionCategoryId]);
 
