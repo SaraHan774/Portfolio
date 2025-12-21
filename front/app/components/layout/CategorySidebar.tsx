@@ -137,14 +137,25 @@ const CategorySidebar = memo(function CategorySidebar({
     prevProps.exhibitionCategories.length === nextProps.exhibitionCategories.length &&
     prevProps.exhibitionCategories.every((cat, index) => cat.id === nextProps.exhibitionCategories[index].id);
 
-  return (
-    prevProps.selectedKeywordId === nextProps.selectedKeywordId &&
-    prevProps.selectedExhibitionCategoryId === nextProps.selectedExhibitionCategoryId &&
-    workIdsEqual &&
-    sentenceCatsEqual &&
-    exhibitionCatsEqual
-    // Intentionally NOT comparing callback functions - they're stable from useCallback
-  );
+  const keywordIdEqual = prevProps.selectedKeywordId === nextProps.selectedKeywordId;
+  const exhibitionIdEqual = prevProps.selectedExhibitionCategoryId === nextProps.selectedExhibitionCategoryId;
+
+  const shouldSkipRender = keywordIdEqual && exhibitionIdEqual && workIdsEqual && sentenceCatsEqual && exhibitionCatsEqual;
+
+  console.log('[CategorySidebar memo]', {
+    keywordIdEqual,
+    exhibitionIdEqual,
+    workIdsEqual,
+    sentenceCatsEqual,
+    exhibitionCatsEqual,
+    shouldSkipRender,
+    prevKeyword: prevProps.selectedKeywordId,
+    nextKeyword: nextProps.selectedKeywordId,
+    prevWorkIds: prevProps.selectedWorkIds,
+    nextWorkIds: nextProps.selectedWorkIds,
+  });
+
+  return shouldSkipRender;
 });
 
 export default CategorySidebar;

@@ -141,11 +141,13 @@ function AnimatedKeyword({
   const isUserClick = prevIsSelected.current === false && isSelected === true;
 
   useEffect(() => {
+    console.log(`[AnimatedKeyword ${keyword.id}] isSelected: ${isSelected}, prevIsSelected: ${prevIsSelected.current}, isUserClick: ${isUserClick}, hasTransitioned: ${hasTransitionedToSelected.current}`);
     if (isUserClick) {
       hasTransitionedToSelected.current = true;
+      console.log(`[AnimatedKeyword ${keyword.id}] ✓ User clicked! Enabling animations.`);
     }
     prevIsSelected.current = isSelected;
-  }, [isSelected, isUserClick]);
+  }, [isSelected, isUserClick, keyword.id]);
 
   // Use custom hooks for state and styling
   const state = useKeywordState({
