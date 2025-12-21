@@ -1699,20 +1699,8 @@ export default function WorkDetailPage() {
     };
   }, [work, selectedWorkId]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div style={{ color: 'var(--color-text-muted)' }}>로딩 중...</div>
-      </div>
-    );
-  }
-
-  if (!work) {
-    return null;
-  }
-
   // 현재 선택된 작품의 ID 목록 계산 (disabled 상태 계산용)
-  const selectedWorkIds = [work.id, ...relatedWorks.map(w => w.id)];
+  const selectedWorkIds = work ? [work.id, ...relatedWorks.map(w => w.id)] : [];
 
   // 이미지와 캡션 렌더링
   const renderCaption = (caption: string | undefined, captionId: string, isModal: boolean = false) => {
@@ -1817,6 +1805,19 @@ export default function WorkDetailPage() {
           showThumbnail={selectedWorkId === null}
         />
         {/* 이미지 컨텐츠 영역 - 좌측 50% */}
+        {isLoading || !work ? (
+          <main
+            style={{
+              position: 'relative',
+              minHeight: 'calc(100vh - 60px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <div style={{ color: 'var(--color-text-muted)' }}>로딩 중...</div>
+          </main>
+        ) : (
         <main
           style={{
             position: 'relative',
@@ -2006,6 +2007,7 @@ export default function WorkDetailPage() {
             );
           })()}
         </main>
+        )}
       </div>
 
       <AnimatePresence>
