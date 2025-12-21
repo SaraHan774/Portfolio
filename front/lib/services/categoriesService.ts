@@ -47,7 +47,7 @@ export const getSentenceCategories = async (): Promise<SentenceCategory[]> => {
 // 단일 문장형 카테고리 조회
 export const getSentenceCategory = async (
   id: string
-): Promise<SentenceCategory | null> => {
+): Promise<SentenceCategory | null> => {  
   const docRef = doc(db, SENTENCE_COLLECTION, id);
   const docSnap = await getDoc(docRef);
 

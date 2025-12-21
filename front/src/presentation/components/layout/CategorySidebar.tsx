@@ -45,67 +45,81 @@ const CategorySidebar = memo(function CategorySidebar({
   // 전시명 카테고리 영역의 ref - 높이 측정용
   const exhibitionCategoryRef = useRef<HTMLDivElement>(null);
   
-  // ResizeObserver로 문장형 카테고리 영역의 높이 변화 감지
-  useEffect(() => {
-    if (!sentenceCategoryRef.current || !onSentenceCategoryHeightChange) return;
-    
-    const element = sentenceCategoryRef.current;
-    
-    // 초기 높이 전달
-    const initialHeight = element.getBoundingClientRect().height;
-    onSentenceCategoryHeightChange(initialHeight);
-    
-    // ResizeObserver로 높이 변화 감지
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const height = entry.contentRect.height;
-        onSentenceCategoryHeightChange(height);
-      }
-    });
-    
-    resizeObserver.observe(element);
-    
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [onSentenceCategoryHeightChange]);
-  
-  // ResizeObserver로 전시명 카테고리 영역의 높이 변화 감지
-  useEffect(() => {
-    if (!exhibitionCategoryRef.current || !onExhibitionCategoryHeightChange) return;
-    
-    const element = exhibitionCategoryRef.current;
-    
-    // 초기 높이 전달
-    const initialHeight = element.getBoundingClientRect().height;
-    onExhibitionCategoryHeightChange(initialHeight);
-    
-    // ResizeObserver로 높이 변화 감지
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const height = entry.contentRect.height;
-        onExhibitionCategoryHeightChange(height);
-      }
-    });
-    
-    resizeObserver.observe(element);
-    
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [onExhibitionCategoryHeightChange]);
-
-  // 문장형 카테고리만 필터링 및 정렬
+  // 문장형 카테고리만 필터링 및 정렬 (useEffect보다 먼저 정의)
   const sortedSentenceCategories = useMemo(
     () => sentenceCategories.filter((cat) => cat.isActive).sort((a, b) => a.displayOrder - b.displayOrder),
     [sentenceCategories]
   );
 
-  // 전시명 카테고리만 필터링 및 정렬
+  // 전시명 카테고리만 필터링 및 정렬 (useEffect보다 먼저 정의)
   const sortedExhibitionCategories = useMemo(
     () => exhibitionCategories.filter((cat) => cat.isActive).sort((a, b) => a.displayOrder - b.displayOrder),
     [exhibitionCategories]
   );
+  
+  // ResizeObserver로 문장형 카테고리 영역의 높이 변화 감지
+  // 의존성 배열에 카테고리 길이를 추가하여 데이터 로드 후 재측정
+  useEffect(() => {
+    if (!sentenceCategoryRef.current || !onSentenceCategoryHeightChange) return;
+    
+    const element = sentenceCategoryRef.current;
+    
+    // requestAnimationFrame으로 DOM 렌더링 완료 후 높이 측정
+    const measureHeight = () => {
+      requestAnimationFrame(() => {
+        if (element) {
+          const height = element.getBoundingClientRect().height;
+          onSentenceCategoryHeightChange(height);
+        }
+      });
+    };
+    
+    // 초기 높이 측정
+    measureHeight();
+    
+    // ResizeObserver로 높이 변화 감지
+    const resizeObserver = new ResizeObserver(() => {
+      measureHeight();
+    });
+    
+    resizeObserver.observe(element);
+    
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [onSentenceCategoryHeightChange, sortedSentenceCategories.length]);
+  
+  // ResizeObserver로 전시명 카테고리 영역의 높이 변화 감지
+  // 의존성 배열에 카테고리 길이를 추가하여 데이터 로드 후 재측정
+  useEffect(() => {
+    if (!exhibitionCategoryRef.current || !onExhibitionCategoryHeightChange) return;
+    
+    const element = exhibitionCategoryRef.current;
+    
+    // requestAnimationFrame으로 DOM 렌더링 완료 후 높이 측정
+    const measureHeight = () => {
+      requestAnimationFrame(() => {
+        if (element) {
+          const height = element.getBoundingClientRect().height;
+          onExhibitionCategoryHeightChange(height);
+        }
+      });
+    };
+    
+    // 초기 높이 측정
+    measureHeight();
+    
+    // ResizeObserver로 높이 변화 감지
+    const resizeObserver = new ResizeObserver(() => {
+      measureHeight();
+    });
+    
+    resizeObserver.observe(element);
+    
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [onExhibitionCategoryHeightChange, sortedExhibitionCategories.length]);
 
   // Create stable handlers for exhibition categories
   const exhibitionSelectHandlers = useMemo(() => {

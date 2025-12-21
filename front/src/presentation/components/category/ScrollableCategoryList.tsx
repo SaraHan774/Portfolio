@@ -2,10 +2,12 @@
 
 import { useRef, useState, useEffect, useCallback, ReactNode } from 'react';
 
-// 뷰포트 높이 대비 스크롤 가능 영역의 최대 높이 비율 (기본값: 25%)
+// 뷰포트 높이 대비 스크롤 가능 영역의 최대 높이 비율 (기본값: 20%)
 const DEFAULT_VIEWPORT_HEIGHT_RATIO = 0.20;
 // fade 영역의 높이 (px)
 const DEFAULT_FADE_HEIGHT = 24;
+// 상단 패딩 - 카테고리 선택 시 나타나는 점(˙)이 잘리지 않도록 여유 공간 확보 (px)
+const TOP_PADDING_FOR_SELECTION_INDICATOR = 20;
 
 interface ScrollableCategoryListProps {
   children: ReactNode;
@@ -171,7 +173,8 @@ export default function ScrollableCategoryList({
     <div
       ref={scrollContainerRef}
       style={{
-        maxHeight: maxHeight ? `${maxHeight}px` : undefined,
+        // 상단 패딩을 포함한 최대 높이 계산
+        maxHeight: maxHeight ? `${maxHeight + TOP_PADDING_FOR_SELECTION_INDICATOR}px` : undefined,
         overflowY: 'auto',
         overflowX: 'hidden',
         // 스크롤바 완전히 숨김 - fading edge로 스크롤 가능함을 나타냄
@@ -183,7 +186,8 @@ export default function ScrollableCategoryList({
       }}
       className="scrollable-category-list"
     >
-      <div ref={contentRef}>
+      {/* 상단 패딩 영역 - 카테고리 선택 시 점(˙)이 잘리지 않도록 여유 공간 */}
+      <div ref={contentRef} style={{ paddingTop: `${TOP_PADDING_FOR_SELECTION_INDICATOR}px` }}>
         {children}
       </div>
     </div>

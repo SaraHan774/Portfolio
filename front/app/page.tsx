@@ -15,6 +15,11 @@ import { useCategories, useCategorySelection, useUIState } from '@/state';
 import { getWorksByKeywordId, getWorksByExhibitionCategoryId } from '@/lib/services/worksService';
 import type { Work } from '@/types';
 
+// 카테고리 영역과 작업 목록 사이의 간격 (px)
+const CATEGORY_TO_WORKLIST_GAP = 24;
+// 헤더 아래 기본 여백 (var(--space-8)의 px 값)
+const BASE_TOP_OFFSET = 64;
+
 export default function HomePage() {
   const router = useRouter();
 
@@ -23,6 +28,19 @@ export default function HomePage() {
   const { mobileMenuOpen, setMobileMenuOpen } = useUIState();
 
   const [works, setWorks] = useState<Work[]>([]);
+  
+  // 카테고리 영역의 높이를 저장하는 상태
+  const [sentenceCategoryHeight, setSentenceCategoryHeight] = useState<number>(0);
+  const [exhibitionCategoryHeight, setExhibitionCategoryHeight] = useState<number>(0);
+  
+  // 높이 변경 콜백 - useCallback으로 메모이제이션
+  const handleSentenceCategoryHeightChange = useCallback((height: number) => {
+    setSentenceCategoryHeight(height);
+  }, []);
+  
+  const handleExhibitionCategoryHeightChange = useCallback((height: number) => {
+    setExhibitionCategoryHeight(height);
+  }, []);
 
   // Get categories from shared context (loaded once at app level)
   const { sentenceCategories, exhibitionCategories, isLoading } = useCategories();
@@ -31,8 +49,13 @@ export default function HomePage() {
   const selectedWorkIds = useMemo(() => works.map(work => work.id), [works]);
 
   // 키워드 선택 시 작품 필터링
+  // 카테고리 전환 시 이전 작업 목록이 잔상으로 보이는 것을 방지하기 위해
+  // 먼저 works를 초기화한 후 새 데이터를 로드
   useEffect(() => {
     if (selectedKeywordId) {
+      // 카테고리 전환 시 이전 작업 목록 즉시 초기화
+      setWorks([]);
+      
       const loadWorks = async () => {
         try {
           const filteredWorks = await getWorksByKeywordId(selectedKeywordId);
@@ -46,8 +69,13 @@ export default function HomePage() {
   }, [selectedKeywordId]);
 
   // 전시명 카테고리 선택 시 작품 필터링
+  // 카테고리 전환 시 이전 작업 목록이 잔상으로 보이는 것을 방지하기 위해
+  // 먼저 works를 초기화한 후 새 데이터를 로드
   useEffect(() => {
     if (selectedExhibitionCategoryId) {
+      // 카테고리 전환 시 이전 작업 목록 즉시 초기화
+      setWorks([]);
+      
       const loadWorks = async () => {
         try {
           const filteredWorks = await getWorksByExhibitionCategoryId(selectedExhibitionCategoryId);
@@ -63,9 +91,7 @@ export default function HomePage() {
   // 두 선택 모두 해제 시 작품 목록 초기화
   useEffect(() => {
     if (!selectedKeywordId && !selectedExhibitionCategoryId) {
-      // Use setTimeout to avoid synchronous setState in effect
-      const timer = setTimeout(() => setWorks([]), 0);
-      return () => clearTimeout(timer);
+      setWorks([]);
     }
   }, [selectedKeywordId, selectedExhibitionCategoryId]);
 
@@ -122,15 +148,18 @@ export default function HomePage() {
           onKeywordSelect={handleKeywordSelect}
           onExhibitionCategorySelect={handleExhibitionCategorySelect}
           selectedWorkIds={selectedWorkIds}
+          onSentenceCategoryHeightChange={handleSentenceCategoryHeightChange}
+          onExhibitionCategoryHeightChange={handleExhibitionCategoryHeightChange}
         />
 
         {/* 작업 목록 영역 - 좌측 (문장형 카테고리 선택 시) */}
-        {works.length > 0 && selectedKeywordId && (
+        {/* 카테고리 높이가 측정된 후에만 작업 목록을 렌더링 */}
+        {works.length > 0 && selectedKeywordId && sentenceCategoryHeight > 0 && (
           <div
             className="hidden lg:block absolute"
             style={{
               left: 'var(--category-margin-left)',
-              top: 'var(--space-20)',
+              top: `${BASE_TOP_OFFSET + sentenceCategoryHeight + CATEGORY_TO_WORKLIST_GAP}px`,
               maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-left))',
               zIndex: 100,
             }}
@@ -152,12 +181,13 @@ export default function HomePage() {
         )}
 
         {/* 작업 목록 영역 - 우측 (전시명 카테고리 선택 시) */}
-        {works.length > 0 && selectedExhibitionCategoryId && (
+        {/* 카테고리 높이가 측정된 후에만 작업 목록을 렌더링 */}
+        {works.length > 0 && selectedExhibitionCategoryId && exhibitionCategoryHeight > 0 && (
           <div
             className="hidden lg:block absolute"
             style={{
               right: 'var(--category-margin-right)',
-              top: 'var(--space-20)',
+              top: `${BASE_TOP_OFFSET + exhibitionCategoryHeight + CATEGORY_TO_WORKLIST_GAP}px`,
               textAlign: 'right',
               maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-right))',
               zIndex: 100,
@@ -179,27 +209,14 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* 중앙 컨텐츠 영역 - 카테고리 선택 안내 메시지 */}
+        {/* 중앙 컨텐츠 영역 */}
         <main
           style={{
             minHeight: 'calc(100vh - 120px)',
             paddingTop: 'var(--space-6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
           }}
-        >
-          {works.length === 0 && (
-            <div
-              style={{
-                color: 'var(--color-text-muted)',
-                fontSize: 'var(--font-size-sm)',
-              }}
-            >
-              카테고리를 선택하세요
-            </div>
-          )}
-        </main>
+        />
+        
       </div>
       <Footer />
     </div>

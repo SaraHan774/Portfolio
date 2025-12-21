@@ -6,7 +6,8 @@ import {
   CategoriesProvider,
   CategorySelectionProvider,
   WorkSelectionProvider,
-  UIStateProvider
+  UIStateProvider,
+  QueryProvider
 } from '@/state';
 
 const nanumMyeongjo = Nanum_Myeongjo({
@@ -35,15 +36,17 @@ export default function RootLayout({
       >
         <DynamicMetadata />
         <ErrorBoundary>
-          <CategoriesProvider>
-            <CategorySelectionProvider>
-              <WorkSelectionProvider>
-                <UIStateProvider>
-                  {children}
-                </UIStateProvider>
-              </WorkSelectionProvider>
-            </CategorySelectionProvider>
-          </CategoriesProvider>
+          <QueryProvider>
+            <CategoriesProvider>
+              <CategorySelectionProvider>
+                <WorkSelectionProvider>
+                  <UIStateProvider>
+                    {children}
+                  </UIStateProvider>
+                </WorkSelectionProvider>
+              </CategorySelectionProvider>
+            </CategoriesProvider>
+          </QueryProvider>
         </ErrorBoundary>
       </body>
     </html>
