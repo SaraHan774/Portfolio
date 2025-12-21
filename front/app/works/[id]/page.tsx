@@ -1749,10 +1749,12 @@ export default function WorkDetailPage() {
   };
 
   // 작품 선택 핸들러 - URL 업데이트 포함
+  // window.history.replaceState를 사용하여 URL만 업데이트하고 페이지 리로드 방지
+  // 이렇게 하면 작업 목록이 다시 fade-in되지 않고 dot만 이동
   const handleWorkSelect = useCallback((newWorkId: string) => {
     setSelectedWorkId(newWorkId);
 
-    // URL 업데이트 (카테고리 정보 유지)
+    // URL 업데이트 (카테고리 정보 유지) - router.replace 대신 history API 사용
     const params = new URLSearchParams();
     if (selectedKeywordId) {
       params.set('keywordId', selectedKeywordId);
@@ -1762,8 +1764,10 @@ export default function WorkDetailPage() {
 
     const queryString = params.toString();
     const newUrl = `/works/${newWorkId}${queryString ? `?${queryString}` : ''}`;
-    router.replace(newUrl, { scroll: false });
-  }, [selectedKeywordId, selectedExhibitionCategoryId, router]);
+    
+    // history.replaceState로 URL만 변경 (페이지 리마운트 없음)
+    window.history.replaceState(null, '', newUrl);
+  }, [selectedKeywordId, selectedExhibitionCategoryId]);
 
   // 카테고리 선택 핸들러 (상세 페이지에서는 네비게이션 용도)
   // Memoize to prevent category re-renders
@@ -1887,7 +1891,7 @@ export default function WorkDetailPage() {
           }}
         >
           {/* 선택된 작품의 미디어(이미지+영상) 표시 - AnimatePresence로 부드러운 전환 */}
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="sync">
           {selectedWorkId && (() => {
             // relatedWorks에서 선택된 작업 찾기 (카테고리 재선택 시에도 올바르게 동작)
             const selectedWork = relatedWorks.find((w) => w.id === selectedWorkId)
@@ -1907,10 +1911,10 @@ export default function WorkDetailPage() {
             return (
               <motion.div
                 key={selectedWorkId}
-                initial={{ opacity: 0.7 }}
+                initial={{ opacity: 0.85 }}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
+                exit={{ opacity: 0.85 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
               >
                 {/* 좌측 고정 타임라인 UI - 미디어가 2개 이상일 때만 표시 */}
                 {sortedMedia.length > 1 && (
