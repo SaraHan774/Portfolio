@@ -1886,7 +1886,8 @@ export default function WorkDetailPage() {
             paddingTop: '320px', // 카테고리 영역(64px) + 작품 목록(~100px) + 썸네일 영역(~100px) + 여백(~56px)과 겹치지 않도록
           }}
         >
-          {/* 선택된 작품의 미디어(이미지+영상) 표시 */}
+          {/* 선택된 작품의 미디어(이미지+영상) 표시 - AnimatePresence로 부드러운 전환 */}
+          <AnimatePresence mode="wait">
           {selectedWorkId && (() => {
             // relatedWorks에서 선택된 작업 찾기 (카테고리 재선택 시에도 올바르게 동작)
             const selectedWork = relatedWorks.find((w) => w.id === selectedWorkId)
@@ -1904,7 +1905,13 @@ export default function WorkDetailPage() {
             const sortedImages = selectedWork.images.sort((a, b) => a.order - b.order);
 
             return (
-              <>
+              <motion.div
+                key={selectedWorkId}
+                initial={{ opacity: 0.7 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+              >
                 {/* 좌측 고정 타임라인 UI - 미디어가 2개 이상일 때만 표시 */}
                 {sortedMedia.length > 1 && (
                   <div
@@ -2064,9 +2071,10 @@ export default function WorkDetailPage() {
                     mediaContainerRef={imageScrollContainerRef}
                   />
                 )}
-              </>
+              </motion.div>
             );
           })()}
+          </AnimatePresence>
         </main>
         )}
       </div>

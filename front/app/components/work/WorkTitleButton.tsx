@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useThumbnailUrl } from '@/domain';
-import { KEYWORD_ANIMATION_VARIANTS, DOT_ANIMATION } from '@/core/constants';
+import { KEYWORD_ANIMATION_VARIANTS } from '@/core/constants';
 import type { Work } from '@/types';
 
 interface WorkTitleButtonProps {
@@ -32,6 +32,24 @@ export default function WorkTitleButton({
   anyWorkHovered = false,
 }: WorkTitleButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
+  
+  // 이전에 선택된 적이 있는지 추적 (점 애니메이션 제어용)
+  // 처음 선택될 때만 애니메이션 실행, 이후 선택 시에는 즉시 표시
+  const wasSelectedBefore = useRef(false);
+  const justSelected = useRef(false);
+
+  // 선택 상태가 true가 되면 wasSelectedBefore 업데이트
+  useEffect(() => {
+    if (isSelected && !wasSelectedBefore.current) {
+      // 처음 선택됨 - 애니메이션 필요
+      justSelected.current = true;
+      wasSelectedBefore.current = true;
+      // 다음 렌더에서 justSelected를 false로 설정
+      requestAnimationFrame(() => {
+        justSelected.current = false;
+      });
+    }
+  }, [isSelected]);
 
   // Use hook for thumbnail URL (includes YouTube fallback)
   const thumbnailUrl = useThumbnailUrl(work);
@@ -95,15 +113,27 @@ export default function WorkTitleButton({
       {/* Container for title with dot indicator */}
       <div style={containerStyle}>
         {/* Dot indicator for selected work (positioned absolutely above) */}
+        {/* 
+          점 애니메이션 전략:
+          - 처음 선택될 때: fade-in 애니메이션 (justSelected.current = true)
+          - 이미 선택된 적 있는 작업 재선택: 즉시 표시 (애니메이션 없음)
+          - 다른 작업에서 이 작업으로 전환: 부드럽게 표시 (짧은 애니메이션)
+        */}
         {isSelected && (
           <motion.span
-            {...DOT_ANIMATION}
+            initial={{ opacity: wasSelectedBefore.current ? 1 : 0 }}
+            animate={{ opacity: 1 }}
+            transition={
+              justSelected.current
+                ? { duration: 0.3, ease: 'easeOut', delay: 0.1 }
+                : { duration: 0 }
+            }
             style={{
               position: 'absolute',
-              top: '0px', // At the top of the padded container
+              top: '0px',
               left: '50%',
               transform: 'translateX(-50%)',
-              fontSize: '18px', // Increased to match category dot size
+              fontSize: '18px',
               color: 'var(--dot-color)',
               lineHeight: 1,
               zIndex: 10,
