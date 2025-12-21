@@ -54,7 +54,6 @@ export default function WorkTitleButton({
   // Container styling for dot positioning (no overflow)
   const containerStyle: React.CSSProperties = {
     position: 'relative',
-    width: '150px', // Fixed width
     paddingTop: '12px', // Make room for dot positioned at -8px
   };
 
@@ -63,9 +62,6 @@ export default function WorkTitleButton({
     display: 'inline-block',
     fontSize: 'var(--font-size-sm)',
     textAlign: 'left',
-    width: '100%',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
     transition: 'color 0.2s ease-in-out',
     // Selected or hovered: transparent with stroke (like category keywords)
@@ -92,9 +88,8 @@ export default function WorkTitleButton({
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center', // Center title and thumbnail horizontally
+        alignItems: 'center', // Center thumbnail below title
         gap: '8px',
-        width: '150px', // Fixed width for entire button
       }}
     >
       {/* Container for title with dot indicator */}
