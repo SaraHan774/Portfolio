@@ -1,14 +1,40 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
 
-interface CategorySelectionContextType {
+/**
+ * Category selection state
+ */
+export interface CategorySelectionState {
   selectedKeywordId: string | null;
   selectedExhibitionCategoryId: string | null;
+}
+
+/**
+ * Category selection actions
+ */
+export interface CategorySelectionActions {
   selectKeyword: (keywordId: string) => void;
   selectExhibitionCategory: (categoryId: string) => void;
   clearSelection: () => void;
 }
+
+/**
+ * Derived state selectors
+ */
+export interface CategorySelectionSelectors {
+  isKeywordSelected: boolean;
+  isExhibitionCategorySelected: boolean;
+  hasAnySelection: boolean;
+}
+
+/**
+ * Combined context type
+ */
+interface CategorySelectionContextType
+  extends CategorySelectionState,
+    CategorySelectionActions,
+    CategorySelectionSelectors {}
 
 const CategorySelectionContext = createContext<CategorySelectionContextType | undefined>(undefined);
 
@@ -16,6 +42,7 @@ export function CategorySelectionProvider({ children }: { children: ReactNode })
   const [selectedKeywordId, setSelectedKeywordId] = useState<string | null>(null);
   const [selectedExhibitionCategoryId, setSelectedExhibitionCategoryId] = useState<string | null>(null);
 
+  // Actions
   const selectKeyword = useCallback((keywordId: string) => {
     setSelectedKeywordId(keywordId);
     setSelectedExhibitionCategoryId(null); // Clear exhibition selection
@@ -31,16 +58,40 @@ export function CategorySelectionProvider({ children }: { children: ReactNode })
     setSelectedExhibitionCategoryId(null);
   }, []);
 
+  // Selectors (derived state)
+  const selectors = useMemo<CategorySelectionSelectors>(
+    () => ({
+      isKeywordSelected: selectedKeywordId !== null,
+      isExhibitionCategorySelected: selectedExhibitionCategoryId !== null,
+      hasAnySelection: selectedKeywordId !== null || selectedExhibitionCategoryId !== null,
+    }),
+    [selectedKeywordId, selectedExhibitionCategoryId]
+  );
+
+  const value = useMemo<CategorySelectionContextType>(
+    () => ({
+      // State
+      selectedKeywordId,
+      selectedExhibitionCategoryId,
+      // Actions
+      selectKeyword,
+      selectExhibitionCategory,
+      clearSelection,
+      // Selectors
+      ...selectors,
+    }),
+    [
+      selectedKeywordId,
+      selectedExhibitionCategoryId,
+      selectKeyword,
+      selectExhibitionCategory,
+      clearSelection,
+      selectors,
+    ]
+  );
+
   return (
-    <CategorySelectionContext.Provider
-      value={{
-        selectedKeywordId,
-        selectedExhibitionCategoryId,
-        selectKeyword,
-        selectExhibitionCategory,
-        clearSelection,
-      }}
-    >
+    <CategorySelectionContext.Provider value={value}>
       {children}
     </CategorySelectionContext.Provider>
   );
@@ -52,4 +103,27 @@ export function useCategorySelection() {
     throw new Error('useCategorySelection must be used within a CategorySelectionProvider');
   }
   return context;
+}
+
+/**
+ * Individual selector hooks for fine-grained updates
+ */
+export function useSelectedKeywordId() {
+  return useCategorySelection().selectedKeywordId;
+}
+
+export function useSelectedExhibitionCategoryId() {
+  return useCategorySelection().selectedExhibitionCategoryId;
+}
+
+export function useIsKeywordSelected() {
+  return useCategorySelection().isKeywordSelected;
+}
+
+export function useIsExhibitionCategorySelected() {
+  return useCategorySelection().isExhibitionCategorySelected;
+}
+
+export function useHasAnySelection() {
+  return useCategorySelection().hasAnySelection;
 }
