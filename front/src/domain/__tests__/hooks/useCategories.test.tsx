@@ -13,7 +13,7 @@ import { CategoryRepository } from '../../../data/repository/CategoryRepository'
 import type {
   SentenceCategory,
   ExhibitionCategory,
-  SentenceCategoryKeyword,
+  KeywordCategory,
 } from '@/core/types';
 
 // Mock the repository
@@ -25,15 +25,17 @@ vi.mock('../../../data/repository/CategoryRepository', () => ({
   },
 }));
 
-const mockKeyword: SentenceCategoryKeyword = {
+const mockKeyword: KeywordCategory = {
   id: 'keyword1',
-  text: 'Test Keyword',
-  order: 0,
+  name: 'Test Keyword',
+  startIndex: 0,
+  endIndex: 12,
+  workOrders: [],
 };
 
 const mockSentenceCategory: SentenceCategory = {
   id: 'sentence1',
-  title: 'Test Sentence',
+  sentence: 'Test Sentence',
   keywords: [mockKeyword],
   isActive: true,
   displayOrder: 0,
@@ -43,9 +45,15 @@ const mockSentenceCategory: SentenceCategory = {
 
 const mockExhibitionCategory: ExhibitionCategory = {
   id: 'exhibition1',
-  name: 'Test Exhibition',
-  isActive: true,
+  title: 'Test Exhibition',
+  description: {
+    exhibitionType: '2인전',
+    venue: 'Test Venue',
+    year: 2024,
+  },
   displayOrder: 0,
+  workOrders: [],
+  isActive: true,
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
 };
@@ -156,8 +164,6 @@ describe('useKeyword', () => {
   });
 
   it('should not fetch when keywordId is undefined', async () => {
-    vi.mocked(CategoryRepository.getKeywordById).mockResolvedValue(undefined);
-
     const { result } = renderHook(() => useKeyword(undefined), {
       wrapper: createWrapper(),
     });
@@ -166,16 +172,16 @@ describe('useKeyword', () => {
     expect(CategoryRepository.getKeywordById).not.toHaveBeenCalled();
   });
 
-  it('should handle when keyword is not found', async () => {
-    vi.mocked(CategoryRepository.getKeywordById).mockResolvedValue(undefined);
+  it('should handle errors when keyword is not found', async () => {
+    const error = new Error('Keyword not found');
+    vi.mocked(CategoryRepository.getKeywordById).mockRejectedValue(error);
 
     const { result } = renderHook(() => useKeyword('nonexistent'), {
       wrapper: createWrapper(),
     });
 
-    // Wait for query to complete
-    await waitFor(() => !result.current.isLoading);
+    await waitFor(() => expect(result.current.isError).toBe(true));
 
-    expect(result.current.data).toBeUndefined();
+    expect(result.current.error).toEqual(error);
   });
 });

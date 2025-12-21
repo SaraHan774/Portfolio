@@ -2,15 +2,17 @@
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from '@/app/components/layout/Header';
 import Footer from '@/app/components/layout/Footer';
-import Sidebar from '@/app/components/layout/Sidebar';
+import CategorySidebar from '@/app/components/layout/CategorySidebar';
+import WorkListScroller from '@/app/components/work/WorkListScroller';
+import Spinner from '@/app/components/common/Spinner';
 import { getWorkById, getWorksByKeywordId, getWorksByExhibitionCategoryId } from '@/lib/services/worksService';
-import { getSentenceCategories, getExhibitionCategories } from '@/lib/services/categoriesService';
+import { useCategories } from '@/app/contexts/CategoriesContext';
 import FloatingWorkWindow from '@/app/components/work/FloatingWorkWindow';
-import type { Work, WorkImage, WorkVideo, MediaItem, ExhibitionCategory, SentenceCategory as SentenceCategoryType } from '@/types';
+import type { Work, WorkImage, WorkVideo, MediaItem } from '@/types';
 
 // 이미지와 영상을 통합 미디어 배열로 변환하는 헬퍼 함수
 function getMediaItems(work: Work): MediaItem[] {
@@ -898,7 +900,7 @@ function WorkModal({
           justifyContent: 'center',
         }}
       >
-        <div style={{ color: 'white' }}>로딩 중...</div>
+        <Spinner size={24} color="white" />
       </div>
     );
   }
@@ -1203,12 +1205,15 @@ export default function WorkDetailPage() {
   const urlKeywordId = searchParams.get('keywordId');
   const urlExhibitionId = searchParams.get('exhibitionId');
 
+  // Get categories from shared context (no flickering on navigation)
+  const { sentenceCategories, exhibitionCategories } = useCategories();
+
   const [work, setWork] = useState<Work | null>(null);
   const [relatedWorks, setRelatedWorks] = useState<Work[]>([]);
-  const [sentenceCategories, setSentenceCategories] = useState<SentenceCategoryType[]>([]);
-  const [exhibitionCategories, setExhibitionCategories] = useState<ExhibitionCategory[]>([]);
-  const [selectedKeywordId, setSelectedKeywordId] = useState<string | null>(null);
-  const [selectedExhibitionCategoryId, setSelectedExhibitionCategoryId] = useState<string | null>(null);
+  // URL 파라미터로 직접 초기화하여 null → selected → null 상태 변경 방지
+  // 이렇게 하면 페이지 이동 시 카테고리 애니메이션이 재실행되지 않음
+  const [selectedKeywordId, setSelectedKeywordId] = useState<string | null>(urlKeywordId);
+  const [selectedExhibitionCategoryId, setSelectedExhibitionCategoryId] = useState<string | null>(urlExhibitionId);
   const [currentImageId, setCurrentImageId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedWorkId, setSelectedWorkId] = useState<string | null>(workId);
@@ -1334,16 +1339,12 @@ export default function WorkDetailPage() {
     };
   }, [hoveredWorkId]);
 
-  // 초기 데이터 로드 (카테고리 목록만 - 최초 1회)
+  // 초기 데이터 로드 (작업 데이터만 - 카테고리는 context에서 가져옴)
   useEffect(() => {
     const loadInitialData = async () => {
       setIsLoading(true);
       try {
-        const [workData, sentences, exhibitions] = await Promise.all([
-          getWorkById(workId),
-          getSentenceCategories(),
-          getExhibitionCategories(),
-        ]);
+        const workData = await getWorkById(workId);
 
         if (!workData) {
           router.push('/');
@@ -1351,23 +1352,20 @@ export default function WorkDetailPage() {
         }
 
         setWork(workData);
-        setSentenceCategories(sentences);
-        setExhibitionCategories(exhibitions);
         setSelectedWorkId(workId);
 
         // URL에서 전달받은 카테고리가 있으면 그것을 사용, 없으면 작품의 첫 번째 카테고리 사용
+        // 주의: 상태는 이미 URL 파라미터로 초기화되어 있으므로, relatedWorks만 로드하면 됨
         if (urlKeywordId) {
-          // URL에서 키워드 카테고리 전달받음
+          // URL에서 키워드 카테고리 전달받음 - 상태는 이미 초기화됨
           const allWorks = await getWorksByKeywordId(urlKeywordId);
           setRelatedWorks(allWorks);
-          setSelectedKeywordId(urlKeywordId);
-          setSelectedExhibitionCategoryId(null);
+          // setSelectedKeywordId는 이미 초기화되어 있으므로 호출하지 않음 (애니메이션 재실행 방지)
         } else if (urlExhibitionId) {
-          // URL에서 전시명 카테고리 전달받음
+          // URL에서 전시명 카테고리 전달받음 - 상태는 이미 초기화됨
           const allWorks = await getWorksByExhibitionCategoryId(urlExhibitionId);
           setRelatedWorks(allWorks);
-          setSelectedExhibitionCategoryId(urlExhibitionId);
-          setSelectedKeywordId(null);
+          // setSelectedExhibitionCategoryId는 이미 초기화되어 있으므로 호출하지 않음 (애니메이션 재실행 방지)
         } else if (workData.sentenceCategoryIds.length > 0) {
           // URL 파라미터 없으면 작품의 첫 번째 카테고리 사용
           const keywordId = workData.sentenceCategoryIds[0];
@@ -1704,20 +1702,13 @@ export default function WorkDetailPage() {
     };
   }, [work, selectedWorkId]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div style={{ color: 'var(--color-text-muted)' }}>로딩 중...</div>
-      </div>
-    );
-  }
-
-  if (!work) {
-    return null;
-  }
-
-  // 현재 선택된 작품의 ID 목록 계산 (disabled 상태 계산용)
-  const selectedWorkIds = [work.id, ...relatedWorks.map(w => w.id)];
+  // 현재 카테고리의 작품 ID 목록 (disabled 상태 계산용)
+  // Only depends on relatedWorks, NOT on the currently viewed work
+  // This prevents categories from re-rendering when selecting different works within the same category
+  const selectedWorkIds = useMemo(
+    () => relatedWorks.map(w => w.id),
+    [relatedWorks]
+  );
 
   // 이미지와 캡션 렌더링
   const renderCaption = (caption: string | undefined, captionId: string, isModal: boolean = false) => {
@@ -1758,10 +1749,12 @@ export default function WorkDetailPage() {
   };
 
   // 작품 선택 핸들러 - URL 업데이트 포함
-  const handleWorkSelect = (newWorkId: string) => {
+  // window.history.replaceState를 사용하여 URL만 업데이트하고 페이지 리로드 방지
+  // 이렇게 하면 작업 목록이 다시 fade-in되지 않고 dot만 이동
+  const handleWorkSelect = useCallback((newWorkId: string) => {
     setSelectedWorkId(newWorkId);
 
-    // URL 업데이트 (카테고리 정보 유지)
+    // URL 업데이트 (카테고리 정보 유지) - router.replace 대신 history API 사용
     const params = new URLSearchParams();
     if (selectedKeywordId) {
       params.set('keywordId', selectedKeywordId);
@@ -1771,11 +1764,14 @@ export default function WorkDetailPage() {
 
     const queryString = params.toString();
     const newUrl = `/works/${newWorkId}${queryString ? `?${queryString}` : ''}`;
-    router.replace(newUrl, { scroll: false });
-  };
+    
+    // history.replaceState로 URL만 변경 (페이지 리마운트 없음)
+    window.history.replaceState(null, '', newUrl);
+  }, [selectedKeywordId, selectedExhibitionCategoryId]);
 
   // 카테고리 선택 핸들러 (상세 페이지에서는 네비게이션 용도)
-  const handleKeywordSelect = async (keywordId: string) => {
+  // Memoize to prevent category re-renders
+  const handleKeywordSelect = useCallback(async (keywordId: string) => {
     const allWorks = await getWorksByKeywordId(keywordId);
     // 모든 작업을 relatedWorks에 저장 (현재 work 제외하지 않음 - Sidebar에서 전체 목록 사용)
     setRelatedWorks(allWorks);
@@ -1787,9 +1783,9 @@ export default function WorkDetailPage() {
     // URL 업데이트 (작품 ID는 유지, 카테고리만 변경)
     const newUrl = `/works/${workId}?keywordId=${keywordId}`;
     router.replace(newUrl, { scroll: false });
-  };
+  }, [workId, router]);
 
-  const handleExhibitionCategorySelect = async (categoryId: string) => {
+  const handleExhibitionCategorySelect = useCallback(async (categoryId: string) => {
     const allWorks = await getWorksByExhibitionCategoryId(categoryId);
     // 모든 작업을 relatedWorks에 저장 (현재 work 제외하지 않음 - Sidebar에서 전체 목록 사용)
     setRelatedWorks(allWorks);
@@ -1801,14 +1797,14 @@ export default function WorkDetailPage() {
     // URL 업데이트 (작품 ID는 유지, 카테고리만 변경)
     const newUrl = `/works/${workId}?exhibitionId=${categoryId}`;
     router.replace(newUrl, { scroll: false });
-  };
+  }, [workId, router]);
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
       <div className="flex-1 relative" style={{ paddingTop: '60px' }}>
-        {/* 좌우 카테고리 영역 - 홈과 동일하게 Sidebar 사용 + 작업 목록 포함 */}
-        <Sidebar
+        {/* 카테고리 영역 - 작품 선택과 완전히 독립적 */}
+        <CategorySidebar
           sentenceCategories={sentenceCategories}
           exhibitionCategories={exhibitionCategories}
           selectedKeywordId={selectedKeywordId}
@@ -1816,12 +1812,78 @@ export default function WorkDetailPage() {
           onKeywordSelect={handleKeywordSelect}
           onExhibitionCategorySelect={handleExhibitionCategorySelect}
           selectedWorkIds={selectedWorkIds}
-          works={relatedWorks}
-          selectedWorkId={selectedWorkId}
-          onWorkSelect={handleWorkSelect}
-          showThumbnail={selectedWorkId === null}
         />
+
+        {/* 작업 목록 영역 - 좌측 (문장형 카테고리 선택 시) */}
+        {relatedWorks.length > 0 && selectedKeywordId && (
+          <div
+            className="hidden lg:block absolute"
+            style={{
+              left: 'var(--category-margin-left)',
+              top: 'var(--space-20)',
+              maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-left))',
+              zIndex: 100,
+            }}
+          >
+            <motion.div
+              initial={false}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            >
+              <WorkListScroller
+                works={relatedWorks}
+                selectedWorkId={selectedWorkId}
+                onWorkSelect={handleWorkSelect}
+                showThumbnail={selectedWorkId === null}
+                direction="ltr"
+              />
+            </motion.div>
+          </div>
+        )}
+
+        {/* 작업 목록 영역 - 우측 (전시명 카테고리 선택 시) */}
+        {/* 전시명 카테고리 아래에 배치: 카테고리 시작(64px) + 카테고리 영역(~120px) + 여백 */}
+        {relatedWorks.length > 0 && selectedExhibitionCategoryId && (
+          <div
+            className="hidden lg:block absolute"
+            style={{
+              right: 'var(--category-margin-right)',
+              top: 'calc(var(--space-8) + 140px)', // 64px + 140px = 204px - 전시명 카테고리 아래
+              textAlign: 'right',
+              maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-right))',
+              zIndex: 100,
+            }}
+          >
+            <motion.div
+              initial={false}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            >
+              <WorkListScroller
+                works={relatedWorks}
+                selectedWorkId={selectedWorkId}
+                onWorkSelect={handleWorkSelect}
+                showThumbnail={selectedWorkId === null}
+                direction="rtl"
+              />
+            </motion.div>
+          </div>
+        )}
+
         {/* 이미지 컨텐츠 영역 - 좌측 50% */}
+        {isLoading || !work ? (
+          <main
+            style={{
+              position: 'relative',
+              minHeight: 'calc(100vh - 60px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Spinner size={24} />
+          </main>
+        ) : (
         <main
           style={{
             position: 'relative',
@@ -1829,7 +1891,8 @@ export default function WorkDetailPage() {
             paddingTop: '320px', // 카테고리 영역(64px) + 작품 목록(~100px) + 썸네일 영역(~100px) + 여백(~56px)과 겹치지 않도록
           }}
         >
-          {/* 선택된 작품의 미디어(이미지+영상) 표시 */}
+          {/* 선택된 작품의 미디어(이미지+영상) 표시 - AnimatePresence로 부드러운 전환 */}
+          <AnimatePresence mode="sync">
           {selectedWorkId && (() => {
             // relatedWorks에서 선택된 작업 찾기 (카테고리 재선택 시에도 올바르게 동작)
             const selectedWork = relatedWorks.find((w) => w.id === selectedWorkId)
@@ -1847,7 +1910,13 @@ export default function WorkDetailPage() {
             const sortedImages = selectedWork.images.sort((a, b) => a.order - b.order);
 
             return (
-              <>
+              <motion.div
+                key={selectedWorkId}
+                initial={{ opacity: 0.85 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0.85 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+              >
                 {/* 좌측 고정 타임라인 UI - 미디어가 2개 이상일 때만 표시 */}
                 {sortedMedia.length > 1 && (
                   <div
@@ -2007,10 +2076,12 @@ export default function WorkDetailPage() {
                     mediaContainerRef={imageScrollContainerRef}
                   />
                 )}
-              </>
+              </motion.div>
             );
           })()}
+          </AnimatePresence>
         </main>
+        )}
       </div>
 
       <AnimatePresence>
@@ -2025,42 +2096,50 @@ export default function WorkDetailPage() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {hoveredWorkId && (
-          <motion.div
-            key="floating-window-container"
-            className="floating-work-window-container"
-            initial={{ opacity: 1 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] } }}
-            onMouseEnter={(e) => {
-              e.stopPropagation();
-            }}
-            style={{
-              position: 'fixed',
-              left: 0,
-              top: 0,
-              width: '100vw',
-              height: '100vh',
-              pointerEvents: 'none',
-              zIndex: 999,
-            }}
-          >
-            <div
+        {hoveredWorkId && (() => {
+          // Find the hovered work from relatedWorks or current work
+          const hoveredWork = relatedWorks.find((w) => w.id === hoveredWorkId)
+            || (hoveredWorkId === workId ? work : null);
+
+          if (!hoveredWork) return null;
+
+          return (
+            <motion.div
+              key="floating-window-container"
+              className="floating-work-window-container"
+              initial={{ opacity: 1 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] } }}
+              onMouseEnter={(e) => {
+                e.stopPropagation();
+              }}
               style={{
-                pointerEvents: 'auto',
+                position: 'fixed',
+                left: 0,
+                top: 0,
+                width: '100vw',
+                height: '100vh',
+                pointerEvents: 'none',
+                zIndex: 999,
               }}
             >
-              <FloatingWorkWindow
-                workId={hoveredWorkId}
-                position={hoverPosition}
-                onClick={(clickedWorkId) => {
-                  setHoveredWorkId(null);
-                  setModalWorkId(clickedWorkId);
+              <div
+                style={{
+                  pointerEvents: 'auto',
                 }}
-              />
-            </div>
-          </motion.div>
-        )}
+              >
+                <FloatingWorkWindow
+                  work={hoveredWork}
+                  position={hoverPosition}
+                  onClick={(clickedWorkId) => {
+                    setHoveredWorkId(null);
+                    setModalWorkId(clickedWorkId);
+                  }}
+                />
+              </div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
 
       <Footer />

@@ -1,14 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import Header from '@/app/components/layout/Header';
 import Footer from '@/app/components/layout/Footer';
-import Sidebar from '@/app/components/layout/Sidebar';
+import CategorySidebar from '@/app/components/layout/CategorySidebar';
+import WorkListScroller from '@/app/components/work/WorkListScroller';
 import MobileCategoryMenu from '@/app/components/layout/MobileCategoryMenu';
-import { getSentenceCategories, getExhibitionCategories } from '@/lib/services/categoriesService';
+import Spinner from '@/app/components/common/Spinner';
+import { useCategories } from '@/app/contexts/CategoriesContext';
 import { getWorksByKeywordId, getWorksByExhibitionCategoryId } from '@/lib/services/worksService';
-import type { Work, SentenceCategory, ExhibitionCategory } from '@/types';
+import type { Work } from '@/types';
 
 export default function HomePage() {
   const router = useRouter();
@@ -17,33 +20,11 @@ export default function HomePage() {
   const [works, setWorks] = useState<Work[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Firebase에서 가져온 카테고리 데이터
-  const [sentenceCategories, setSentenceCategories] = useState<SentenceCategory[]>([]);
-  const [exhibitionCategories, setExhibitionCategories] = useState<ExhibitionCategory[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Get categories from shared context (loaded once at app level)
+  const { sentenceCategories, exhibitionCategories, isLoading } = useCategories();
 
   // 선택된 카테고리의 작업 ID 목록 계산 (disabled 상태 계산용)
-  const selectedWorkIds = works.map(work => work.id);
-
-  // 초기 데이터 로드 (카테고리)
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const [sentences, exhibitions] = await Promise.all([
-          getSentenceCategories(),
-          getExhibitionCategories(),
-        ]);
-        setSentenceCategories(sentences);
-        setExhibitionCategories(exhibitions);
-      } catch (error) {
-        console.error('카테고리 로드 실패:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadCategories();
-  }, []);
+  const selectedWorkIds = useMemo(() => works.map(work => work.id), [works]);
 
   // 키워드 선택 시 작품 필터링
   useEffect(() => {
@@ -84,16 +65,16 @@ export default function HomePage() {
     }
   }, [selectedKeywordId, selectedExhibitionCategoryId]);
 
-  const handleKeywordSelect = (keywordId: string) => {
+  const handleKeywordSelect = useCallback((keywordId: string) => {
     setSelectedKeywordId(keywordId);
-  };
+  }, []);
 
-  const handleExhibitionCategorySelect = (categoryId: string) => {
+  const handleExhibitionCategorySelect = useCallback((categoryId: string) => {
     setSelectedExhibitionCategoryId(categoryId);
-  };
+  }, []);
 
   // 작품 선택 시 상세 페이지로 이동 (현재 선택된 카테고리 정보 전달)
-  const handleWorkSelect = (workId: string) => {
+  const handleWorkSelect = useCallback((workId: string) => {
     const params = new URLSearchParams();
     if (selectedKeywordId) {
       params.set('keywordId', selectedKeywordId);
@@ -102,12 +83,12 @@ export default function HomePage() {
     }
     const queryString = params.toString();
     router.push(`/works/${workId}${queryString ? `?${queryString}` : ''}`);
-  };
+  }, [selectedKeywordId, selectedExhibitionCategoryId, router]);
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div style={{ color: 'var(--color-text-muted)' }}>로딩 중...</div>
+        <Spinner size={24} />
       </div>
     );
   }
@@ -128,8 +109,8 @@ export default function HomePage() {
       />
       {/* 상단 영역 없음 - PRD 기준 */}
       <div className="flex-1 relative" style={{ paddingTop: '60px' }}>
-        {/* 좌우 카테고리 영역 + 작품 목록 (Sidebar에서 통합 관리) */}
-        <Sidebar
+        {/* 카테고리 영역 - 작품 선택과 완전히 독립적 */}
+        <CategorySidebar
           sentenceCategories={sentenceCategories}
           exhibitionCategories={exhibitionCategories}
           selectedKeywordId={selectedKeywordId}
@@ -137,10 +118,63 @@ export default function HomePage() {
           onKeywordSelect={handleKeywordSelect}
           onExhibitionCategorySelect={handleExhibitionCategorySelect}
           selectedWorkIds={selectedWorkIds}
-          works={works}
-          onWorkSelect={handleWorkSelect}
-          showThumbnail={true}
         />
+
+        {/* 작업 목록 영역 - 좌측 (문장형 카테고리 선택 시) */}
+        {works.length > 0 && selectedKeywordId && (
+          <div
+            className="hidden lg:block absolute"
+            style={{
+              left: 'var(--category-margin-left)',
+              top: 'var(--space-20)',
+              maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-left))',
+              zIndex: 100,
+            }}
+          >
+            <motion.div
+              initial={false}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            >
+              <WorkListScroller
+                works={works}
+                selectedWorkId={null}
+                onWorkSelect={handleWorkSelect}
+                showThumbnail={true}
+                direction="ltr"
+              />
+            </motion.div>
+          </div>
+        )}
+
+        {/* 작업 목록 영역 - 우측 (전시명 카테고리 선택 시) */}
+        {works.length > 0 && selectedExhibitionCategoryId && (
+          <div
+            className="hidden lg:block absolute"
+            style={{
+              right: 'var(--category-margin-right)',
+              top: 'var(--space-20)',
+              textAlign: 'right',
+              maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-right))',
+              zIndex: 100,
+            }}
+          >
+            <motion.div
+              initial={false}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            >
+              <WorkListScroller
+                works={works}
+                selectedWorkId={null}
+                onWorkSelect={handleWorkSelect}
+                showThumbnail={true}
+                direction="rtl"
+              />
+            </motion.div>
+          </div>
+        )}
+
         {/* 중앙 컨텐츠 영역 - 카테고리 선택 안내 메시지 */}
         <main
           style={{

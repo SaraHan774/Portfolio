@@ -9,18 +9,21 @@ const mockWorkWithImages: Work = {
   id: 'work1',
   title: 'Work with Images',
   year: 2024,
-  description: 'Description',
+  fullDescription: 'Description',
+  thumbnailImageId: 'image1',
   images: [
     {
+      id: 'image1',
       url: 'https://example.com/image1.jpg',
-      alt: 'Image 1',
+      thumbnailUrl: 'https://example.com/image1-thumb.jpg',
       width: 800,
       height: 600,
       order: 0,
     },
     {
+      id: 'image2',
       url: 'https://example.com/image2.jpg',
-      alt: 'Image 2',
+      thumbnailUrl: 'https://example.com/image2-thumb.jpg',
       width: 800,
       height: 600,
       order: 1,
@@ -38,7 +41,8 @@ const mockWorkWithoutImages: Work = {
   id: 'work2',
   title: 'Work without Images',
   year: 2024,
-  description: 'Description',
+  fullDescription: 'Description',
+  thumbnailImageId: 'image1',
   images: [],
   sentenceCategoryIds: [],
   exhibitionCategoryIds: [],
@@ -52,7 +56,7 @@ describe('useThumbnailUrl', () => {
   it('should return first image URL when work has images', () => {
     const { result } = renderHook(() => useThumbnailUrl(mockWorkWithImages));
 
-    expect(result.current).toBe('https://example.com/image1.jpg');
+    expect(result.current).toBe('https://example.com/image1-thumb.jpg');
   });
 
   it('should return undefined when work has no images', () => {
@@ -91,7 +95,7 @@ describe('useThumbnailUrl', () => {
       }
     );
 
-    expect(result.current).toBe('https://example.com/image1.jpg');
+    expect(result.current).toBe('https://example.com/image1-thumb.jpg');
 
     // Change work
     rerender({ work: mockWorkWithoutImages });
@@ -104,7 +108,7 @@ describe('getThumbnailUrl', () => {
   it('should return first image URL when work has images', () => {
     const result = getThumbnailUrl(mockWorkWithImages);
 
-    expect(result).toBe('https://example.com/image1.jpg');
+    expect(result).toBe('https://example.com/image1-thumb.jpg');
   });
 
   it('should return undefined when work has no images', () => {

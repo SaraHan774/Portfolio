@@ -1,7 +1,11 @@
 'use client';
 
+import { memo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import type { SentenceCategory as SentenceCategoryType, KeywordCategory, CategoryState } from '@/types';
+import { useKeywordState, useKeywordStyle } from '@/domain';
+import { KEYWORD_ANIMATION_VARIANTS, DOT_ANIMATION } from '@/core/constants';
+import { categoryAnimationStore } from '@/app/utils/categoryAnimationStore';
+import type { SentenceCategory as SentenceCategoryType, KeywordCategory } from '@/types';
 
 interface SentenceCategoryProps {
   category: SentenceCategoryType;
@@ -12,7 +16,16 @@ interface SentenceCategoryProps {
   selectedWorkIds?: string[]; // 현재 선택된 카테고리의 작업 ID 목록 (disabled 상태 계산용)
 }
 
-export default function SentenceCategory({
+/**
+ * Sentence category component with interactive keywords
+ *
+ * Features:
+ * - Character-by-character animation on hover
+ * - State-based styling (active, hover, disabled, clickable)
+ * - Dot indicator for selected keywords
+ * - Memoized to prevent re-renders when unrelated props change
+ */
+const SentenceCategory = memo(function SentenceCategory({
   category,
   selectedKeywordId,
   onKeywordSelect,
@@ -20,212 +33,51 @@ export default function SentenceCategory({
   onKeywordHover,
   selectedWorkIds = [],
 }: SentenceCategoryProps) {
-  // 키워드의 상태를 계산하는 함수
-  const getKeywordState = (keyword: KeywordCategory, isSelected: boolean, isHovered: boolean): CategoryState => {
-    // active 상태: 선택된 경우
-    if (isSelected) {
-      return 'active';
-    }
-
-    // hover 상태: 마우스 오버 시
-    if (isHovered) {
-      return 'hover';
-    }
-
-    // disabled 상태: 선택된 카테고리가 있고, 이 키워드가 선택된 작업에 포함되지 않는 경우
-    // 주의: workOrders가 비어있어도 Work.sentenceCategoryIds로 연결된 작업이 있을 수 있음
-    if (selectedWorkIds.length > 0 && keyword.workOrders && keyword.workOrders.length > 0) {
-      const keywordWorkIds = keyword.workOrders.map(order => order.workId);
-      const hasCommonWork = keywordWorkIds.some(workId => selectedWorkIds.includes(workId));
-      if (!hasCommonWork) {
-        return 'disabled';
-      }
-    }
-
-    // 모든 키워드는 기본적으로 클릭 가능
-    // (workOrders가 비어있어도 Work.sentenceCategoryIds를 통해 작업 조회 가능)
-    return 'clickable';
-  };
-
-  // 상태에 따른 스타일을 반환하는 함수
-  const getKeywordStyle = (state: CategoryState, _isHovered: boolean) => {
-    const baseStyle: React.CSSProperties = {
-      position: 'relative',
-      display: 'inline-block',
-      transition: 'color 0.2s ease-in-out',
-    };
-
-    switch (state) {
-      case 'basic':
-        return {
-          ...baseStyle,
-          color: 'var(--color-category-basic)',
-          cursor: 'default',
-        };
-      case 'clickable':
-        return {
-          ...baseStyle,
-          color: 'var(--color-category-clickable)', // 완전 검정 - 클릭 가능
-          cursor: 'pointer',
-        };
-      case 'hover':
-        return {
-          ...baseStyle,
-          color: 'transparent',
-          WebkitTextStroke: '0.7px var(--color-category-hover-stroke)',
-          cursor: 'pointer',
-        };
-      case 'active':
-        return {
-          ...baseStyle,
-          color: 'transparent',
-          WebkitTextStroke: '0.7px var(--color-category-hover-stroke)',
-          cursor: 'pointer',
-        };
-      case 'disabled':
-        return {
-          ...baseStyle,
-          color: 'var(--color-category-disabled)',
-          cursor: 'default',
-        };
-      default:
-        return baseStyle;
-    }
-  };
-
-  // 문장을 키워드 단위로 분할하여 렌더링
+  // Render sentence with keywords as interactive spans
   const renderSentence = () => {
     const { sentence, keywords } = category;
     const parts: Array<{ text: string; keyword?: KeywordCategory }> = [];
     let lastIndex = 0;
 
-    // 키워드를 startIndex 기준으로 정렬
+    // Sort keywords by startIndex
     const sortedKeywords = [...keywords].sort((a, b) => a.startIndex - b.startIndex);
 
     sortedKeywords.forEach((keyword) => {
-      // 키워드 앞의 일반 텍스트
+      // Plain text before keyword
       if (keyword.startIndex > lastIndex) {
         parts.push({ text: sentence.slice(lastIndex, keyword.startIndex) });
       }
-      // 키워드
-      parts.push({ text: sentence.slice(keyword.startIndex, keyword.endIndex), keyword });
+
+      // Keyword text
+      parts.push({
+        text: sentence.slice(keyword.startIndex, keyword.endIndex),
+        keyword,
+      });
+
       lastIndex = keyword.endIndex;
     });
 
-    // 마지막 일반 텍스트
+    // Remaining plain text
     if (lastIndex < sentence.length) {
       parts.push({ text: sentence.slice(lastIndex) });
     }
 
     return parts.map((part, index) => {
       if (part.keyword) {
-        const isSelected = selectedKeywordId === part.keyword.id;
-        const isHovered = hoveredKeywordId === part.keyword.id;
-        const state = getKeywordState(part.keyword, isSelected, isHovered);
-        const keywordStyle = getKeywordStyle(state, isHovered);
-        
-        // 텍스트를 글자 단위로 분할하여 좌->우 애니메이션 적용
-        const characters = part.text.split('');
-
-        // 클릭 가능 여부 확인
-        const isClickable = state === 'clickable' || state === 'active' || state === 'hover';
-
-        // hover: 샤라락 효과로 bold 전환
-        // selected: 즉시 bold 유지
-        // normal: 일반 weight
-        const animateState = isHovered ? 'hover' : (isSelected ? 'selected' : 'normal');
-
         return (
-          <motion.span
+          <AnimatedKeyword
             key={index}
-            onClick={() => {
-              if (isClickable) {
-                onKeywordSelect(part.keyword!.id);
-              }
-            }}
-            onMouseEnter={() => {
-              if (state !== 'basic' && state !== 'disabled') {
-                onKeywordHover(part.keyword!.id);
-              }
-            }}
-            onMouseLeave={() => onKeywordHover(null)}
-            style={keywordStyle}
-            initial={false}
-            animate={animateState}
-          >
-            <motion.span
-              style={{ display: 'inline-block' }}
-              variants={{
-                hover: {
-                  transition: {
-                    staggerChildren: 0.03, // 각 글자 간 30ms 간격 (좌→우 샤라락)
-                  },
-                },
-                selected: {
-                  transition: {
-                    staggerChildren: 0, // 즉시 적용 (샤라락 없이 bold 유지)
-                  },
-                },
-                normal: {
-                  transition: {
-                    staggerChildren: 0,
-                  },
-                },
-              }}
-            >
-              {characters.map((char, charIndex) => (
-                <motion.span
-                  key={charIndex}
-                  style={{ display: 'inline-block' }}
-                  variants={{
-                    hover: {
-                      fontWeight: 700,
-                      transition: {
-                        duration: 0.1,
-                        ease: 'easeOut',
-                      },
-                    },
-                    selected: {
-                      fontWeight: 700,
-                      transition: {
-                        duration: 0,
-                      },
-                    },
-                    normal: {
-                      fontWeight: 400,
-                      transition: {
-                        duration: 0.1,
-                        ease: 'easeOut',
-                      },
-                    },
-                  }}
-                >
-                  {char}
-                </motion.span>
-              ))}
-            </motion.span>
-            {/* 선택 시 점(˙) 표시 - 원래 위치에서 */}
-            {isSelected && (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3, ease: 'easeOut', delay: 0.4 }}
-                style={{
-                  position: 'absolute',
-                  top: 'var(--dot-offset-top)', // -8px (글자 정중앙 위)
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  fontSize: '14px', // 10px에서 4px 증가
-                  color: 'var(--dot-color)',
-                  lineHeight: 1,
-                }}
-              >
-                ˙
-              </motion.span>
-            )}
-          </motion.span>
+            keyword={part.keyword}
+            text={part.text}
+            isSelected={selectedKeywordId === part.keyword.id}
+            isHovered={hoveredKeywordId === part.keyword.id}
+            selectedWorkIds={selectedWorkIds}
+            onSelect={onKeywordSelect}
+            onHover={onKeywordHover}
+          />
         );
       }
+
       return <span key={index}>{part.text}</span>;
     });
   };
@@ -238,10 +90,153 @@ export default function SentenceCategory({
         color: 'var(--color-text-secondary)',
       }}
     >
-      {'\''}
-      {renderSentence()}
-      {'\''}
+      {'\''}{renderSentence()}{'\''}
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Return true if props are equal (don't re-render)
+  // Return false if props are different (re-render)
 
+  // Check array equality properly
+  const prevWorkIds = prevProps.selectedWorkIds ?? [];
+  const nextWorkIds = nextProps.selectedWorkIds ?? [];
+  const workIdsEqual =
+    prevWorkIds.length === nextWorkIds.length &&
+    prevWorkIds.every((id, index) => nextWorkIds[index] === id);
+
+  return (
+    prevProps.category.id === nextProps.category.id &&
+    prevProps.selectedKeywordId === nextProps.selectedKeywordId &&
+    prevProps.hoveredKeywordId === nextProps.hoveredKeywordId &&
+    prevProps.onKeywordSelect === nextProps.onKeywordSelect &&
+    prevProps.onKeywordHover === nextProps.onKeywordHover &&
+    workIdsEqual
+  );
+});
+
+export default SentenceCategory;
+
+/**
+ * Animated keyword component with character-by-character animation
+ */
+function AnimatedKeyword({
+  keyword,
+  text,
+  isSelected,
+  isHovered,
+  selectedWorkIds,
+  onSelect,
+  onHover,
+}: {
+  keyword: KeywordCategory;
+  text: string;
+  isSelected: boolean;
+  isHovered: boolean;
+  selectedWorkIds: string[];
+  onSelect: (keywordId: string) => void;
+  onHover: (keywordId: string | null) => void;
+}) {
+  // 이 키워드가 사용자에 의해 클릭된 적이 있는지 확인 (페이지 이동 시에도 유지됨)
+  const hasBeenClickedBefore = categoryAnimationStore.hasBeenClicked(keyword.id);
+
+  // 방금 클릭했는지 추적 (점 애니메이션용)
+  const justClicked = useRef(false);
+
+  // justClicked 플래그 리셋
+  useEffect(() => {
+    if (justClicked.current && isSelected) {
+      setTimeout(() => {
+        justClicked.current = false;
+      }, 0);
+    }
+  }, [isSelected]);
+
+  // 상태 및 스타일 계산
+  const state = useKeywordState({
+    keyword,
+    isSelected,
+    isHovered,
+    selectedWorkIds,
+  });
+
+  const keywordStyle = useKeywordStyle(state);
+
+  // 글자 단위 애니메이션을 위해 텍스트를 문자 배열로 분리
+  const characters = text.split('');
+
+  // 클릭 가능 여부 확인
+  const isClickable = state === 'clickable' || state === 'active' || state === 'hover';
+
+  // 애니메이션 상태: 사용자가 클릭한 적이 있을 때만 selected 상태 사용
+  // 첫 페이지 로드 시 selected=true여도 애니메이션 없이 정적으로 bold 표시
+  const animateState = isHovered ? 'hover' : (isSelected && hasBeenClickedBefore) ? 'selected' : 'normal';
+
+  // 초기 마운트 시 이미 선택된 상태이고 클릭된 적이 있다면, initial을 selected로 설정
+  const initialState = isSelected && hasBeenClickedBefore ? 'selected' : false;
+
+  // Handle click - mark as clicked BEFORE calling onSelect
+  const handleClick = () => {
+    if (isClickable) {
+      if (!hasBeenClickedBefore) {
+        categoryAnimationStore.markAsClicked(keyword.id);
+        justClicked.current = true;
+        console.log(`✓ User clicked keyword ${keyword.id}`);
+      }
+      onSelect(keyword.id);
+    }
+  };
+
+  return (
+    <motion.span
+      onClick={handleClick}
+      onMouseEnter={() => {
+        if (state !== 'basic' && state !== 'disabled') {
+          onHover(keyword.id);
+        }
+      }}
+      onMouseLeave={() => onHover(null)}
+      style={keywordStyle}
+      initial={initialState}
+      animate={animateState}
+    >
+      <motion.span
+        style={{ display: 'inline-block' }}
+        variants={KEYWORD_ANIMATION_VARIANTS.container}
+      >
+        {characters.map((char, charIndex) => (
+          <motion.span
+            key={charIndex}
+            style={{
+              display: 'inline-block',
+              // Always show correct fontWeight, regardless of animation state
+              fontWeight: isSelected ? 700 : 400,
+            }}
+            variants={hasBeenClickedBefore ? KEYWORD_ANIMATION_VARIANTS.character : undefined}
+          >
+            {char}
+          </motion.span>
+        ))}
+      </motion.span>
+
+      {/* Dot indicator for selected keyword */}
+      {isSelected && (
+        <motion.span
+          initial={{ opacity: justClicked.current ? 0 : 1 }}
+          animate={{ opacity: 1 }}
+          transition={justClicked.current ? { duration: 0.3, ease: 'easeOut', delay: 0.4 } : { duration: 0 }}
+          style={{
+            position: 'absolute',
+            top: 'var(--dot-offset-top)', // -8px (center above text)
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontSize: '14px', // 10px + 4px increase
+            color: 'var(--dot-color)',
+            lineHeight: 1,
+          }}
+        >
+          ˙
+        </motion.span>
+      )}
+    </motion.span>
+  );
+}

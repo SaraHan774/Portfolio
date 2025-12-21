@@ -29,11 +29,13 @@ const mockWork: Work = {
   id: 'work1',
   title: 'Test Work',
   year: 2024,
-  description: 'Test description',
+  fullDescription: 'Test description',
+  thumbnailImageId: 'image1',
   images: [
     {
+      id: 'image1',
       url: 'https://example.com/image1.jpg',
-      alt: 'Image 1',
+      thumbnailUrl: 'https://example.com/image1-thumb.jpg',
       width: 800,
       height: 600,
       order: 0,

@@ -1,6 +1,8 @@
 'use client';
 
+import { memo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { categoryAnimationStore } from '@/app/utils/categoryAnimationStore';
 import type { ExhibitionCategory, CategoryState } from '@/types';
 
 interface TextCategoryProps {
@@ -12,7 +14,7 @@ interface TextCategoryProps {
   selectedWorkIds?: string[]; // 현재 선택된 카테고리의 작업 ID 목록 (disabled 상태 계산용)
 }
 
-export default function TextCategory({
+const TextCategory = memo(function TextCategory({
   category,
   isSelected,
   onSelect,
@@ -21,6 +23,40 @@ export default function TextCategory({
   selectedWorkIds = [],
 }: TextCategoryProps) {
   const isHovered = hoveredCategoryId === category.id;
+
+  // 이 카테고리가 사용자에 의해 클릭된 적이 있는지 확인 (페이지 이동 시에도 유지됨)
+  const hasBeenClickedBefore = categoryAnimationStore.hasBeenClicked(category.id);
+
+  // 방금 클릭했는지 추적 (점 애니메이션용)
+  const justClicked = useRef(false);
+
+  // Track actual DOM click events, not state transitions
+  const handleClick = () => {
+    const isClickable = getCategoryState() === 'clickable' || getCategoryState() === 'active' || getCategoryState() === 'hover';
+    if (isClickable) {
+      // Mark as clicked in persistent store BEFORE calling onSelect
+      // This ensures hasBeenClickedBefore is true when the component re-renders with selected=true
+      if (!hasBeenClickedBefore) {
+        categoryAnimationStore.markAsClicked(category.id);
+        justClicked.current = true; // Mark that we just clicked
+        console.log(`✓ User clicked exhibition ${category.id}`);
+      }
+      onSelect();
+    }
+  };
+
+  // Reset justClicked after render
+  useEffect(() => {
+    if (justClicked.current && isSelected) {
+      // Next render, this will be false
+      setTimeout(() => {
+        justClicked.current = false;
+      }, 0);
+    }
+  }, [isSelected]);
+
+  // 애니메이션 상태 계산
+  const animateState = isHovered ? 'hover' : (isSelected && hasBeenClickedBefore) ? 'selected' : 'normal';
 
   // 카테고리의 상태를 계산하는 함수
   const getCategoryState = (): CategoryState => {
@@ -115,13 +151,38 @@ export default function TextCategory({
   // Title 글자 단위 애니메이션 - hover/active 시 stroke + bold 효과
   const renderTitleText = (text: string) => {
     const characters = text.split('');
-    const animateState = isHovered ? 'hover' : (isSelected ? 'selected' : 'normal');
     const isActive = isHovered || isSelected;
+
+    // 초기 마운트 시 이미 선택된 상태이고 클릭된 적이 있다면, initial을 selected로 설정
+    const initialState = isSelected && hasBeenClickedBefore ? 'selected' : false;
+
+    const charVariants = hasBeenClickedBefore ? {
+      hover: {
+        fontWeight: 700,
+        transition: {
+          duration: 0.1,
+          ease: 'easeOut' as const,
+        },
+      },
+      selected: {
+        fontWeight: 700,
+        transition: {
+          duration: 0,
+        },
+      },
+      normal: {
+        fontWeight: 400,
+        transition: {
+          duration: 0.1,
+          ease: 'easeOut' as const,
+        },
+      },
+    } as const : undefined;
 
     return (
       <motion.span
         style={{ display: 'block' }}
-        initial={false}
+        initial={initialState}
         animate={animateState}
         variants={{
           hover: {
@@ -149,29 +210,10 @@ export default function TextCategory({
               color: isActive ? 'transparent' : 'var(--color-category-clickable)',
               WebkitTextStroke: isActive ? '0.7px var(--color-category-hover-stroke)' : '0px transparent',
               transition: 'color 0.1s ease-out, -webkit-text-stroke 0.1s ease-out',
+              // Always show correct fontWeight, regardless of animation state
+              fontWeight: isSelected ? 700 : 400,
             }}
-            variants={{
-              hover: {
-                fontWeight: 700,
-                transition: {
-                  duration: 0.1,
-                  ease: 'easeOut',
-                },
-              },
-              selected: {
-                fontWeight: 700,
-                transition: {
-                  duration: 0,
-                },
-              },
-              normal: {
-                fontWeight: 400,
-                transition: {
-                  duration: 0.1,
-                  ease: 'easeOut',
-                },
-              },
-            }}
+            variants={charVariants}
           >
             {char === ' ' ? '\u00A0' : char}
           </motion.span>
@@ -198,11 +240,7 @@ export default function TextCategory({
 
   return (
     <span
-      onClick={() => {
-        if (isClickable) {
-          onSelect();
-        }
-      }}
+      onClick={handleClick}
       onMouseEnter={() => {
         if (state !== 'basic' && state !== 'disabled') {
           onHover(category.id);
@@ -230,9 +268,13 @@ export default function TextCategory({
         }}
       >
         <motion.span
-          initial={{ opacity: 0 }}
+          initial={{ opacity: justClicked.current ? 0 : (isSelected ? 1 : 0) }}
           animate={{ opacity: isSelected ? 1 : 0 }}
-          transition={{ duration: 0.3, ease: 'easeOut', delay: isSelected ? 0.4 : 0 }}
+          transition={
+            justClicked.current
+              ? { duration: 0.3, ease: 'easeOut', delay: 0.4 }
+              : { duration: 0 }
+          }
           style={{
             color: 'var(--dot-color)',
           }}
@@ -244,4 +286,23 @@ export default function TextCategory({
       {renderDescriptionText(displayDescription)}
     </span>
   );
-}
+}, (prevProps, nextProps) => {
+  // Return true if props are equal (don't re-render)
+  // Return false if props are different (re-render)
+
+  // Check array equality properly
+  const workIdsEqual =
+    (prevProps.selectedWorkIds?.length ?? 0) === (nextProps.selectedWorkIds?.length ?? 0) &&
+    (prevProps.selectedWorkIds ?? []).every((id, index) => (nextProps.selectedWorkIds ?? [])[index] === id);
+
+  return (
+    prevProps.category.id === nextProps.category.id &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.hoveredCategoryId === nextProps.hoveredCategoryId &&
+    prevProps.onSelect === nextProps.onSelect &&
+    prevProps.onHover === nextProps.onHover &&
+    workIdsEqual
+  );
+});
+
+export default TextCategory;
