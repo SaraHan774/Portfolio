@@ -55,6 +55,7 @@ export default function WorkTitleButton({
   const containerStyle: React.CSSProperties = {
     position: 'relative',
     width: '150px', // Fixed width
+    paddingTop: '12px', // Make room for dot positioned at -8px
   };
 
   // Title styling based on state (matches category keyword behavior)
