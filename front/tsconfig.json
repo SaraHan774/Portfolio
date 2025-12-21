@@ -34,7 +34,8 @@
       "@/presentation/*": ["./src/presentation/*"],
       "@/state": ["./src/state"],
       "@/state/*": ["./src/state/*"],
-      "@/types": ["./types"]
+      "@/types": ["./types"],
+      "@/core/types": ["./src/core/types"]
     }
   },
   "include": [
