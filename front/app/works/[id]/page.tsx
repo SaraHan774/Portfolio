@@ -2,7 +2,7 @@
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from '@/app/components/layout/Header';
 import Footer from '@/app/components/layout/Footer';
@@ -1741,7 +1741,7 @@ export default function WorkDetailPage() {
   };
 
   // 작품 선택 핸들러 - URL 업데이트 포함
-  const handleWorkSelect = (newWorkId: string) => {
+  const handleWorkSelect = useCallback((newWorkId: string) => {
     setSelectedWorkId(newWorkId);
 
     // URL 업데이트 (카테고리 정보 유지)
@@ -1755,10 +1755,11 @@ export default function WorkDetailPage() {
     const queryString = params.toString();
     const newUrl = `/works/${newWorkId}${queryString ? `?${queryString}` : ''}`;
     router.replace(newUrl, { scroll: false });
-  };
+  }, [selectedKeywordId, selectedExhibitionCategoryId, router]);
 
   // 카테고리 선택 핸들러 (상세 페이지에서는 네비게이션 용도)
-  const handleKeywordSelect = async (keywordId: string) => {
+  // Memoize to prevent category re-renders
+  const handleKeywordSelect = useCallback(async (keywordId: string) => {
     const allWorks = await getWorksByKeywordId(keywordId);
     // 모든 작업을 relatedWorks에 저장 (현재 work 제외하지 않음 - Sidebar에서 전체 목록 사용)
     setRelatedWorks(allWorks);
@@ -1770,9 +1771,9 @@ export default function WorkDetailPage() {
     // URL 업데이트 (작품 ID는 유지, 카테고리만 변경)
     const newUrl = `/works/${workId}?keywordId=${keywordId}`;
     router.replace(newUrl, { scroll: false });
-  };
+  }, [workId, router]);
 
-  const handleExhibitionCategorySelect = async (categoryId: string) => {
+  const handleExhibitionCategorySelect = useCallback(async (categoryId: string) => {
     const allWorks = await getWorksByExhibitionCategoryId(categoryId);
     // 모든 작업을 relatedWorks에 저장 (현재 work 제외하지 않음 - Sidebar에서 전체 목록 사용)
     setRelatedWorks(allWorks);
@@ -1784,7 +1785,7 @@ export default function WorkDetailPage() {
     // URL 업데이트 (작품 ID는 유지, 카테고리만 변경)
     const newUrl = `/works/${workId}?exhibitionId=${categoryId}`;
     router.replace(newUrl, { scroll: false });
-  };
+  }, [workId, router]);
 
   return (
     <div className="min-h-screen flex flex-col">

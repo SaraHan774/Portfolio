@@ -89,7 +89,7 @@ export default function Sidebar({
         {/* 문장형 카테고리 선택 시: 작업 목록 가로 스크롤 (좌 → 우) */}
         {showWorkList && isLeftAligned && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
             style={{
@@ -142,7 +142,7 @@ export default function Sidebar({
         {/* 전시명 카테고리 선택 시: 작업 목록 가로 스크롤 (우 → 좌) */}
         {showWorkList && isRightAligned && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
             style={{
