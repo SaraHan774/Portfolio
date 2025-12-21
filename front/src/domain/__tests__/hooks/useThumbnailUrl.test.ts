@@ -56,7 +56,7 @@ describe('useThumbnailUrl', () => {
   it('should return first image URL when work has images', () => {
     const { result } = renderHook(() => useThumbnailUrl(mockWorkWithImages));
 
-    expect(result.current).toBe('https://example.com/image1.jpg');
+    expect(result.current).toBe('https://example.com/image1-thumb.jpg');
   });
 
   it('should return undefined when work has no images', () => {
@@ -95,7 +95,7 @@ describe('useThumbnailUrl', () => {
       }
     );
 
-    expect(result.current).toBe('https://example.com/image1.jpg');
+    expect(result.current).toBe('https://example.com/image1-thumb.jpg');
 
     // Change work
     rerender({ work: mockWorkWithoutImages });
@@ -108,7 +108,7 @@ describe('getThumbnailUrl', () => {
   it('should return first image URL when work has images', () => {
     const result = getThumbnailUrl(mockWorkWithImages);
 
-    expect(result).toBe('https://example.com/image1.jpg');
+    expect(result).toBe('https://example.com/image1-thumb.jpg');
   });
 
   it('should return undefined when work has no images', () => {

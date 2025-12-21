@@ -93,11 +93,14 @@ const SentenceCategory = memo(function SentenceCategory({
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Only re-render if these props change
+  // Return true if props are equal (don't re-render)
+  // Return false if props are different (re-render)
   return (
     prevProps.category.id === nextProps.category.id &&
     prevProps.selectedKeywordId === nextProps.selectedKeywordId &&
     prevProps.hoveredKeywordId === nextProps.hoveredKeywordId &&
+    prevProps.onKeywordSelect === nextProps.onKeywordSelect &&
+    prevProps.onKeywordHover === nextProps.onKeywordHover &&
     JSON.stringify(prevProps.selectedWorkIds) === JSON.stringify(nextProps.selectedWorkIds)
   );
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import SentenceCategory from '@/app/components/category/SentenceCategory';
 import TextCategory from '@/app/components/category/TextCategory';
@@ -39,14 +39,25 @@ export default function Sidebar({
   const [hoveredExhibitionCategoryId, setHoveredExhibitionCategoryId] = useState<string | null>(null);
 
   // 문장형 카테고리만 필터링 및 정렬
-  const sortedSentenceCategories = sentenceCategories
-    .filter((cat) => cat.isActive)
-    .sort((a, b) => a.displayOrder - b.displayOrder);
+  const sortedSentenceCategories = useMemo(
+    () => sentenceCategories.filter((cat) => cat.isActive).sort((a, b) => a.displayOrder - b.displayOrder),
+    [sentenceCategories]
+  );
 
   // 전시명 카테고리만 필터링 및 정렬
-  const sortedExhibitionCategories = exhibitionCategories
-    .filter((cat) => cat.isActive)
-    .sort((a, b) => a.displayOrder - b.displayOrder);
+  const sortedExhibitionCategories = useMemo(
+    () => exhibitionCategories.filter((cat) => cat.isActive).sort((a, b) => a.displayOrder - b.displayOrder),
+    [exhibitionCategories]
+  );
+
+  // Create stable handlers for exhibition categories
+  const exhibitionSelectHandlers = useMemo(() => {
+    const handlers: Record<string, () => void> = {};
+    sortedExhibitionCategories.forEach((category) => {
+      handlers[category.id] = () => onExhibitionCategorySelect(category.id);
+    });
+    return handlers;
+  }, [sortedExhibitionCategories, onExhibitionCategorySelect]);
 
   // 작업 목록 표시 여부 및 방향 결정
   const showWorkList = works.length > 0 && onWorkSelect;
@@ -130,7 +141,7 @@ export default function Sidebar({
               <TextCategory
                 category={category}
                 isSelected={selectedExhibitionCategoryId === category.id}
-                onSelect={() => onExhibitionCategorySelect(category.id)}
+                onSelect={exhibitionSelectHandlers[category.id]}
                 hoveredCategoryId={hoveredExhibitionCategoryId}
                 onHover={setHoveredExhibitionCategoryId}
                 selectedWorkIds={selectedWorkIds}

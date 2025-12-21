@@ -246,11 +246,14 @@ const TextCategory = memo(function TextCategory({
     </span>
   );
 }, (prevProps, nextProps) => {
-  // Only re-render if these props change
+  // Return true if props are equal (don't re-render)
+  // Return false if props are different (re-render)
   return (
     prevProps.category.id === nextProps.category.id &&
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.hoveredCategoryId === nextProps.hoveredCategoryId &&
+    prevProps.onSelect === nextProps.onSelect &&
+    prevProps.onHover === nextProps.onHover &&
     JSON.stringify(prevProps.selectedWorkIds) === JSON.stringify(nextProps.selectedWorkIds)
   );
 });
