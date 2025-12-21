@@ -23,16 +23,19 @@ const TextCategory = memo(function TextCategory({
 }: TextCategoryProps) {
   const isHovered = hoveredCategoryId === category.id;
 
-  // Track if this is initial mount to skip animations
-  const isInitialMount = useRef(true);
-  const prevIsSelected = useRef(isSelected);
+  // Track state transitions to detect user clicks vs initial render
+  const prevIsSelected = useRef<boolean | null>(null);
+  const hasTransitionedToSelected = useRef(false);
+
+  // Determine if this is a user-triggered transition (false → true)
+  const isUserClick = prevIsSelected.current === false && isSelected === true;
 
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
+    if (isUserClick) {
+      hasTransitionedToSelected.current = true;
     }
     prevIsSelected.current = isSelected;
-  }, [isSelected]);
+  }, [isSelected, isUserClick]);
 
   // 카테고리의 상태를 계산하는 함수
   const getCategoryState = (): CategoryState => {
@@ -127,8 +130,32 @@ const TextCategory = memo(function TextCategory({
   // Title 글자 단위 애니메이션 - hover/active 시 stroke + bold 효과
   const renderTitleText = (text: string) => {
     const characters = text.split('');
-    const animateState = isHovered ? 'hover' : (isSelected ? 'selected' : 'normal');
+    // Only use selected animation state if this was a user click
+    const animateState = isHovered ? 'hover' : (isSelected && hasTransitionedToSelected.current) ? 'selected' : 'normal';
     const isActive = isHovered || isSelected;
+
+    const charVariants = hasTransitionedToSelected.current ? {
+      hover: {
+        fontWeight: 700,
+        transition: {
+          duration: 0.1,
+          ease: 'easeOut',
+        },
+      },
+      selected: {
+        fontWeight: 700,
+        transition: {
+          duration: 0,
+        },
+      },
+      normal: {
+        fontWeight: 400,
+        transition: {
+          duration: 0.1,
+          ease: 'easeOut',
+        },
+      },
+    } : undefined;
 
     return (
       <motion.span
@@ -161,31 +188,10 @@ const TextCategory = memo(function TextCategory({
               color: isActive ? 'transparent' : 'var(--color-category-clickable)',
               WebkitTextStroke: isActive ? '0.7px var(--color-category-hover-stroke)' : '0px transparent',
               transition: 'color 0.1s ease-out, -webkit-text-stroke 0.1s ease-out',
-              // On initial mount with selected state, directly apply fontWeight without animation
-              fontWeight: (isInitialMount.current && isSelected) ? 700 : undefined,
+              // Always show correct fontWeight, regardless of animation state
+              fontWeight: isSelected ? 700 : 400,
             }}
-            variants={{
-              hover: {
-                fontWeight: 700,
-                transition: {
-                  duration: 0.1,
-                  ease: 'easeOut',
-                },
-              },
-              selected: {
-                fontWeight: 700,
-                transition: {
-                  duration: 0,
-                },
-              },
-              normal: {
-                fontWeight: 400,
-                transition: {
-                  duration: 0.1,
-                  ease: 'easeOut',
-                },
-              },
-            }}
+            variants={charVariants}
           >
             {char === ' ' ? '\u00A0' : char}
           </motion.span>
@@ -244,10 +250,10 @@ const TextCategory = memo(function TextCategory({
         }}
       >
         <motion.span
-          initial={{ opacity: (isInitialMount.current && isSelected) ? 1 : 0 }}
+          initial={{ opacity: isUserClick ? 0 : (isSelected ? 1 : 0) }}
           animate={{ opacity: isSelected ? 1 : 0 }}
           transition={
-            (!isInitialMount.current && isSelected)
+            isUserClick
               ? { duration: 0.3, ease: 'easeOut', delay: 0.4 }
               : { duration: 0 }
           }

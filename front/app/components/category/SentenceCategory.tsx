@@ -133,16 +133,19 @@ function AnimatedKeyword({
   onSelect: (keywordId: string) => void;
   onHover: (keywordId: string | null) => void;
 }) {
-  // Track if this is initial mount to skip animations
-  const isInitialMount = useRef(true);
-  const prevIsSelected = useRef(isSelected);
+  // Track state transitions to detect user clicks vs initial render
+  const prevIsSelected = useRef<boolean | null>(null);
+  const hasTransitionedToSelected = useRef(false);
+
+  // Determine if this is a user-triggered transition (false → true)
+  const isUserClick = prevIsSelected.current === false && isSelected === true;
 
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
+    if (isUserClick) {
+      hasTransitionedToSelected.current = true;
     }
     prevIsSelected.current = isSelected;
-  }, [isSelected]);
+  }, [isSelected, isUserClick]);
 
   // Use custom hooks for state and styling
   const state = useKeywordState({
@@ -160,11 +163,12 @@ function AnimatedKeyword({
   // Check if clickable
   const isClickable = state === 'clickable' || state === 'active' || state === 'hover';
 
-  // Animation state: hover (staggered bold), selected (instant bold), normal
-  const animateState = isHovered ? 'hover' : isSelected ? 'selected' : 'normal';
+  // Animation state: only use selected state if this was a user click
+  // Otherwise keep in normal state (but with bold fontWeight from inline style)
+  const animateState = isHovered ? 'hover' : (isSelected && hasTransitionedToSelected.current) ? 'selected' : 'normal';
 
-  // Only animate dot on user interaction, not on initial render
-  const shouldAnimateDot = !isInitialMount.current && !prevIsSelected.current && isSelected;
+  // Only animate dot on user click transition
+  const shouldAnimateDot = isUserClick;
 
   return (
     <motion.span
@@ -192,10 +196,10 @@ function AnimatedKeyword({
             key={charIndex}
             style={{
               display: 'inline-block',
-              // On initial mount with selected state, directly apply fontWeight without animation
-              fontWeight: (isInitialMount.current && isSelected) ? 700 : undefined,
+              // Always show correct fontWeight, regardless of animation state
+              fontWeight: isSelected ? 700 : 400,
             }}
-            variants={KEYWORD_ANIMATION_VARIANTS.character}
+            variants={hasTransitionedToSelected.current ? KEYWORD_ANIMATION_VARIANTS.character : undefined}
           >
             {char}
           </motion.span>
