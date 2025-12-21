@@ -1210,8 +1210,10 @@ export default function WorkDetailPage() {
 
   const [work, setWork] = useState<Work | null>(null);
   const [relatedWorks, setRelatedWorks] = useState<Work[]>([]);
-  const [selectedKeywordId, setSelectedKeywordId] = useState<string | null>(null);
-  const [selectedExhibitionCategoryId, setSelectedExhibitionCategoryId] = useState<string | null>(null);
+  // URL 파라미터로 직접 초기화하여 null → selected → null 상태 변경 방지
+  // 이렇게 하면 페이지 이동 시 카테고리 애니메이션이 재실행되지 않음
+  const [selectedKeywordId, setSelectedKeywordId] = useState<string | null>(urlKeywordId);
+  const [selectedExhibitionCategoryId, setSelectedExhibitionCategoryId] = useState<string | null>(urlExhibitionId);
   const [currentImageId, setCurrentImageId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedWorkId, setSelectedWorkId] = useState<string | null>(workId);
@@ -1353,18 +1355,17 @@ export default function WorkDetailPage() {
         setSelectedWorkId(workId);
 
         // URL에서 전달받은 카테고리가 있으면 그것을 사용, 없으면 작품의 첫 번째 카테고리 사용
+        // 주의: 상태는 이미 URL 파라미터로 초기화되어 있으므로, relatedWorks만 로드하면 됨
         if (urlKeywordId) {
-          // URL에서 키워드 카테고리 전달받음
+          // URL에서 키워드 카테고리 전달받음 - 상태는 이미 초기화됨
           const allWorks = await getWorksByKeywordId(urlKeywordId);
           setRelatedWorks(allWorks);
-          setSelectedKeywordId(urlKeywordId);
-          setSelectedExhibitionCategoryId(null);
+          // setSelectedKeywordId는 이미 초기화되어 있으므로 호출하지 않음 (애니메이션 재실행 방지)
         } else if (urlExhibitionId) {
-          // URL에서 전시명 카테고리 전달받음
+          // URL에서 전시명 카테고리 전달받음 - 상태는 이미 초기화됨
           const allWorks = await getWorksByExhibitionCategoryId(urlExhibitionId);
           setRelatedWorks(allWorks);
-          setSelectedExhibitionCategoryId(urlExhibitionId);
-          setSelectedKeywordId(null);
+          // setSelectedExhibitionCategoryId는 이미 초기화되어 있으므로 호출하지 않음 (애니메이션 재실행 방지)
         } else if (workData.sentenceCategoryIds.length > 0) {
           // URL 파라미터 없으면 작품의 첫 번째 카테고리 사용
           const keywordId = workData.sentenceCategoryIds[0];

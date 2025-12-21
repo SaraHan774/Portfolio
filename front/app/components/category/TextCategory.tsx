@@ -24,10 +24,10 @@ const TextCategory = memo(function TextCategory({
 }: TextCategoryProps) {
   const isHovered = hoveredCategoryId === category.id;
 
-  // Check if this category has ever been clicked (survives page navigation)
+  // 이 카테고리가 사용자에 의해 클릭된 적이 있는지 확인 (페이지 이동 시에도 유지됨)
   const hasBeenClickedBefore = categoryAnimationStore.hasBeenClicked(category.id);
 
-  // Track if we just clicked (for dot animation)
+  // 방금 클릭했는지 추적 (점 애니메이션용)
   const justClicked = useRef(false);
 
   // Track actual DOM click events, not state transitions
@@ -54,6 +54,9 @@ const TextCategory = memo(function TextCategory({
       }, 0);
     }
   }, [isSelected]);
+
+  // 애니메이션 상태 계산
+  const animateState = isHovered ? 'hover' : (isSelected && hasBeenClickedBefore) ? 'selected' : 'normal';
 
   // 카테고리의 상태를 계산하는 함수
   const getCategoryState = (): CategoryState => {
@@ -148,16 +151,17 @@ const TextCategory = memo(function TextCategory({
   // Title 글자 단위 애니메이션 - hover/active 시 stroke + bold 효과
   const renderTitleText = (text: string) => {
     const characters = text.split('');
-    // Only use selected animation state if user has clicked it before
-    const animateState = isHovered ? 'hover' : (isSelected && hasBeenClickedBefore) ? 'selected' : 'normal';
     const isActive = isHovered || isSelected;
+
+    // 초기 마운트 시 이미 선택된 상태이고 클릭된 적이 있다면, initial을 selected로 설정
+    const initialState = isSelected && hasBeenClickedBefore ? 'selected' : false;
 
     const charVariants = hasBeenClickedBefore ? {
       hover: {
         fontWeight: 700,
         transition: {
           duration: 0.1,
-          ease: 'easeOut',
+          ease: 'easeOut' as const,
         },
       },
       selected: {
@@ -170,15 +174,15 @@ const TextCategory = memo(function TextCategory({
         fontWeight: 400,
         transition: {
           duration: 0.1,
-          ease: 'easeOut',
+          ease: 'easeOut' as const,
         },
       },
-    } : undefined;
+    } as const : undefined;
 
     return (
       <motion.span
         style={{ display: 'block' }}
-        initial={false}
+        initial={initialState}
         animate={animateState}
         variants={{
           hover: {
@@ -288,8 +292,8 @@ const TextCategory = memo(function TextCategory({
 
   // Check array equality properly
   const workIdsEqual =
-    prevProps.selectedWorkIds.length === nextProps.selectedWorkIds.length &&
-    prevProps.selectedWorkIds.every((id, index) => id === nextProps.selectedWorkIds[index]);
+    (prevProps.selectedWorkIds?.length ?? 0) === (nextProps.selectedWorkIds?.length ?? 0) &&
+    (prevProps.selectedWorkIds ?? []).every((id, index) => (nextProps.selectedWorkIds ?? [])[index] === id);
 
   return (
     prevProps.category.id === nextProps.category.id &&

@@ -98,9 +98,11 @@ const SentenceCategory = memo(function SentenceCategory({
   // Return false if props are different (re-render)
 
   // Check array equality properly
+  const prevWorkIds = prevProps.selectedWorkIds ?? [];
+  const nextWorkIds = nextProps.selectedWorkIds ?? [];
   const workIdsEqual =
-    prevProps.selectedWorkIds.length === nextProps.selectedWorkIds.length &&
-    prevProps.selectedWorkIds.every((id, index) => id === nextProps.selectedWorkIds[index]);
+    prevWorkIds.length === nextWorkIds.length &&
+    prevWorkIds.every((id, index) => nextWorkIds[index] === id);
 
   return (
     prevProps.category.id === nextProps.category.id &&
@@ -134,13 +136,13 @@ function AnimatedKeyword({
   onSelect: (keywordId: string) => void;
   onHover: (keywordId: string | null) => void;
 }) {
-  // Check if this keyword has ever been clicked (survives page navigation)
+  // 이 키워드가 사용자에 의해 클릭된 적이 있는지 확인 (페이지 이동 시에도 유지됨)
   const hasBeenClickedBefore = categoryAnimationStore.hasBeenClicked(keyword.id);
 
-  // Track if we just clicked (for dot animation)
+  // 방금 클릭했는지 추적 (점 애니메이션용)
   const justClicked = useRef(false);
 
-  // Reset justClicked after render
+  // justClicked 플래그 리셋
   useEffect(() => {
     if (justClicked.current && isSelected) {
       setTimeout(() => {
@@ -149,7 +151,7 @@ function AnimatedKeyword({
     }
   }, [isSelected]);
 
-  // Use custom hooks for state and styling
+  // 상태 및 스타일 계산
   const state = useKeywordState({
     keyword,
     isSelected,
@@ -159,15 +161,18 @@ function AnimatedKeyword({
 
   const keywordStyle = useKeywordStyle(state);
 
-  // Split text into characters for animation
+  // 글자 단위 애니메이션을 위해 텍스트를 문자 배열로 분리
   const characters = text.split('');
 
-  // Check if clickable
+  // 클릭 가능 여부 확인
   const isClickable = state === 'clickable' || state === 'active' || state === 'hover';
 
-  // Animation state: only use selected state if user has clicked it before
-  // On first page load with selected=true, show static bold without animation
+  // 애니메이션 상태: 사용자가 클릭한 적이 있을 때만 selected 상태 사용
+  // 첫 페이지 로드 시 selected=true여도 애니메이션 없이 정적으로 bold 표시
   const animateState = isHovered ? 'hover' : (isSelected && hasBeenClickedBefore) ? 'selected' : 'normal';
+
+  // 초기 마운트 시 이미 선택된 상태이고 클릭된 적이 있다면, initial을 selected로 설정
+  const initialState = isSelected && hasBeenClickedBefore ? 'selected' : false;
 
   // Handle click - mark as clicked BEFORE calling onSelect
   const handleClick = () => {
@@ -191,7 +196,7 @@ function AnimatedKeyword({
       }}
       onMouseLeave={() => onHover(null)}
       style={keywordStyle}
-      initial={false}
+      initial={initialState}
       animate={animateState}
     >
       <motion.span

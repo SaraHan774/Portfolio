@@ -28,6 +28,8 @@ const CategorySidebar = memo(function CategorySidebar({
   onExhibitionCategorySelect,
   selectedWorkIds,
 }: CategorySidebarProps) {
+  console.log('[CategorySidebar RENDER]', { selectedKeywordId, selectedExhibitionCategoryId, workIdsCount: selectedWorkIds.length });
+
   const [hoveredKeywordId, setHoveredKeywordId] = useState<string | null>(null);
   const [hoveredExhibitionCategoryId, setHoveredExhibitionCategoryId] = useState<string | null>(null);
 
