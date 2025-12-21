@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useThumbnailUrl } from '@/domain';
+import { KEYWORD_ANIMATION_VARIANTS, DOT_ANIMATION } from '@/core/constants';
 import type { Work } from '@/types';
 
 interface WorkTitleButtonProps {
@@ -20,6 +21,8 @@ interface WorkTitleButtonProps {
  * Behavior:
  * - Home page (showThumbnail=true): Always shows thumbnail
  * - Detail page (showThumbnail=false): Shows thumbnail only on hover
+ * - Hover effect: Character-by-character animation with transparent stroke
+ * - Fixed width: 150px with overflow handling
  */
 export default function WorkTitleButton({
   work,
@@ -41,6 +44,34 @@ export default function WorkTitleButton({
   const shouldShowThumbnail =
     showThumbnail || (isHovered && hasThumbnail) || (anyWorkHovered && hasThumbnail);
 
+  // Animation state for character-by-character effect
+  const animateState = isHovered ? 'hover' : isSelected ? 'selected' : 'normal';
+
+  // Format title with quotes and year
+  const displayText = `「'${work.title}'」${work.year ? `, ${work.year}` : ''}`;
+  const characters = displayText.split('');
+
+  // Title styling based on state
+  const titleStyle: React.CSSProperties = {
+    position: 'relative',
+    display: 'inline-block',
+    fontSize: 'var(--font-size-sm)',
+    textAlign: 'left',
+    width: '150px', // Fixed width
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    transition: 'color 0.2s ease-in-out',
+    ...(isHovered
+      ? {
+          color: 'transparent',
+          WebkitTextStroke: '0.7px var(--color-category-hover-stroke)',
+        }
+      : {
+          color: isSelected ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+        }),
+  };
+
   return (
     <button
       onClick={onClick}
@@ -55,22 +86,48 @@ export default function WorkTitleButton({
         flexDirection: 'column',
         alignItems: 'flex-start',
         gap: '8px',
-        minWidth: '80px',
+        width: '150px', // Fixed width for entire button
       }}
     >
-      {/* 작업 제목 + 년도 */}
-      <span
-        style={{
-          fontSize: 'var(--font-size-sm)',
-          fontWeight: isSelected ? 'var(--font-weight-bold)' : 'var(--font-weight-normal)',
-          color: isSelected ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-          textAlign: 'left',
-          whiteSpace: 'nowrap',
-          transition: 'font-weight 0.2s ease-out, color 0.2s ease-out',
-        }}
+      {/* 작업 제목 + 년도 with character-by-character animation */}
+      <motion.span
+        style={titleStyle}
+        initial={false}
+        animate={animateState}
       >
-        {`「'${work.title}'」${work.year ? `, ${work.year}` : ''}`}
-      </span>
+        <motion.span
+          style={{ display: 'inline-block' }}
+          variants={KEYWORD_ANIMATION_VARIANTS.container}
+        >
+          {characters.map((char, charIndex) => (
+            <motion.span
+              key={charIndex}
+              style={{ display: 'inline-block' }}
+              variants={KEYWORD_ANIMATION_VARIANTS.character}
+            >
+              {char}
+            </motion.span>
+          ))}
+        </motion.span>
+
+        {/* Dot indicator for selected work */}
+        {isSelected && (
+          <motion.span
+            {...DOT_ANIMATION}
+            style={{
+              position: 'absolute',
+              top: 'var(--dot-offset-top)', // -8px (center above text)
+              left: '50%',
+              transform: 'translateX(-50%)',
+              fontSize: '14px',
+              color: 'var(--dot-color)',
+              lineHeight: 1,
+            }}
+          >
+            ˙
+          </motion.span>
+        )}
+      </motion.span>
 
       {/* 썸네일 공간 (항상 확보하여 레이아웃 안정성 유지) */}
       <div
