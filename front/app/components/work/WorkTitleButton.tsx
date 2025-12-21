@@ -108,7 +108,7 @@ export default function WorkTitleButton({
               top: '0px', // At the top of the padded container
               left: '50%',
               transform: 'translateX(-50%)',
-              fontSize: '14px',
+              fontSize: '18px', // Increased to match category dot size
               color: 'var(--dot-color)',
               lineHeight: 1,
               zIndex: 10,
