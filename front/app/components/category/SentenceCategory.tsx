@@ -4,6 +4,7 @@ import { memo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useKeywordState, useKeywordStyle } from '@/domain';
 import { KEYWORD_ANIMATION_VARIANTS, DOT_ANIMATION } from '@/core/constants';
+import { categoryAnimationStore } from '@/app/utils/categoryAnimationStore';
 import type { SentenceCategory as SentenceCategoryType, KeywordCategory } from '@/types';
 
 interface SentenceCategoryProps {
@@ -135,16 +136,17 @@ function AnimatedKeyword({
 }) {
   // Track state transitions to detect user clicks vs initial render
   const prevIsSelected = useRef<boolean | null>(null);
-  const hasTransitionedToSelected = useRef(false);
+
+  // Check if this keyword has ever been clicked (survives page navigation)
+  const hasBeenClickedBefore = categoryAnimationStore.hasBeenClicked(keyword.id);
 
   // Determine if this is a user-triggered transition (false → true)
   const isUserClick = prevIsSelected.current === false && isSelected === true;
 
   useEffect(() => {
-    console.log(`[AnimatedKeyword ${keyword.id}] isSelected: ${isSelected}, prevIsSelected: ${prevIsSelected.current}, isUserClick: ${isUserClick}, hasTransitioned: ${hasTransitionedToSelected.current}`);
     if (isUserClick) {
-      hasTransitionedToSelected.current = true;
-      console.log(`[AnimatedKeyword ${keyword.id}] ✓ User clicked! Enabling animations.`);
+      // Mark as clicked in persistent store
+      categoryAnimationStore.markAsClicked(keyword.id);
     }
     prevIsSelected.current = isSelected;
   }, [isSelected, isUserClick, keyword.id]);
@@ -165,9 +167,9 @@ function AnimatedKeyword({
   // Check if clickable
   const isClickable = state === 'clickable' || state === 'active' || state === 'hover';
 
-  // Animation state: only use selected state if this was a user click
-  // Otherwise keep in normal state (but with bold fontWeight from inline style)
-  const animateState = isHovered ? 'hover' : (isSelected && hasTransitionedToSelected.current) ? 'selected' : 'normal';
+  // Animation state: only use selected state if user has clicked it before
+  // On first page load with selected=true, show static bold without animation
+  const animateState = isHovered ? 'hover' : (isSelected && hasBeenClickedBefore) ? 'selected' : 'normal';
 
   // Only animate dot on user click transition
   const shouldAnimateDot = isUserClick;
@@ -201,7 +203,7 @@ function AnimatedKeyword({
               // Always show correct fontWeight, regardless of animation state
               fontWeight: isSelected ? 700 : 400,
             }}
-            variants={hasTransitionedToSelected.current ? KEYWORD_ANIMATION_VARIANTS.character : undefined}
+            variants={hasBeenClickedBefore ? KEYWORD_ANIMATION_VARIANTS.character : undefined}
           >
             {char}
           </motion.span>

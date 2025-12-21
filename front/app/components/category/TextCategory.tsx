@@ -2,6 +2,7 @@
 
 import { memo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { categoryAnimationStore } from '@/app/utils/categoryAnimationStore';
 import type { ExhibitionCategory, CategoryState } from '@/types';
 
 interface TextCategoryProps {
@@ -25,17 +26,20 @@ const TextCategory = memo(function TextCategory({
 
   // Track state transitions to detect user clicks vs initial render
   const prevIsSelected = useRef<boolean | null>(null);
-  const hasTransitionedToSelected = useRef(false);
+
+  // Check if this category has ever been clicked (survives page navigation)
+  const hasBeenClickedBefore = categoryAnimationStore.hasBeenClicked(category.id);
 
   // Determine if this is a user-triggered transition (false → true)
   const isUserClick = prevIsSelected.current === false && isSelected === true;
 
   useEffect(() => {
     if (isUserClick) {
-      hasTransitionedToSelected.current = true;
+      // Mark as clicked in persistent store
+      categoryAnimationStore.markAsClicked(category.id);
     }
     prevIsSelected.current = isSelected;
-  }, [isSelected, isUserClick]);
+  }, [isSelected, isUserClick, category.id]);
 
   // 카테고리의 상태를 계산하는 함수
   const getCategoryState = (): CategoryState => {
@@ -130,11 +134,11 @@ const TextCategory = memo(function TextCategory({
   // Title 글자 단위 애니메이션 - hover/active 시 stroke + bold 효과
   const renderTitleText = (text: string) => {
     const characters = text.split('');
-    // Only use selected animation state if this was a user click
-    const animateState = isHovered ? 'hover' : (isSelected && hasTransitionedToSelected.current) ? 'selected' : 'normal';
+    // Only use selected animation state if user has clicked it before
+    const animateState = isHovered ? 'hover' : (isSelected && hasBeenClickedBefore) ? 'selected' : 'normal';
     const isActive = isHovered || isSelected;
 
-    const charVariants = hasTransitionedToSelected.current ? {
+    const charVariants = hasBeenClickedBefore ? {
       hover: {
         fontWeight: 700,
         transition: {
