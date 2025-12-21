@@ -1,6 +1,6 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { ExhibitionCategory, CategoryState } from '@/types';
 
@@ -22,6 +22,17 @@ const TextCategory = memo(function TextCategory({
   selectedWorkIds = [],
 }: TextCategoryProps) {
   const isHovered = hoveredCategoryId === category.id;
+
+  // Track if this is initial mount to skip animations
+  const isInitialMount = useRef(true);
+  const prevIsSelected = useRef(isSelected);
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+    }
+    prevIsSelected.current = isSelected;
+  }, [isSelected]);
 
   // 카테고리의 상태를 계산하는 함수
   const getCategoryState = (): CategoryState => {
@@ -150,6 +161,8 @@ const TextCategory = memo(function TextCategory({
               color: isActive ? 'transparent' : 'var(--color-category-clickable)',
               WebkitTextStroke: isActive ? '0.7px var(--color-category-hover-stroke)' : '0px transparent',
               transition: 'color 0.1s ease-out, -webkit-text-stroke 0.1s ease-out',
+              // On initial mount with selected state, directly apply fontWeight without animation
+              fontWeight: (isInitialMount.current && isSelected) ? 700 : undefined,
             }}
             variants={{
               hover: {
@@ -231,9 +244,13 @@ const TextCategory = memo(function TextCategory({
         }}
       >
         <motion.span
-          initial={{ opacity: 0 }}
+          initial={{ opacity: (isInitialMount.current && isSelected) ? 1 : 0 }}
           animate={{ opacity: isSelected ? 1 : 0 }}
-          transition={{ duration: 0.3, ease: 'easeOut', delay: isSelected ? 0.4 : 0 }}
+          transition={
+            (!isInitialMount.current && isSelected)
+              ? { duration: 0.3, ease: 'easeOut', delay: 0.4 }
+              : { duration: 0 }
+          }
           style={{
             color: 'var(--dot-color)',
           }}

@@ -1,6 +1,6 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useKeywordState, useKeywordStyle } from '@/domain';
 import { KEYWORD_ANIMATION_VARIANTS, DOT_ANIMATION } from '@/core/constants';
@@ -133,6 +133,17 @@ function AnimatedKeyword({
   onSelect: (keywordId: string) => void;
   onHover: (keywordId: string | null) => void;
 }) {
+  // Track if this is initial mount to skip animations
+  const isInitialMount = useRef(true);
+  const prevIsSelected = useRef(isSelected);
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+    }
+    prevIsSelected.current = isSelected;
+  }, [isSelected]);
+
   // Use custom hooks for state and styling
   const state = useKeywordState({
     keyword,
@@ -151,6 +162,9 @@ function AnimatedKeyword({
 
   // Animation state: hover (staggered bold), selected (instant bold), normal
   const animateState = isHovered ? 'hover' : isSelected ? 'selected' : 'normal';
+
+  // Only animate dot on user interaction, not on initial render
+  const shouldAnimateDot = !isInitialMount.current && !prevIsSelected.current && isSelected;
 
   return (
     <motion.span
@@ -176,7 +190,11 @@ function AnimatedKeyword({
         {characters.map((char, charIndex) => (
           <motion.span
             key={charIndex}
-            style={{ display: 'inline-block' }}
+            style={{
+              display: 'inline-block',
+              // On initial mount with selected state, directly apply fontWeight without animation
+              fontWeight: (isInitialMount.current && isSelected) ? 700 : undefined,
+            }}
             variants={KEYWORD_ANIMATION_VARIANTS.character}
           >
             {char}
@@ -187,7 +205,9 @@ function AnimatedKeyword({
       {/* Dot indicator for selected keyword */}
       {isSelected && (
         <motion.span
-          {...DOT_ANIMATION}
+          initial={{ opacity: shouldAnimateDot ? 0 : 1 }}
+          animate={{ opacity: 1 }}
+          transition={shouldAnimateDot ? { duration: 0.3, ease: 'easeOut', delay: 0.4 } : { duration: 0 }}
           style={{
             position: 'absolute',
             top: 'var(--dot-offset-top)', // -8px (center above text)
