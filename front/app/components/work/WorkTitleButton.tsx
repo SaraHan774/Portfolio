@@ -51,13 +51,18 @@ export default function WorkTitleButton({
   const displayText = `「'${work.title}'」${work.year ? `, ${work.year}` : ''}`;
   const characters = displayText.split('');
 
+  // Container styling for dot positioning (no overflow)
+  const containerStyle: React.CSSProperties = {
+    position: 'relative',
+    width: '150px', // Fixed width
+  };
+
   // Title styling based on state
   const titleStyle: React.CSSProperties = {
-    position: 'relative',
     display: 'inline-block',
     fontSize: 'var(--font-size-sm)',
     textAlign: 'left',
-    width: '150px', // Fixed width
+    width: '100%',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
@@ -89,28 +94,9 @@ export default function WorkTitleButton({
         width: '150px', // Fixed width for entire button
       }}
     >
-      {/* 작업 제목 + 년도 with character-by-character animation */}
-      <motion.span
-        style={titleStyle}
-        initial={false}
-        animate={animateState}
-      >
-        <motion.span
-          style={{ display: 'inline-block' }}
-          variants={KEYWORD_ANIMATION_VARIANTS.container}
-        >
-          {characters.map((char, charIndex) => (
-            <motion.span
-              key={charIndex}
-              style={{ display: 'inline-block' }}
-              variants={KEYWORD_ANIMATION_VARIANTS.character}
-            >
-              {char}
-            </motion.span>
-          ))}
-        </motion.span>
-
-        {/* Dot indicator for selected work */}
+      {/* Container for title with dot indicator */}
+      <div style={containerStyle}>
+        {/* Dot indicator for selected work (positioned absolutely above) */}
         {isSelected && (
           <motion.span
             {...DOT_ANIMATION}
@@ -122,12 +108,35 @@ export default function WorkTitleButton({
               fontSize: '14px',
               color: 'var(--dot-color)',
               lineHeight: 1,
+              zIndex: 10,
             }}
           >
             ˙
           </motion.span>
         )}
-      </motion.span>
+
+        {/* 작업 제목 + 년도 with character-by-character animation */}
+        <motion.span
+          style={titleStyle}
+          initial={false}
+          animate={animateState}
+        >
+          <motion.span
+            style={{ display: 'inline-block' }}
+            variants={KEYWORD_ANIMATION_VARIANTS.container}
+          >
+            {characters.map((char, charIndex) => (
+              <motion.span
+                key={charIndex}
+                style={{ display: 'inline-block' }}
+                variants={KEYWORD_ANIMATION_VARIANTS.character}
+              >
+                {char}
+              </motion.span>
+            ))}
+          </motion.span>
+        </motion.span>
+      </div>
 
       {/* 썸네일 공간 (항상 확보하여 레이아웃 안정성 유지) */}
       <div
