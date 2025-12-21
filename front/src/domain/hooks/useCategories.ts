@@ -6,7 +6,7 @@ import { CategoryRepository } from '../../data/repository/CategoryRepository';
 import type {
   SentenceCategory,
   ExhibitionCategory,
-  SentenceCategoryKeyword,
+  KeywordCategory,
 } from '../../core/types';
 
 /**
@@ -47,7 +47,7 @@ export const useExhibitionCategories = (): UseQueryResult<
  */
 export const useKeyword = (
   keywordId: string | undefined
-): UseQueryResult<SentenceCategoryKeyword | undefined, Error> => {
+): UseQueryResult<KeywordCategory | undefined, Error> => {
   return useQuery({
     queryKey: keywordId
       ? queryKeys.categories.sentence.keyword(keywordId)

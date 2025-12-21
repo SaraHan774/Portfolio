@@ -8,7 +8,6 @@ const createMockKeyword = (overrides?: Partial<KeywordCategory>): KeywordCategor
   name: 'test keyword',
   startIndex: 0,
   endIndex: 10,
-  isActive: true,
   workOrders: [],
   ...overrides,
 });

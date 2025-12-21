@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Nanum_Myeongjo } from "next/font/google";
 import "./globals.css";
 import DynamicMetadata from "./components/DynamicMetadata";
+import { CategoriesProvider } from "./contexts/CategoriesContext";
 
 const nanumMyeongjo = Nanum_Myeongjo({
   weight: ['400', '700'],
@@ -28,7 +29,9 @@ export default function RootLayout({
         style={{ fontFamily: 'var(--font-nanum-myeongjo)' }}
       >
         <DynamicMetadata />
-        {children}
+        <CategoriesProvider>
+          {children}
+        </CategoriesProvider>
       </body>
     </html>
   );

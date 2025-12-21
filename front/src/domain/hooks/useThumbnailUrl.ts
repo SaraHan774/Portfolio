@@ -1,7 +1,7 @@
 // Custom hook for thumbnail URL calculation logic
 
 import { useMemo } from 'react';
-import type { Work } from '../../core/types';
+import type { Work } from '@/types';
 
 /**
  * Calculate thumbnail URL from work data

@@ -6,9 +6,9 @@ import Header from '@/app/components/layout/Header';
 import Footer from '@/app/components/layout/Footer';
 import Sidebar from '@/app/components/layout/Sidebar';
 import MobileCategoryMenu from '@/app/components/layout/MobileCategoryMenu';
-import { getSentenceCategories, getExhibitionCategories } from '@/lib/services/categoriesService';
+import { useCategories } from '@/app/contexts/CategoriesContext';
 import { getWorksByKeywordId, getWorksByExhibitionCategoryId } from '@/lib/services/worksService';
-import type { Work, SentenceCategory, ExhibitionCategory } from '@/types';
+import type { Work } from '@/types';
 
 export default function HomePage() {
   const router = useRouter();
@@ -17,33 +17,11 @@ export default function HomePage() {
   const [works, setWorks] = useState<Work[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Firebase에서 가져온 카테고리 데이터
-  const [sentenceCategories, setSentenceCategories] = useState<SentenceCategory[]>([]);
-  const [exhibitionCategories, setExhibitionCategories] = useState<ExhibitionCategory[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Get categories from shared context (loaded once at app level)
+  const { sentenceCategories, exhibitionCategories, isLoading } = useCategories();
 
   // 선택된 카테고리의 작업 ID 목록 계산 (disabled 상태 계산용)
   const selectedWorkIds = works.map(work => work.id);
-
-  // 초기 데이터 로드 (카테고리)
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const [sentences, exhibitions] = await Promise.all([
-          getSentenceCategories(),
-          getExhibitionCategories(),
-        ]);
-        setSentenceCategories(sentences);
-        setExhibitionCategories(exhibitions);
-      } catch (error) {
-        console.error('[HomePage] 카테고리 로드 실패:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadCategories();
-  }, []);
 
   // 키워드 선택 시 작품 필터링
   useEffect(() => {

@@ -8,9 +8,9 @@ import Header from '@/app/components/layout/Header';
 import Footer from '@/app/components/layout/Footer';
 import Sidebar from '@/app/components/layout/Sidebar';
 import { getWorkById, getWorksByKeywordId, getWorksByExhibitionCategoryId } from '@/lib/services/worksService';
-import { getSentenceCategories, getExhibitionCategories } from '@/lib/services/categoriesService';
+import { useCategories } from '@/app/contexts/CategoriesContext';
 import FloatingWorkWindow from '@/app/components/work/FloatingWorkWindow';
-import type { Work, WorkImage, WorkVideo, MediaItem, ExhibitionCategory, SentenceCategory as SentenceCategoryType } from '@/types';
+import type { Work, WorkImage, WorkVideo, MediaItem } from '@/types';
 
 // 이미지와 영상을 통합 미디어 배열로 변환하는 헬퍼 함수
 function getMediaItems(work: Work): MediaItem[] {
@@ -1203,10 +1203,11 @@ export default function WorkDetailPage() {
   const urlKeywordId = searchParams.get('keywordId');
   const urlExhibitionId = searchParams.get('exhibitionId');
 
+  // Get categories from shared context (no flickering on navigation)
+  const { sentenceCategories, exhibitionCategories } = useCategories();
+
   const [work, setWork] = useState<Work | null>(null);
   const [relatedWorks, setRelatedWorks] = useState<Work[]>([]);
-  const [sentenceCategories, setSentenceCategories] = useState<SentenceCategoryType[]>([]);
-  const [exhibitionCategories, setExhibitionCategories] = useState<ExhibitionCategory[]>([]);
   const [selectedKeywordId, setSelectedKeywordId] = useState<string | null>(null);
   const [selectedExhibitionCategoryId, setSelectedExhibitionCategoryId] = useState<string | null>(null);
   const [currentImageId, setCurrentImageId] = useState<string | null>(null);
@@ -1334,16 +1335,12 @@ export default function WorkDetailPage() {
     };
   }, [hoveredWorkId]);
 
-  // 초기 데이터 로드 (카테고리 목록만 - 최초 1회)
+  // 초기 데이터 로드 (작업 데이터만 - 카테고리는 context에서 가져옴)
   useEffect(() => {
     const loadInitialData = async () => {
       setIsLoading(true);
       try {
-        const [workData, sentences, exhibitions] = await Promise.all([
-          getWorkById(workId),
-          getSentenceCategories(),
-          getExhibitionCategories(),
-        ]);
+        const workData = await getWorkById(workId);
 
         if (!workData) {
           router.push('/');
@@ -1351,8 +1348,6 @@ export default function WorkDetailPage() {
         }
 
         setWork(workData);
-        setSentenceCategories(sentences);
-        setExhibitionCategories(exhibitions);
         setSelectedWorkId(workId);
 
         // URL에서 전달받은 카테고리가 있으면 그것을 사용, 없으면 작품의 첫 번째 카테고리 사용
