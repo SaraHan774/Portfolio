@@ -1842,12 +1842,13 @@ export default function WorkDetailPage() {
         )}
 
         {/* 작업 목록 영역 - 우측 (전시명 카테고리 선택 시) */}
+        {/* 전시명 카테고리 아래에 배치: 카테고리 시작(64px) + 카테고리 영역(~120px) + 여백 */}
         {relatedWorks.length > 0 && selectedExhibitionCategoryId && (
           <div
             className="hidden lg:block absolute"
             style={{
               right: 'var(--category-margin-right)',
-              top: 'var(--space-20)',
+              top: 'calc(var(--space-8) + 140px)', // 64px + 140px = 204px - 전시명 카테고리 아래
               textAlign: 'right',
               maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-right))',
               zIndex: 100,
