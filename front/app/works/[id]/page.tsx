@@ -1700,11 +1700,12 @@ export default function WorkDetailPage() {
     };
   }, [work, selectedWorkId]);
 
-  // 현재 선택된 작품의 ID 목록 계산 (disabled 상태 계산용)
-  // Memoize to prevent categories from re-rendering
+  // 현재 카테고리의 작품 ID 목록 (disabled 상태 계산용)
+  // Only depends on relatedWorks, NOT on the currently viewed work
+  // This prevents categories from re-rendering when selecting different works within the same category
   const selectedWorkIds = useMemo(
-    () => (work ? [work.id, ...relatedWorks.map(w => w.id)] : []),
-    [work, relatedWorks]
+    () => relatedWorks.map(w => w.id),
+    [relatedWorks]
   );
 
   // 이미지와 캡션 렌더링

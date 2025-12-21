@@ -57,7 +57,7 @@ export default function Sidebar({
           className="hidden lg:block absolute"
           style={{
             left: 'var(--category-margin-left)',
-            top: 'calc(var(--space-8) + var(--space-4))', // 카테고리 아래
+            top: 'var(--space-20)', // 카테고리 충분히 아래 (160px)
             maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-left))',
             zIndex: 100,
           }}
@@ -66,9 +66,6 @@ export default function Sidebar({
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            style={{
-              marginTop: 'var(--space-4)',
-            }}
           >
             <WorkListScroller
               works={works}
@@ -87,7 +84,7 @@ export default function Sidebar({
           className="hidden lg:block absolute"
           style={{
             right: 'var(--category-margin-right)',
-            top: 'calc(var(--space-8) + var(--space-4))', // 카테고리 아래
+            top: 'var(--space-20)', // 카테고리 충분히 아래 (160px)
             textAlign: 'right',
             maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-right))',
             zIndex: 100,
@@ -97,9 +94,6 @@ export default function Sidebar({
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            style={{
-              marginTop: 'var(--space-4)',
-            }}
           >
             <WorkListScroller
               works={works}
