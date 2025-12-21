@@ -2025,42 +2025,50 @@ export default function WorkDetailPage() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {hoveredWorkId && (
-          <motion.div
-            key="floating-window-container"
-            className="floating-work-window-container"
-            initial={{ opacity: 1 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] } }}
-            onMouseEnter={(e) => {
-              e.stopPropagation();
-            }}
-            style={{
-              position: 'fixed',
-              left: 0,
-              top: 0,
-              width: '100vw',
-              height: '100vh',
-              pointerEvents: 'none',
-              zIndex: 999,
-            }}
-          >
-            <div
+        {hoveredWorkId && (() => {
+          // Find the hovered work from relatedWorks or current work
+          const hoveredWork = relatedWorks.find((w) => w.id === hoveredWorkId)
+            || (hoveredWorkId === workId ? work : null);
+
+          if (!hoveredWork) return null;
+
+          return (
+            <motion.div
+              key="floating-window-container"
+              className="floating-work-window-container"
+              initial={{ opacity: 1 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] } }}
+              onMouseEnter={(e) => {
+                e.stopPropagation();
+              }}
               style={{
-                pointerEvents: 'auto',
+                position: 'fixed',
+                left: 0,
+                top: 0,
+                width: '100vw',
+                height: '100vh',
+                pointerEvents: 'none',
+                zIndex: 999,
               }}
             >
-              <FloatingWorkWindow
-                workId={hoveredWorkId}
-                position={hoverPosition}
-                onClick={(clickedWorkId) => {
-                  setHoveredWorkId(null);
-                  setModalWorkId(clickedWorkId);
+              <div
+                style={{
+                  pointerEvents: 'auto',
                 }}
-              />
-            </div>
-          </motion.div>
-        )}
+              >
+                <FloatingWorkWindow
+                  work={hoveredWork}
+                  position={hoverPosition}
+                  onClick={(clickedWorkId) => {
+                    setHoveredWorkId(null);
+                    setModalWorkId(clickedWorkId);
+                  }}
+                />
+              </div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
 
       <Footer />
