@@ -11,7 +11,7 @@ export interface UseWorkListScrollOptions {
 
 export interface UseWorkListScrollResult {
   /** Ref to attach to scroll container */
-  scrollContainerRef: RefObject<HTMLDivElement | null>;
+  scrollContainerRef: RefObject<HTMLDivElement>;
   /** Whether to show left scroll arrow */
   showLeftArrow: boolean;
   /** Whether to show right scroll arrow */
@@ -95,7 +95,7 @@ export const useWorkListScroll = ({
   };
 
   return {
-    scrollContainerRef,
+    scrollContainerRef: scrollContainerRef as React.RefObject<HTMLDivElement>,
     showLeftArrow,
     showRightArrow,
     scroll,
