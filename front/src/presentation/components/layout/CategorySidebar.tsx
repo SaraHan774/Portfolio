@@ -1,8 +1,9 @@
 'use client';
 
-import { memo, useState, useMemo, useCallback } from 'react';
+import { memo, useState, useMemo, useCallback, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import SentenceCategory from '../category/SentenceCategory';
 import TextCategory from '../category/TextCategory';
+import ScrollableCategoryList from '../category/ScrollableCategoryList';
 import type { SentenceCategory as SentenceCategoryType, ExhibitionCategory } from '@/types';
 
 interface CategorySidebarProps {
@@ -13,6 +14,10 @@ interface CategorySidebarProps {
   onKeywordSelect: (keywordId: string) => void;
   onExhibitionCategorySelect: (categoryId: string) => void;
   selectedWorkIds: string[];
+  /** 문장형 카테고리 영역의 높이가 변경될 때 호출되는 콜백 */
+  onSentenceCategoryHeightChange?: (height: number) => void;
+  /** 전시명 카테고리 영역의 높이가 변경될 때 호출되는 콜백 */
+  onExhibitionCategoryHeightChange?: (height: number) => void;
 }
 
 /**
@@ -27,11 +32,68 @@ const CategorySidebar = memo(function CategorySidebar({
   onKeywordSelect,
   onExhibitionCategorySelect,
   selectedWorkIds,
+  onSentenceCategoryHeightChange,
+  onExhibitionCategoryHeightChange,
 }: CategorySidebarProps) {
   console.log('[CategorySidebar RENDER]', { selectedKeywordId, selectedExhibitionCategoryId, workIdsCount: selectedWorkIds.length });
 
   const [hoveredKeywordId, setHoveredKeywordId] = useState<string | null>(null);
   const [hoveredExhibitionCategoryId, setHoveredExhibitionCategoryId] = useState<string | null>(null);
+  
+  // 문장형 카테고리 영역의 ref - 높이 측정용
+  const sentenceCategoryRef = useRef<HTMLDivElement>(null);
+  // 전시명 카테고리 영역의 ref - 높이 측정용
+  const exhibitionCategoryRef = useRef<HTMLDivElement>(null);
+  
+  // ResizeObserver로 문장형 카테고리 영역의 높이 변화 감지
+  useEffect(() => {
+    if (!sentenceCategoryRef.current || !onSentenceCategoryHeightChange) return;
+    
+    const element = sentenceCategoryRef.current;
+    
+    // 초기 높이 전달
+    const initialHeight = element.getBoundingClientRect().height;
+    onSentenceCategoryHeightChange(initialHeight);
+    
+    // ResizeObserver로 높이 변화 감지
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const height = entry.contentRect.height;
+        onSentenceCategoryHeightChange(height);
+      }
+    });
+    
+    resizeObserver.observe(element);
+    
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [onSentenceCategoryHeightChange]);
+  
+  // ResizeObserver로 전시명 카테고리 영역의 높이 변화 감지
+  useEffect(() => {
+    if (!exhibitionCategoryRef.current || !onExhibitionCategoryHeightChange) return;
+    
+    const element = exhibitionCategoryRef.current;
+    
+    // 초기 높이 전달
+    const initialHeight = element.getBoundingClientRect().height;
+    onExhibitionCategoryHeightChange(initialHeight);
+    
+    // ResizeObserver로 높이 변화 감지
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const height = entry.contentRect.height;
+        onExhibitionCategoryHeightChange(height);
+      }
+    });
+    
+    resizeObserver.observe(element);
+    
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [onExhibitionCategoryHeightChange]);
 
   // 문장형 카테고리만 필터링 및 정렬
   const sortedSentenceCategories = useMemo(
@@ -58,6 +120,7 @@ const CategorySidebar = memo(function CategorySidebar({
     <>
       {/* 좌측 문장형 카테고리 영역 (세로로 나열) */}
       <div
+        ref={sentenceCategoryRef}
         className="hidden lg:block absolute"
         style={{
           left: 'var(--category-margin-left)', // 48px
@@ -66,30 +129,33 @@ const CategorySidebar = memo(function CategorySidebar({
           zIndex: 100,
         }}
       >
-        {sortedSentenceCategories.map((category, index) => {
-          const isLast = index === sortedSentenceCategories.length - 1;
-          return (
-            <div
-              key={category.id}
-              style={{
-                marginBottom: isLast ? 0 : 'var(--category-spacing)',
-              }}
-            >
-              <SentenceCategory
-                category={category}
-                selectedKeywordId={selectedKeywordId}
-                onKeywordSelect={onKeywordSelect}
-                hoveredKeywordId={hoveredKeywordId}
-                onKeywordHover={setHoveredKeywordId}
-                selectedWorkIds={selectedWorkIds}
-              />
-            </div>
-          );
-        })}
+        <ScrollableCategoryList>
+          {sortedSentenceCategories.map((category, index) => {
+            const isLast = index === sortedSentenceCategories.length - 1;
+            return (
+              <div
+                key={category.id}
+                style={{
+                  marginBottom: isLast ? 0 : 'var(--category-spacing)',
+                }}
+              >
+                <SentenceCategory
+                  category={category}
+                  selectedKeywordId={selectedKeywordId}
+                  onKeywordSelect={onKeywordSelect}
+                  hoveredKeywordId={hoveredKeywordId}
+                  onKeywordHover={setHoveredKeywordId}
+                  selectedWorkIds={selectedWorkIds}
+                />
+              </div>
+            );
+          })}
+        </ScrollableCategoryList>
       </div>
 
       {/* 우측 전시명 카테고리 영역 (세로로 나열) */}
       <div
+        ref={exhibitionCategoryRef}
         className="hidden lg:block absolute"
         style={{
           right: 'var(--category-margin-right)', // 48px
@@ -99,26 +165,28 @@ const CategorySidebar = memo(function CategorySidebar({
           zIndex: 100,
         }}
       >
-        {sortedExhibitionCategories.map((category, index) => {
-          const isLast = index === sortedExhibitionCategories.length - 1;
-          return (
-            <div
-              key={category.id}
-              style={{
-                marginBottom: isLast ? 0 : 'var(--category-spacing)',
-              }}
-            >
-              <TextCategory
-                category={category}
-                isSelected={selectedExhibitionCategoryId === category.id}
-                onSelect={exhibitionSelectHandlers[category.id]}
-                hoveredCategoryId={hoveredExhibitionCategoryId}
-                onHover={setHoveredExhibitionCategoryId}
-                selectedWorkIds={selectedWorkIds}
-              />
-            </div>
-          );
-        })}
+        <ScrollableCategoryList>
+          {sortedExhibitionCategories.map((category, index) => {
+            const isLast = index === sortedExhibitionCategories.length - 1;
+            return (
+              <div
+                key={category.id}
+                style={{
+                  marginBottom: isLast ? 0 : 'var(--category-spacing)',
+                }}
+              >
+                <TextCategory
+                  category={category}
+                  isSelected={selectedExhibitionCategoryId === category.id}
+                  onSelect={exhibitionSelectHandlers[category.id]}
+                  hoveredCategoryId={hoveredExhibitionCategoryId}
+                  onHover={setHoveredExhibitionCategoryId}
+                  selectedWorkIds={selectedWorkIds}
+                />
+              </div>
+            );
+          })}
+        </ScrollableCategoryList>
       </div>
     </>
   );

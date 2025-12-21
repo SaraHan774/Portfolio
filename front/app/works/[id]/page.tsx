@@ -1223,6 +1223,17 @@ export default function WorkDetailPage() {
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
   const imageScrollContainerRef = useRef<HTMLDivElement>(null);
   const [modalWorkId, setModalWorkId] = useState<string | null>(null);
+  // 문장형 카테고리 영역의 높이 - WorkListScroller 위치 계산에 사용
+  const [sentenceCategoryHeight, setSentenceCategoryHeight] = useState<number>(0);
+  // 전시명 카테고리 영역의 높이 - WorkListScroller 위치 계산에 사용
+  const [exhibitionCategoryHeight, setExhibitionCategoryHeight] = useState<number>(0);
+  // 좌측 작업 목록(WorkListScroller) 영역의 높이 - 컨텐츠 영역 위치 계산에 사용
+  const [leftWorkListHeight, setLeftWorkListHeight] = useState<number>(0);
+  // 우측 작업 목록(WorkListScroller) 영역의 높이 - 컨텐츠 영역 위치 계산에 사용
+  const [rightWorkListHeight, setRightWorkListHeight] = useState<number>(0);
+  // 작업 목록 영역 ref
+  const leftWorkListRef = useRef<HTMLDivElement>(null);
+  const rightWorkListRef = useRef<HTMLDivElement>(null);
   const hoverPositionRef = useRef({ x: 0, y: 0 });
   const observerRef = useRef<MutationObserver | null>(null);
   const hoverLinkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -1238,6 +1249,56 @@ export default function WorkDetailPage() {
   useEffect(() => {
     hoveredWorkIdRef.current = hoveredWorkId;
   }, [hoveredWorkId]);
+
+  // 좌측 작업 목록 높이 측정
+  useEffect(() => {
+    const element = leftWorkListRef.current;
+    if (!element) {
+      setLeftWorkListHeight(0);
+      return;
+    }
+    
+    const updateHeight = () => {
+      const height = element.getBoundingClientRect().height;
+      setLeftWorkListHeight(height);
+    };
+    
+    updateHeight();
+    
+    const resizeObserver = new ResizeObserver(() => {
+      updateHeight();
+    });
+    resizeObserver.observe(element);
+    
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [selectedKeywordId, relatedWorks]);
+
+  // 우측 작업 목록 높이 측정
+  useEffect(() => {
+    const element = rightWorkListRef.current;
+    if (!element) {
+      setRightWorkListHeight(0);
+      return;
+    }
+    
+    const updateHeight = () => {
+      const height = element.getBoundingClientRect().height;
+      setRightWorkListHeight(height);
+    };
+    
+    updateHeight();
+    
+    const resizeObserver = new ResizeObserver(() => {
+      updateHeight();
+    });
+    resizeObserver.observe(element);
+    
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [selectedExhibitionCategoryId, relatedWorks]);
 
   // 위키피디아 스타일: 스크롤 시 Floating Window 숨김
   useEffect(() => {
@@ -1814,15 +1875,20 @@ export default function WorkDetailPage() {
           onKeywordSelect={handleKeywordSelect}
           onExhibitionCategorySelect={handleExhibitionCategorySelect}
           selectedWorkIds={selectedWorkIds}
+          onSentenceCategoryHeightChange={setSentenceCategoryHeight}
+          onExhibitionCategoryHeightChange={setExhibitionCategoryHeight}
         />
 
         {/* 작업 목록 영역 - 좌측 (문장형 카테고리 선택 시) */}
+        {/* 문장형 카테고리 아래에 배치: 카테고리 시작(64px) + 카테고리 영역 높이 + 여백(24px) */}
         {relatedWorks.length > 0 && selectedKeywordId && (
           <div
+            ref={leftWorkListRef}
             className="hidden lg:block absolute"
             style={{
               left: 'var(--category-margin-left)',
-              top: 'var(--space-20)',
+              // 카테고리 시작점(64px, var(--space-8)) + 카테고리 영역 높이 + 여백(24px)
+              top: `calc(var(--space-8) + ${sentenceCategoryHeight}px + 24px)`,
               maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-left))',
               zIndex: 100,
             }}
@@ -1844,13 +1910,15 @@ export default function WorkDetailPage() {
         )}
 
         {/* 작업 목록 영역 - 우측 (전시명 카테고리 선택 시) */}
-        {/* 전시명 카테고리 아래에 배치: 카테고리 시작(64px) + 카테고리 영역(~120px) + 여백 */}
+        {/* 전시명 카테고리 아래에 배치: 카테고리 시작(64px) + 카테고리 영역 높이 + 여백(24px) */}
         {relatedWorks.length > 0 && selectedExhibitionCategoryId && (
           <div
+            ref={rightWorkListRef}
             className="hidden lg:block absolute"
             style={{
               right: 'var(--category-margin-right)',
-              top: 'calc(var(--space-8) + 140px)', // 64px + 140px = 204px - 전시명 카테고리 아래
+              // 카테고리 시작점(64px, var(--space-8)) + 카테고리 영역 높이 + 여백(24px)
+              top: `calc(var(--space-8) + ${exhibitionCategoryHeight}px + 24px)`,
               textAlign: 'right',
               maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-right))',
               zIndex: 100,
@@ -1890,7 +1958,23 @@ export default function WorkDetailPage() {
           style={{
             position: 'relative',
             minHeight: 'calc(100vh - 60px)',
-            paddingTop: '320px', // 카테고리 영역(64px) + 작품 목록(~100px) + 썸네일 영역(~100px) + 여백(~56px)과 겹치지 않도록
+            // 컨텐츠가 카테고리 + 작업 목록 아래에 배치되도록 동적 계산
+            // 공식: 카테고리 시작점(64px) + 카테고리 높이 + 여백(24px) + 작업목록 높이 + 여백(40px)
+            paddingTop: (() => {
+              const categoryStart = 64; // var(--space-8)
+              const gapBetweenCategoryAndWorkList = 24;
+              const gapBetweenWorkListAndContent = 40;
+              
+              if (selectedKeywordId && leftWorkListHeight > 0) {
+                // 문장형 카테고리 선택 시
+                return `${categoryStart + sentenceCategoryHeight + gapBetweenCategoryAndWorkList + leftWorkListHeight + gapBetweenWorkListAndContent}px`;
+              } else if (selectedExhibitionCategoryId && rightWorkListHeight > 0) {
+                // 전시명 카테고리 선택 시
+                return `${categoryStart + exhibitionCategoryHeight + gapBetweenCategoryAndWorkList + rightWorkListHeight + gapBetweenWorkListAndContent}px`;
+              }
+              // 기본값 (작업 목록이 없을 때)
+              return '200px';
+            })(),
           }}
         >
           {/* 선택된 작품의 미디어(이미지+영상) 표시 - AnimatePresence로 부드러운 전환 */}
