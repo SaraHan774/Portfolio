@@ -248,13 +248,19 @@ const TextCategory = memo(function TextCategory({
 }, (prevProps, nextProps) => {
   // Return true if props are equal (don't re-render)
   // Return false if props are different (re-render)
+
+  // Check array equality properly
+  const workIdsEqual =
+    prevProps.selectedWorkIds.length === nextProps.selectedWorkIds.length &&
+    prevProps.selectedWorkIds.every((id, index) => id === nextProps.selectedWorkIds[index]);
+
   return (
     prevProps.category.id === nextProps.category.id &&
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.hoveredCategoryId === nextProps.hoveredCategoryId &&
     prevProps.onSelect === nextProps.onSelect &&
     prevProps.onHover === nextProps.onHover &&
-    JSON.stringify(prevProps.selectedWorkIds) === JSON.stringify(nextProps.selectedWorkIds)
+    workIdsEqual
   );
 });
 

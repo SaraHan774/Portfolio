@@ -95,13 +95,19 @@ const SentenceCategory = memo(function SentenceCategory({
 }, (prevProps, nextProps) => {
   // Return true if props are equal (don't re-render)
   // Return false if props are different (re-render)
+
+  // Check array equality properly
+  const workIdsEqual =
+    prevProps.selectedWorkIds.length === nextProps.selectedWorkIds.length &&
+    prevProps.selectedWorkIds.every((id, index) => id === nextProps.selectedWorkIds[index]);
+
   return (
     prevProps.category.id === nextProps.category.id &&
     prevProps.selectedKeywordId === nextProps.selectedKeywordId &&
     prevProps.hoveredKeywordId === nextProps.hoveredKeywordId &&
     prevProps.onKeywordSelect === nextProps.onKeywordSelect &&
     prevProps.onKeywordHover === nextProps.onKeywordHover &&
-    JSON.stringify(prevProps.selectedWorkIds) === JSON.stringify(nextProps.selectedWorkIds)
+    workIdsEqual
   );
 });
 

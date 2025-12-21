@@ -2,11 +2,12 @@
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from '@/app/components/layout/Header';
 import Footer from '@/app/components/layout/Footer';
 import Sidebar from '@/app/components/layout/Sidebar';
+import Spinner from '@/app/components/common/Spinner';
 import { getWorkById, getWorksByKeywordId, getWorksByExhibitionCategoryId } from '@/lib/services/worksService';
 import { useCategories } from '@/app/contexts/CategoriesContext';
 import FloatingWorkWindow from '@/app/components/work/FloatingWorkWindow';
@@ -898,7 +899,7 @@ function WorkModal({
           justifyContent: 'center',
         }}
       >
-        <div style={{ color: 'white' }}>로딩 중...</div>
+        <Spinner size={24} color="white" />
       </div>
     );
   }
@@ -1700,7 +1701,11 @@ export default function WorkDetailPage() {
   }, [work, selectedWorkId]);
 
   // 현재 선택된 작품의 ID 목록 계산 (disabled 상태 계산용)
-  const selectedWorkIds = work ? [work.id, ...relatedWorks.map(w => w.id)] : [];
+  // Memoize to prevent categories from re-rendering
+  const selectedWorkIds = useMemo(
+    () => (work ? [work.id, ...relatedWorks.map(w => w.id)] : []),
+    [work, relatedWorks]
+  );
 
   // 이미지와 캡션 렌더링
   const renderCaption = (caption: string | undefined, captionId: string, isModal: boolean = false) => {

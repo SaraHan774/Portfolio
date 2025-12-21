@@ -6,6 +6,7 @@ import Header from '@/app/components/layout/Header';
 import Footer from '@/app/components/layout/Footer';
 import Sidebar from '@/app/components/layout/Sidebar';
 import MobileCategoryMenu from '@/app/components/layout/MobileCategoryMenu';
+import Spinner from '@/app/components/common/Spinner';
 import { useCategories } from '@/app/contexts/CategoriesContext';
 import { getWorksByKeywordId, getWorksByExhibitionCategoryId } from '@/lib/services/worksService';
 import type { Work } from '@/types';
@@ -85,7 +86,7 @@ export default function HomePage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div style={{ color: 'var(--color-text-muted)' }}>로딩 중...</div>
+        <Spinner size={24} />
       </div>
     );
   }
