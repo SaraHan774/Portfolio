@@ -57,7 +57,7 @@ export default function WorkTitleButton({
     width: '150px', // Fixed width
   };
 
-  // Title styling based on state
+  // Title styling based on state (matches category keyword behavior)
   const titleStyle: React.CSSProperties = {
     display: 'inline-block',
     fontSize: 'var(--font-size-sm)',
@@ -67,13 +67,15 @@ export default function WorkTitleButton({
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
     transition: 'color 0.2s ease-in-out',
-    ...(isHovered
+    // Selected or hovered: transparent with stroke (like category keywords)
+    // Unselected: gray color
+    ...(isSelected || isHovered
       ? {
           color: 'transparent',
           WebkitTextStroke: '0.7px var(--color-category-hover-stroke)',
         }
       : {
-          color: isSelected ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+          color: 'var(--color-text-secondary)', // Gray for unselected
         }),
   };
 
