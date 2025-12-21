@@ -32,6 +32,10 @@ export const queryKeys = {
       detail: (id: string) =>
         [...queryKeys.categories.all(), 'exhibition', 'detail', id] as const,
     },
+    keyword: {
+      detail: (id: string) =>
+        [...queryKeys.categories.all(), 'keyword', 'detail', id] as const,
+    },
   },
 
   // Settings

@@ -34,7 +34,7 @@ export class WorkRepository {
    * Get query key for works by exhibition category
    */
   static getWorksByExhibitionKey(categoryId: string) {
-    return queryKeys.works.byExhibition(categoryId);
+    return queryKeys.works.byExhibitionCategory(categoryId);
   }
 
   /**

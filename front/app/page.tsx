@@ -36,7 +36,7 @@ export default function HomePage() {
         setSentenceCategories(sentences);
         setExhibitionCategories(exhibitions);
       } catch (error) {
-        console.error('카테고리 로드 실패:', error);
+        console.error('[HomePage] 카테고리 로드 실패:', error);
       } finally {
         setIsLoading(false);
       }

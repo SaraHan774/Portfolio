@@ -27,7 +27,7 @@ export class CategoryRepository {
    * Get query key for sentence category by keyword ID
    */
   static getSentenceCategoryByKeywordIdKey(keywordId: string) {
-    return queryKeys.categories.sentence.byKeyword(keywordId);
+    return queryKeys.categories.sentence.keyword(keywordId);
   }
 
   /**
