@@ -13,6 +13,7 @@ import { Spinner } from '@/presentation';
 import { YouTubeEmbed } from '../media';
 import ModalImage from './ModalImage';
 import FloatingWorkWindow from './FloatingWorkWindow';
+import MediaTimeline from './MediaTimeline';
 
 interface WorkModalProps {
   /** 표시할 작품 ID */
@@ -337,84 +338,22 @@ export default function WorkModal({
               position: 'relative',
             }}
           >
-            {/* 타임라인 UI - 미디어가 2개 이상일 때만 표시 */}
-            {modalMediaItems.length > 1 && (
-              <div
-                style={{
-                  position: 'sticky',
-                  top: 'var(--space-6)',
-                  height: 'fit-content',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  paddingLeft: 'var(--space-4)',
-                  paddingRight: 'var(--space-2)',
-                  zIndex: 10,
-                }}
-              >
-                {(() => {
-                  const activeIndex = modalMediaItems.findIndex(
-                    (item) => item.data.id === modalCurrentImageId
-                  );
-
-                  return modalMediaItems.map((item, index) => {
-                    const isActive = modalCurrentImageId === item.data.id;
-                    const isLast = index === modalMediaItems.length - 1;
-
-                    const getLineHeight = () => {
-                      if (index === activeIndex) return '80px';
-                      else if (index === activeIndex - 1) return '50px';
-                      else return '25px';
-                    };
-
-                    return (
-                      <div
-                        key={item.data.id}
-                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
-                      >
-                        <button
-                          onClick={() => {
-                            const element = modalImageScrollContainerRef.current?.querySelector(
-                              `[data-image-id="${item.data.id}"]`
-                            );
-                            if (element) {
-                              element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }
-                          }}
-                          style={{
-                            width: isActive ? '8px' : '5px',
-                            height: isActive ? '8px' : '5px',
-                            borderRadius: '50%',
-                            backgroundColor: isActive
-                              ? 'var(--color-text-primary)'
-                              : 'var(--color-gray-400)',
-                            border: 'none',
-                            cursor: 'pointer',
-                            transition: 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                            padding: 0,
-                          }}
-                          aria-label={`미디어 ${index + 1}로 이동`}
-                        />
-                        {!isLast && (
-                          <div
-                            style={{
-                              width: '1px',
-                              height: getLineHeight(),
-                              backgroundImage:
-                                'linear-gradient(var(--color-gray-300) 50%, transparent 50%)',
-                              backgroundSize: '1px 5px',
-                              backgroundRepeat: 'repeat-y',
-                              margin: '5px 0',
-                              transition: 'height 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                            }}
-                          />
-                        )}
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            )}
+            {/* 타임라인 UI */}
+            <MediaTimeline
+              mediaItems={modalMediaItems}
+              currentMediaId={modalCurrentImageId}
+              positionStyle={{
+                position: 'sticky',
+                top: 'var(--space-6)',
+                left: 'unset',
+                transform: 'none',
+                height: 'fit-content',
+                paddingLeft: 'var(--space-4)',
+                paddingRight: 'var(--space-2)',
+                zIndex: 10,
+              }}
+              scrollContainerRef={modalImageScrollContainerRef}
+            />
 
             {/* 미디어 스크롤 영역 (이미지 + 영상) */}
             <div
@@ -493,8 +432,8 @@ export default function WorkModal({
                 work={hoveredWork}
                 position={hoverPosition}
                 onClick={(clickedWorkId) => {
-                  clearHover();
                   onWorkClick(clickedWorkId);
+                  clearHover();
                 }}
               />
             </div>

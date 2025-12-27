@@ -18,6 +18,7 @@ import {
   FadeInImage,
   WorkModal,
   CaptionWithBoundary,
+  MediaTimeline,
 } from '@/presentation';
 import { getMediaItems, hasMedia } from '@/core/utils';
 import { useCategories } from '@/state';
@@ -529,79 +530,10 @@ export default function WorkDetailPage() {
                   transition={{ duration: 0.15, ease: 'easeOut' }}
                 >
                   {/* 좌측 고정 타임라인 UI */}
-                  {sortedMedia.length > 1 && (
-                    <div
-                      style={{
-                        position: 'fixed',
-                        left: 'var(--category-margin-left)',
-                        top: '70%',
-                        transform: 'translateY(-50%)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        zIndex: 50,
-                      }}
-                    >
-                      {sortedMedia.map((item, index) => {
-                        const isActive = currentImageId === item.data.id;
-                        const isLast = index === sortedMedia.length - 1;
-
-                        return (
-                          <div
-                            key={item.data.id}
-                            style={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                            }}
-                          >
-                            <button
-                              onClick={() => {
-                                const element = document.querySelector(
-                                  `[data-image-id="${item.data.id}"]`
-                                );
-                                if (element) {
-                                  element.scrollIntoView({
-                                    behavior: 'smooth',
-                                    block: 'start',
-                                  });
-                                }
-                              }}
-                              style={{
-                                width: isActive ? '10px' : '6px',
-                                height: isActive ? '10px' : '6px',
-                                borderRadius: '50%',
-                                backgroundColor: isActive
-                                  ? 'var(--color-text-primary)'
-                                  : 'var(--color-gray-400)',
-                                border: 'none',
-                                cursor: 'pointer',
-                                transition:
-                                  'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                                padding: 0,
-                              }}
-                              aria-label={`미디어 ${index + 1}로 이동`}
-                            />
-                            {!isLast && (
-                              <div
-                                style={{
-                                  width: '1px',
-                                  height: '50px',
-                                  backgroundImage:
-                                    'linear-gradient(var(--color-gray-300) 50%, transparent 50%)',
-                                  backgroundSize: '1px 6px',
-                                  backgroundRepeat: 'repeat-y',
-                                  margin: '6px 0',
-                                  transition:
-                                    'height 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                                }}
-                              />
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                  <MediaTimeline
+                    mediaItems={sortedMedia}
+                    currentMediaId={currentImageId}
+                  />
 
                   {/* 컨텐츠 영역: 미디어 + 캡션 */}
                   <div
