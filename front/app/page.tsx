@@ -8,8 +8,8 @@ import {
   CategorySidebar,
   WorkListScroller,
   MobileCategoryMenu,
-  Spinner
 } from '@/presentation';
+import { LoadingContainer } from '@/presentation/ui';
 import { useCategories, useCategorySelection, useUIState } from '@/state';
 import { useFilteredWorks } from '@/domain';
 
@@ -71,11 +71,7 @@ export default function HomePage() {
   }, [selectedKeywordId, selectedExhibitionCategoryId, router]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Spinner size={24} />
-      </div>
-    );
+    return <LoadingContainer size={24} />;
   }
 
   return (

@@ -189,9 +189,8 @@ export default function WorkTitleButton({
               left: 0,
               width: '100%',
               height: '100%',
-              borderRadius: '2px',
               overflow: 'hidden',
-              border: isHovered ? '2px solid red' : '2px solid transparent',
+              border: isHovered ? '1px solid #B22222' : '1px solid transparent',
               transition: 'border-color 0.2s ease-out',
               boxSizing: 'border-box',
             }}
