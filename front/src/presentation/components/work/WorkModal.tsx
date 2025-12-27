@@ -6,13 +6,13 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { useWork } from '@/domain';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useWork, useCaptionHoverEvents } from '@/domain';
 import { getMediaItems } from '@/core/utils';
 import { Spinner } from '@/presentation';
 import { YouTubeEmbed } from '../media';
 import ModalImage from './ModalImage';
-import type { Work } from '@/types';
+import FloatingWorkWindow from './FloatingWorkWindow';
 
 interface WorkModalProps {
   /** 표시할 작품 ID */
@@ -38,8 +38,25 @@ export default function WorkModal({
   // Fetch work data using domain hook
   const { data: modalWork } = useWork(workId);
 
+  // Caption hover events 설정
+  const { hoveredWorkId, hoverPosition, clearHover } = useCaptionHoverEvents({
+    containerSelector: '[data-is-modal="true"]',
+    hoverDelay: 400,
+    hideDelay: 200,
+    currentWorkId: modalWork?.id,
+    dependencies: [modalWork],
+  });
+
+  // Hover 중인 작업 데이터
+  const { data: hoveredWork } = useWork(hoveredWorkId || '');
+
   const [modalCurrentImageId, setModalCurrentImageId] = useState<string | null>(null);
   const modalImageScrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // 모달 작품이 변경될 때 hover 상태 초기화
+  useEffect(() => {
+    clearHover();
+  }, [workId, clearHover]);
 
   // 모달 열릴 때 배경 스크롤 방지
   useEffect(() => {
@@ -148,38 +165,31 @@ export default function WorkModal({
     };
   }, [modalWork, modalCurrentImageId]);
 
-  // 모달 내 링크 클릭 이벤트 처리
+  // 모달 내 링크 클릭 이벤트 처리 (이벤트 위임)
   useEffect(() => {
-    if (!modalWork) return;
-
     const handleLinkClick = (e: Event) => {
-      e.preventDefault();
       const target = e.target as HTMLElement;
       const link = target.closest('a[data-work-id]') as HTMLElement;
-      if (link) {
+
+      // 모달 내부 캡션의 링크만 처리
+      const modalCaptionContainer = link?.closest('[data-is-modal="true"]');
+      if (link && modalCaptionContainer) {
+        e.preventDefault();
         const clickedWorkId = link.getAttribute('data-work-id');
         if (clickedWorkId) {
+          clearHover(); // Hover 상태 초기화
           onWorkClick(clickedWorkId);
         }
       }
     };
 
-    const captionContainers = document.querySelectorAll('[data-is-modal="true"]');
-    const links: HTMLElement[] = [];
-    captionContainers.forEach((container) => {
-      const containerLinks = container.querySelectorAll('a[data-work-id]');
-      containerLinks.forEach((link) => {
-        links.push(link as HTMLElement);
-        link.addEventListener('click', handleLinkClick);
-      });
-    });
+    // document.body에 이벤트 위임으로 부착 (동적 링크 포함)
+    document.body.addEventListener('click', handleLinkClick);
 
     return () => {
-      links.forEach((link) => {
-        link.removeEventListener('click', handleLinkClick);
-      });
+      document.body.removeEventListener('click', handleLinkClick);
     };
-  }, [modalWork, onWorkClick]);
+  }, [onWorkClick, clearHover]);
 
   // 로딩 상태
   if (!modalWork) {
@@ -301,24 +311,12 @@ export default function WorkModal({
           <h2
             style={{
               fontSize: 'var(--font-size-lg)',
-              fontWeight: 'var(--font-weight-bold)',
               color: 'var(--color-text-primary)',
               margin: 0,
               textAlign: 'center',
             }}
           >
-            {`「'${modalWork.title}'」`}
-            {modalWork.year && (
-              <span
-                style={{
-                  fontWeight: 'var(--font-weight-normal)',
-                  color: 'var(--color-text-secondary)',
-                  marginLeft: '8px',
-                }}
-              >
-                {modalWork.year}
-              </span>
-            )}
+              {`「‘${modalWork.title}’」${modalWork.year ? `,\u00A0${modalWork.year}` : ''}`}
           </h2>
         </div>
 
@@ -486,6 +484,22 @@ export default function WorkModal({
             )}
           </div>
         </div>
+
+        {/* FloatingWorkWindow - Caption hover */}
+        <AnimatePresence>
+          {hoveredWork && hoverPosition && (
+            <div data-floating-window="true" style={{ zIndex: 1100, position: 'absolute' }}>
+              <FloatingWorkWindow
+                work={hoveredWork}
+                position={hoverPosition}
+                onClick={(clickedWorkId) => {
+                  clearHover();
+                  onWorkClick(clickedWorkId);
+                }}
+              />
+            </div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </motion.div>
   );

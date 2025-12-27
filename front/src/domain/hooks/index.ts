@@ -16,3 +16,4 @@ export * from './useWorkListScroll';
 export * from './useKeywordState';
 export * from './useKeywordStyle';
 export * from './useClickAnimationTracking';
+export * from './useCaptionHoverEvents';

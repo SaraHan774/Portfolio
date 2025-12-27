@@ -21,8 +21,7 @@ import {
 } from '@/presentation';
 import { getMediaItems, hasMedia } from '@/core/utils';
 import { useCategories } from '@/state';
-import { useWork, useWorksByKeyword, useWorksByExhibitionCategory } from '@/domain';
-import type { Work } from '@/types';
+import { useWork, useWorksByKeyword, useWorksByExhibitionCategory, useCaptionHoverEvents } from '@/domain';
 
 /**
  * 캡션 렌더링 함수
@@ -87,8 +86,6 @@ export default function WorkDetailPage() {
   const [selectedExhibitionCategoryId, setSelectedExhibitionCategoryId] = useState<string | null>(urlExhibitionId);
   const [currentImageId, setCurrentImageId] = useState<string | null>(null);
   const [selectedWorkId, setSelectedWorkId] = useState<string | null>(workId);
-  const [hoveredWorkId, setHoveredWorkId] = useState<string | null>(null);
-  const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
   const [modalWorkId, setModalWorkId] = useState<string | null>(null);
   const [sentenceCategoryHeight, setSentenceCategoryHeight] = useState<number>(0);
   const [exhibitionCategoryHeight, setExhibitionCategoryHeight] = useState<number>(0);
@@ -102,6 +99,18 @@ export default function WorkDetailPage() {
     selectedExhibitionCategoryId || undefined
   );
 
+  // Caption hover events 설정
+  const { hoveredWorkId, hoverPosition, clearHover } = useCaptionHoverEvents({
+    containerSelector: '[data-caption-container-id]',
+    hoverDelay: 400,
+    hideDelay: 200,
+    currentWorkId: work?.id,
+    dependencies: [work, renderCaption],
+  });
+
+  // Hover 중인 작업 데이터 (캡션 링크용)
+  const { data: hoveredWork } = useWork(hoveredWorkId || '');
+
   // Determine related works based on selected category
   const relatedWorks = selectedKeywordId ? keywordWorks : selectedExhibitionCategoryId ? exhibitionWorks : [];
 
@@ -109,25 +118,16 @@ export default function WorkDetailPage() {
   const imageScrollContainerRef = useRef<HTMLDivElement>(null);
   const leftWorkListRef = useRef<HTMLDivElement>(null);
   const rightWorkListRef = useRef<HTMLDivElement>(null);
-  const hoverPositionRef = useRef({ x: 0, y: 0 });
-  const hoveredWorkIdRef = useRef<string | null>(null);
-  const observerRef = useRef<MutationObserver | null>(null);
-  const hoverLinkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isInSafeZoneRef = useRef<boolean>(true);
 
   // 선택된 카테고리의 작품 ID 목록 (disabled 상태 계산용)
   const selectedWorkIds = useMemo(() => relatedWorks.map((w) => w.id), [relatedWorks]);
 
-  // hoverPosition이 변경될 때마다 ref 업데이트
+  // 모달이 열릴 때 hover 상태 초기화
   useEffect(() => {
-    hoverPositionRef.current = hoverPosition;
-  }, [hoverPosition]);
-
-  // hoveredWorkId가 변경될 때마다 ref 업데이트
-  useEffect(() => {
-    hoveredWorkIdRef.current = hoveredWorkId;
-  }, [hoveredWorkId]);
+    if (modalWorkId) {
+      clearHover();
+    }
+  }, [modalWorkId, clearHover]);
 
   // 작품 데이터 로드 시 초기화
   useEffect(() => {
@@ -203,119 +203,6 @@ export default function WorkDetailPage() {
       resizeObserver.disconnect();
     };
   }, [selectedExhibitionCategoryId, relatedWorks]);
-
-  // 스크롤 시 Floating Window 숨김
-  useEffect(() => {
-    if (!hoveredWorkId) return;
-
-    const handleScroll = () => {
-      setHoveredWorkId(null);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, [hoveredWorkId]);
-
-  // 마우스가 링크나 FloatingWindow 밖으로 나가면 사라짐
-  useEffect(() => {
-    if (!hoveredWorkId) {
-      isInSafeZoneRef.current = true;
-      return;
-    }
-
-    const checkSafeZone = (mouseX: number, mouseY: number): boolean => {
-      const SAFE_MARGIN = 20;
-
-      // 링크 영역 체크
-      const links = document.querySelectorAll(`a[data-work-id="${hoveredWorkIdRef.current}"]`);
-      let linkBottom = 0;
-      let linkLeft = Infinity;
-      let linkRight = 0;
-
-      for (const link of links) {
-        const rect = link.getBoundingClientRect();
-        linkBottom = Math.max(linkBottom, rect.bottom);
-        linkLeft = Math.min(linkLeft, rect.left);
-        linkRight = Math.max(linkRight, rect.right);
-
-        if (
-          mouseX >= rect.left - SAFE_MARGIN &&
-          mouseX <= rect.right + SAFE_MARGIN &&
-          mouseY >= rect.top - SAFE_MARGIN &&
-          mouseY <= rect.bottom + SAFE_MARGIN
-        ) {
-          return true;
-        }
-      }
-
-      // FloatingWindow 영역 체크
-      const floatingWindow = document.querySelector('[data-floating-window="true"]');
-      if (floatingWindow) {
-        const rect = floatingWindow.getBoundingClientRect();
-        if (
-          mouseX >= rect.left - SAFE_MARGIN &&
-          mouseX <= rect.right + SAFE_MARGIN &&
-          mouseY >= rect.top - SAFE_MARGIN &&
-          mouseY <= rect.bottom + SAFE_MARGIN
-        ) {
-          return true;
-        }
-
-        // 링크와 FloatingWindow 사이 연결 영역 (세로)
-        if (
-          mouseY >= linkBottom - SAFE_MARGIN &&
-          mouseY <= rect.top + SAFE_MARGIN &&
-          mouseX >= Math.min(linkLeft, rect.left) - SAFE_MARGIN &&
-          mouseX <= Math.max(linkRight, rect.right) + SAFE_MARGIN
-        ) {
-          return true;
-        }
-      } else if (linkBottom > 0) {
-        // FloatingWindow 로딩 중일 때 링크 아래 영역 허용
-        if (
-          mouseY >= linkBottom - SAFE_MARGIN &&
-          mouseY <= linkBottom + 180 &&
-          mouseX >= linkLeft - 100 &&
-          mouseX <= linkRight + 100
-        ) {
-          return true;
-        }
-      }
-
-      return false;
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const isInSafeZone = checkSafeZone(e.clientX, e.clientY);
-
-      if (isInSafeZone) {
-        isInSafeZoneRef.current = true;
-        if (hideTimeoutRef.current) {
-          clearTimeout(hideTimeoutRef.current);
-          hideTimeoutRef.current = null;
-        }
-      } else if (isInSafeZoneRef.current) {
-        isInSafeZoneRef.current = false;
-        if (!hideTimeoutRef.current) {
-          hideTimeoutRef.current = setTimeout(() => {
-            setHoveredWorkId(null);
-            hideTimeoutRef.current = null;
-          }, 200);
-        }
-      }
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-        hideTimeoutRef.current = null;
-      }
-    };
-  }, [hoveredWorkId]);
 
   // Intersection Observer로 현재 보이는 이미지 감지
   useEffect(() => {
@@ -430,188 +317,31 @@ export default function WorkDetailPage() {
     };
   }, [selectedWorkId, work, relatedWorks, workId]);
 
-  // 캡션 내 링크에 호버 이벤트 추가
+  // 캡션 내 링크 클릭 이벤트 처리 (이벤트 위임)
   useEffect(() => {
-    if (!work) return;
-
-    const eventHandlers = new Map<
-      HTMLElement,
-      {
-        enter: (e: Event) => void;
-        leave: () => void;
-        move: (e: Event) => void;
-        click: (e: Event) => void;
-      }
-    >();
-
-    const handleLinkMouseEnter = (e: Event) => {
-      const target = e.target as HTMLElement;
-      const link = target.closest('a[data-work-id]') as HTMLElement;
-      if (link) {
-        const linkWorkId = link.getAttribute('data-work-id');
-        if (linkWorkId) {
-          if (hoverLinkTimeoutRef.current) {
-            clearTimeout(hoverLinkTimeoutRef.current);
-            hoverLinkTimeoutRef.current = null;
-          }
-          if (hideTimeoutRef.current) {
-            clearTimeout(hideTimeoutRef.current);
-            hideTimeoutRef.current = null;
-          }
-
-          hoverLinkTimeoutRef.current = setTimeout(() => {
-            const rect = link.getBoundingClientRect();
-            const x = rect.left + rect.width / 2;
-            const y = rect.bottom;
-
-            isInSafeZoneRef.current = true;
-
-            setHoverPosition({ x, y });
-            setHoveredWorkId(linkWorkId);
-            hoverLinkTimeoutRef.current = null;
-          }, 400);
-        }
-      }
-    };
-
-    const handleLinkMouseLeave = () => {
-      if (hoverLinkTimeoutRef.current) {
-        clearTimeout(hoverLinkTimeoutRef.current);
-        hoverLinkTimeoutRef.current = null;
-      }
-    };
-
-    const handleLinkMouseMove = () => {};
-
     const handleLinkClick = (e: Event) => {
-      e.preventDefault();
       const target = e.target as HTMLElement;
       const link = target.closest('a[data-work-id]') as HTMLElement;
-      if (link) {
+
+      // 캡션 컨테이너 내부의 링크만 처리 (모달이 아닌 경우)
+      const captionContainer = link?.closest('[data-is-modal="false"]');
+      if (link && captionContainer) {
+        e.preventDefault();
         const clickedWorkId = link.getAttribute('data-work-id');
         if (clickedWorkId) {
-          if (hoverLinkTimeoutRef.current) {
-            clearTimeout(hoverLinkTimeoutRef.current);
-            hoverLinkTimeoutRef.current = null;
-          }
-          setHoveredWorkId(null);
-          hoveredWorkIdRef.current = null;
+          clearHover(); // Hover 상태 초기화
           setModalWorkId(clickedWorkId);
         }
       }
     };
 
-    const attachEventListeners = (container: Element) => {
-      const links = container.querySelectorAll('a[data-work-id]');
-      links.forEach((link) => {
-        const linkElement = link as HTMLElement;
-
-        const existingHandlers = eventHandlers.get(linkElement);
-        if (existingHandlers) {
-          linkElement.removeEventListener('mouseenter', existingHandlers.enter);
-          linkElement.removeEventListener('mouseleave', existingHandlers.leave);
-          linkElement.removeEventListener('mousemove', existingHandlers.move);
-          linkElement.removeEventListener('click', existingHandlers.click);
-        }
-
-        const handlers = {
-          enter: handleLinkMouseEnter,
-          leave: handleLinkMouseLeave,
-          move: handleLinkMouseMove,
-          click: handleLinkClick,
-        };
-        eventHandlers.set(linkElement, handlers);
-
-        linkElement.addEventListener('mouseenter', handlers.enter);
-        linkElement.addEventListener('mouseleave', handlers.leave);
-        linkElement.addEventListener('mousemove', handlers.move);
-        linkElement.addEventListener('click', handlers.click);
-      });
-    };
-
-    const setupEventListeners = () => {
-      eventHandlers.forEach((handlers, link) => {
-        link.removeEventListener('mouseenter', handlers.enter);
-        link.removeEventListener('mouseleave', handlers.leave);
-        link.removeEventListener('mousemove', handlers.move);
-        link.removeEventListener('click', handlers.click);
-      });
-      eventHandlers.clear();
-
-      const captionContainers = document.querySelectorAll('[data-caption-container-id]');
-      captionContainers.forEach(attachEventListeners);
-
-      const observer = new MutationObserver(() => {
-        const allContainers = document.querySelectorAll('[data-caption-container-id]');
-        allContainers.forEach((container) => {
-          const links = container.querySelectorAll('a[data-work-id]');
-          links.forEach((link) => {
-            const linkElement = link as HTMLElement;
-            if (!eventHandlers.has(linkElement)) {
-              const handlers = {
-                enter: handleLinkMouseEnter,
-                leave: handleLinkMouseLeave,
-                move: handleLinkMouseMove,
-                click: handleLinkClick,
-              };
-              eventHandlers.set(linkElement, handlers);
-              linkElement.addEventListener('mouseenter', handlers.enter);
-              linkElement.addEventListener('mouseleave', handlers.leave);
-              linkElement.addEventListener('mousemove', handlers.move);
-              linkElement.addEventListener('click', handlers.click);
-            }
-          });
-        });
-      });
-
-      const mainElement = document.querySelector('main');
-      if (mainElement) {
-        observer.observe(mainElement, {
-          childList: true,
-          subtree: true,
-        });
-      }
-
-      return observer;
-    };
-
-    const timeoutId = setTimeout(() => {
-      const observer = setupEventListeners();
-      observerRef.current = observer;
-    }, 100);
-
-    const recheckTimeoutId = setTimeout(() => {
-      const captionContainers = document.querySelectorAll('[data-caption-container-id]');
-      captionContainers.forEach(attachEventListeners);
-    }, 300);
+    // document.body에 이벤트 위임으로 부착 (동적 링크 포함)
+    document.body.addEventListener('click', handleLinkClick);
 
     return () => {
-      clearTimeout(timeoutId);
-      clearTimeout(recheckTimeoutId);
-
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-        observerRef.current = null;
-      }
-
-      eventHandlers.forEach((handlers, link) => {
-        link.removeEventListener('mouseenter', handlers.enter);
-        link.removeEventListener('mouseleave', handlers.leave);
-        link.removeEventListener('mousemove', handlers.move);
-        link.removeEventListener('click', handlers.click);
-      });
-      eventHandlers.clear();
-
-      if (hoverLinkTimeoutRef.current) {
-        clearTimeout(hoverLinkTimeoutRef.current);
-        hoverLinkTimeoutRef.current = null;
-      }
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-        hideTimeoutRef.current = null;
-      }
+      document.body.removeEventListener('click', handleLinkClick);
     };
-  }, [work, selectedWorkId]);
+  }, [clearHover]);
 
   // 작품 선택 핸들러 - URL 업데이트 포함
   const handleWorkSelect = useCallback(
@@ -975,50 +705,16 @@ export default function WorkDetailPage() {
 
       {/* 플로팅 작품 미리보기 */}
       <AnimatePresence>
-        {hoveredWorkId &&
-          (() => {
-            const hoveredWork =
-              relatedWorks.find((w) => w.id === hoveredWorkId) ||
-              (hoveredWorkId === workId ? work : null);
-
-            if (!hoveredWork) return null;
-
-            return (
-              <motion.div
-                key="floating-window-container"
-                className="floating-work-window-container"
-                initial={{ opacity: 1 }}
-                animate={{ opacity: 1 }}
-                exit={{
-                  opacity: 0,
-                  transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] },
-                }}
-                onMouseEnter={(e) => {
-                  e.stopPropagation();
-                }}
-                style={{
-                  position: 'fixed',
-                  left: 0,
-                  top: 0,
-                  width: '100vw',
-                  height: '100vh',
-                  pointerEvents: 'none',
-                  zIndex: 999,
-                }}
-              >
-                <div style={{ pointerEvents: 'auto' }}>
-                  <FloatingWorkWindow
-                    work={hoveredWork}
-                    position={hoverPosition}
-                    onClick={(clickedWorkId) => {
-                      setHoveredWorkId(null);
-                      setModalWorkId(clickedWorkId);
-                    }}
-                  />
-                </div>
-              </motion.div>
-            );
-          })()}
+        {hoveredWorkId && hoverPosition && hoveredWork && !modalWorkId && (
+          <FloatingWorkWindow
+            work={hoveredWork}
+            position={hoverPosition}
+            onClick={(clickedWorkId) => {
+              clearHover();
+              setModalWorkId(clickedWorkId);
+            }}
+          />
+        )}
       </AnimatePresence>
 
       <Footer />
