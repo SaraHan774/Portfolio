@@ -1,18 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { getSiteSettings } from '@/lib/services/settingsService';
+import { useSiteSettings } from '@/domain';
 
 export default function Footer() {
-  const [footerText, setFooterText] = useState('');
-
-  useEffect(() => {
-    const loadSettings = async () => {
-      const settings = await getSiteSettings();
-      setFooterText(settings.footerText);
-    };
-    loadSettings();
-  }, []);
+  const { data: settings } = useSiteSettings();
 
   return (
     <footer
@@ -25,7 +16,7 @@ export default function Footer() {
         color: 'var(--color-text-muted)',
       }}
     >
-      {footerText}
+      {settings?.footerText || ''}
     </footer>
   );
 }
