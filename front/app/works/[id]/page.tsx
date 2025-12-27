@@ -718,7 +718,7 @@ export default function WorkDetailPage() {
             style={{
               left: 'var(--category-margin-left)',
               top: `calc(var(--space-8) + ${sentenceCategoryHeight}px + 24px)`,
-              maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-left))',
+              maxWidth: 'calc(70% - var(--content-gap) - var(--category-margin-left))',
               zIndex: 100,
             }}
           >
@@ -747,7 +747,7 @@ export default function WorkDetailPage() {
               right: 'var(--category-margin-right)',
               top: `calc(var(--space-8) + ${exhibitionCategoryHeight}px + 24px)`,
               textAlign: 'right',
-              maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-right))',
+              maxWidth: 'calc(70% - var(--content-gap) - var(--category-margin-right))',
               zIndex: 100,
             }}
           >

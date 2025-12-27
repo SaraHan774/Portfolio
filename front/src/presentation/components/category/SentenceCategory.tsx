@@ -90,7 +90,7 @@ const SentenceCategory = memo(function SentenceCategory({
         color: 'var(--color-text-secondary)',
       }}
     >
-      {'\''}{renderSentence()}{'\''}
+      {'‘'}{renderSentence()}{'’'}
     </div>
   );
 }, (prevProps, nextProps) => {
