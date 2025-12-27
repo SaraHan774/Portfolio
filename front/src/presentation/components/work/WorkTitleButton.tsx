@@ -66,7 +66,7 @@ export default function WorkTitleButton({
   const animateState = isHovered ? 'hover' : isSelected ? 'selected' : 'normal';
 
   // Format title with quotes and year
-  const displayText = `「'${work.title}'」,\u00A0${work.year ? work.year : ''}`;
+  const displayText = `「‘${work.title}’」,\u00A0${work.year ? work.year : ''}`;
   const characters = displayText.split('');
 
   // Container styling for dot positioning (no overflow)
