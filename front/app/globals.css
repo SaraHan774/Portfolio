@@ -67,7 +67,7 @@
   /* 좌/우 카테고리 영역 (고정 박스 없음) */
   --category-margin-left: var(--space-6);    /* 48px - 좌측 시작점 */
   --category-margin-right: var(--space-6);   /* 48px - 우측 끝점 */
-  --category-spacing: 10px;                  /* 10px - 문장 간 간격 (20px의 50%) */
+  --category-spacing: 20px;                  /* 10px - 문장 간 간격 (20px의 50%) */
   --category-font-size: 12px;                /* 카테고리 글꼴 사이즈 (15px의 80%) */
   --category-line-height: 1.8;
 
@@ -299,5 +299,18 @@ img {
   100% {
     background-position: 200% 0;
   }
+}
+
+/* 스크롤 가능한 카테고리 리스트 스타일 */
+.scrollable-category-list {
+  /* 스크롤바 완전히 숨김 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollable-category-list::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 

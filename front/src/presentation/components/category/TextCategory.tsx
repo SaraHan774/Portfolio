@@ -39,7 +39,6 @@ const TextCategory = memo(function TextCategory({
       if (!hasBeenClickedBefore) {
         categoryAnimationStore.markAsClicked(category.id);
         setJustClicked(true); // Mark that we just clicked
-        console.log(`✓ User clicked exhibition ${category.id}`);
       }
       onSelect();
     }
