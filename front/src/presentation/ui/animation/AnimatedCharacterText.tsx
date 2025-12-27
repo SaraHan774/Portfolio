@@ -7,7 +7,7 @@
  * animating them individually with a stagger effect on hover/selection.
  */
 
-import { useMemo, memo } from 'react';
+import React, { useMemo, memo } from 'react';
 import { motion } from 'framer-motion';
 import { KEYWORD_ANIMATION_VARIANTS } from '@/core/constants';
 import type { Variants } from 'framer-motion';

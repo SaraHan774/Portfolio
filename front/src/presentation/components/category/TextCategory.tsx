@@ -1,8 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import { motion } from 'framer-motion';
-import { useKeywordState, useKeywordStyle, useClickAnimationTracking } from '@/domain';
+import { useKeywordState, useClickAnimationTracking } from '@/domain';
 import { AnimatedCharacterText, DotIndicator } from '@/presentation/ui';
 import type { ExhibitionCategory } from '@/types';
 
@@ -43,16 +42,6 @@ const TextCategory = memo(function TextCategory({
     isClickable,
   });
 
-  // 스타일 계산 (useKeywordStyle 사용 + TextCategory 전용 스타일 추가)
-  const baseStyle = useKeywordStyle(state);
-  const categoryStyle = {
-    ...baseStyle,
-    fontSize: 'var(--category-font-size)',
-    lineHeight: 'var(--line-height-relaxed)',
-    display: 'block',
-    whiteSpace: 'normal' as const,
-  };
-
   // 전시명 카테고리 표시 형식: <작업명> + 전시유형, 공간, 년도
   const displayTitle = `<${category.title}>`;
   const displayDescription = `${category.description.exhibitionType}, ${category.description.venue}, ${category.description.year}`;
@@ -68,23 +57,6 @@ const TextCategory = memo(function TextCategory({
         isSelected={isSelected}
         hasBeenClickedBefore={hasBeenClickedBefore}
         containerStyle={{ display: 'block' }}
-        containerVariants={{
-          hover: {
-            transition: {
-              staggerChildren: 0.02, // 좌→우 샤라락 효과 (TextCategory uses slower stagger than keywords)
-            },
-          },
-          selected: {
-            transition: {
-              staggerChildren: 0,
-            },
-          },
-          normal: {
-            transition: {
-              staggerChildren: 0,
-            },
-          },
-        }}
         characterStyle={(isActive) => ({
           display: 'inline-block',
           color: isActive ? 'transparent' : 'var(--color-category-clickable)',

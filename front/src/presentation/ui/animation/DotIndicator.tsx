@@ -7,7 +7,7 @@
  * is first selected, with configurable timing and positioning.
  */
 
-import { memo } from 'react';
+import React, { memo } from 'react';
 import { motion } from 'framer-motion';
 
 export interface DotIndicatorProps {

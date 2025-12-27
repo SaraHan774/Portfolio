@@ -1,7 +1,7 @@
 // Custom hook for keyword state calculation logic
 
 import { useMemo } from 'react';
-import type { KeywordCategory, CategoryState, WorkOrder } from '../../core/types';
+import type { CategoryState, WorkOrder } from '@/core/types';
 
 export interface UseKeywordStateOptions<T extends { workOrders?: WorkOrder[] }> {
   /** The keyword or category to calculate state for */

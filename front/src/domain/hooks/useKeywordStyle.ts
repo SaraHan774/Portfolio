@@ -1,7 +1,7 @@
 // Custom hook for keyword styling logic
 
 import { useMemo } from 'react';
-import type { CategoryState } from '../../core/types';
+import type { CategoryState } from '@/core/types';
 
 /**
  * Get CSS styles for keyword based on its current state
