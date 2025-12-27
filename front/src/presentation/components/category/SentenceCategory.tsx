@@ -180,7 +180,6 @@ function AnimatedKeyword({
       if (!hasBeenClickedBefore) {
         categoryAnimationStore.markAsClicked(keyword.id);
         justClicked.current = true;
-        console.log(`✓ User clicked keyword ${keyword.id}`);
       }
       onSelect(keyword.id);
     }

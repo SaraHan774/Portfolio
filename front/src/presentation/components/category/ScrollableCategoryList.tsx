@@ -85,29 +85,30 @@ export default function ScrollableCategoryList({
   useEffect(() => {
     // 초기 체크
     checkScrollability();
-    
+
     // 뷰포트 리사이즈 시 재계산
     const handleResize = () => {
       checkScrollability();
     };
     window.addEventListener('resize', handleResize, { passive: true });
-    
+
     // 컨텐츠 변경 시 재계산
     const content = contentRef.current;
+    let resizeObserver: ResizeObserver | null = null;
+
     if (content) {
-      const resizeObserver = new ResizeObserver(() => {
+      resizeObserver = new ResizeObserver(() => {
         checkScrollability();
       });
       resizeObserver.observe(content);
-      
-      return () => {
-        window.removeEventListener('resize', handleResize);
-        resizeObserver.disconnect();
-      };
     }
-    
+
+    // 항상 window event listener와 ResizeObserver를 정리
     return () => {
       window.removeEventListener('resize', handleResize);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
     };
   }, [checkScrollability]);
   
