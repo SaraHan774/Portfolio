@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { getWorkById } from '@/lib/services/worksService';
+import { useWork } from '@/domain';
 import { getMediaItems } from '@/core/utils';
 import { Spinner } from '@/presentation';
 import { YouTubeEmbed } from '../media';
@@ -35,7 +35,9 @@ export default function WorkModal({
   onWorkClick,
   renderCaption,
 }: WorkModalProps) {
-  const [modalWork, setModalWork] = useState<Work | null>(null);
+  // Fetch work data using domain hook
+  const { data: modalWork } = useWork(workId);
+
   const [modalCurrentImageId, setModalCurrentImageId] = useState<string | null>(null);
   const modalImageScrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -47,25 +49,19 @@ export default function WorkModal({
     };
   }, []);
 
-  // 모달 작업 데이터 로드
+  // 첫 번째 미디어 ID 설정 및 스크롤 초기화
   useEffect(() => {
-    const loadModalWork = async () => {
-      const work = await getWorkById(workId);
-      setModalWork(work);
-      if (work) {
-        // 이미지와 영상을 통합하여 첫 번째 미디어 ID 설정
-        const mediaItems = getMediaItems(work);
-        if (mediaItems.length > 0) {
-          setModalCurrentImageId(mediaItems[0].data.id);
-        }
+    if (modalWork) {
+      const mediaItems = getMediaItems(modalWork);
+      if (mediaItems.length > 0) {
+        setModalCurrentImageId(mediaItems[0].data.id);
       }
       // 스크롤 초기화 (다른 작품으로 이동 시)
       if (modalImageScrollContainerRef.current) {
         modalImageScrollContainerRef.current.scrollTop = 0;
       }
-    };
-    void loadModalWork();
-  }, [workId]);
+    }
+  }, [modalWork, workId]);
 
   // 모달 내 이미지 Intersection Observer + 스크롤 끝 감지
   useEffect(() => {

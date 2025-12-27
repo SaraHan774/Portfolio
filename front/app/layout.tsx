@@ -34,9 +34,9 @@ export default function RootLayout({
         className={`${nanumMyeongjo.variable} antialiased`}
         style={{ fontFamily: 'var(--font-nanum-myeongjo)' }}
       >
-        <DynamicMetadata />
         <ErrorBoundary>
           <QueryProvider>
+            <DynamicMetadata />
             <CategoriesProvider>
               <CategorySelectionProvider>
                 <WorkSelectionProvider>

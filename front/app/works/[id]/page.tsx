@@ -19,13 +19,9 @@ import {
   WorkModal,
   CaptionWithBoundary,
 } from '@/presentation';
-import {
-  getWorkById,
-  getWorksByKeywordId,
-  getWorksByExhibitionCategoryId,
-} from '@/lib/services/worksService';
 import { getMediaItems, hasMedia } from '@/core/utils';
 import { useCategories } from '@/state';
+import { useWork, useWorksByKeyword, useWorksByExhibitionCategory } from '@/domain';
 import type { Work } from '@/types';
 
 /**
@@ -99,10 +95,15 @@ export default function WorkDetailPage() {
   const [leftWorkListHeight, setLeftWorkListHeight] = useState<number>(0);
   const [rightWorkListHeight, setRightWorkListHeight] = useState<number>(0);
 
-  // 작품 데이터 상태
-  const [work, setWork] = useState<Work | null>(null);
-  const [relatedWorks, setRelatedWorks] = useState<Work[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Fetch work data using domain hooks
+  const { data: work, isLoading } = useWork(workId);
+  const { data: keywordWorks = [] } = useWorksByKeyword(selectedKeywordId || undefined);
+  const { data: exhibitionWorks = [] } = useWorksByExhibitionCategory(
+    selectedExhibitionCategoryId || undefined
+  );
+
+  // Determine related works based on selected category
+  const relatedWorks = selectedKeywordId ? keywordWorks : selectedExhibitionCategoryId ? exhibitionWorks : [];
 
   // Refs
   const imageScrollContainerRef = useRef<HTMLDivElement>(null);
@@ -128,59 +129,30 @@ export default function WorkDetailPage() {
     hoveredWorkIdRef.current = hoveredWorkId;
   }, [hoveredWorkId]);
 
-  // 초기 데이터 로드 (작업 데이터 및 관련 작업 목록)
+  // 작품 데이터 로드 시 초기화
   useEffect(() => {
-    const loadInitialData = async () => {
-      setIsLoading(true);
-      try {
-        const workData = await getWorkById(workId);
+    if (!work) return;
 
-        if (!workData) {
-          router.push('/');
-          return;
-        }
+    setSelectedWorkId(workId);
 
-        setWork(workData);
-        setSelectedWorkId(workId);
+    // 첫 번째 미디어 ID 설정
+    const mediaItems = getMediaItems(work);
+    if (mediaItems.length > 0) {
+      setCurrentImageId(mediaItems[0].data.id);
+    }
 
-        // 첫 번째 미디어 ID 설정
-        const mediaItems = getMediaItems(workData);
-        if (mediaItems.length > 0) {
-          setCurrentImageId(mediaItems[0].data.id);
-        }
-
-        // URL 파라미터로 카테고리가 지정된 경우 해당 카테고리의 작품 로드
-        if (urlKeywordId) {
-          const allWorks = await getWorksByKeywordId(urlKeywordId);
-          setRelatedWorks(allWorks);
-        } else if (urlExhibitionId) {
-          const allWorks = await getWorksByExhibitionCategoryId(urlExhibitionId);
-          setRelatedWorks(allWorks);
-        } else if (workData.sentenceCategoryIds.length > 0) {
-          // URL 파라미터 없으면 작품의 첫 번째 카테고리 사용
-          const keywordId = workData.sentenceCategoryIds[0];
-          const allWorks = await getWorksByKeywordId(keywordId);
-          setRelatedWorks(allWorks);
-          setSelectedKeywordId(keywordId);
-          setSelectedExhibitionCategoryId(null);
-        } else if (workData.exhibitionCategoryIds.length > 0) {
-          const categoryId = workData.exhibitionCategoryIds[0];
-          const allWorks = await getWorksByExhibitionCategoryId(categoryId);
-          setRelatedWorks(allWorks);
-          setSelectedExhibitionCategoryId(categoryId);
-          setSelectedKeywordId(null);
-        }
-      } catch (error) {
-        console.error('데이터 로드 실패:', error);
-        router.push('/');
-      } finally {
-        setIsLoading(false);
+    // URL 파라미터가 없으면 작품의 첫 번째 카테고리를 기본값으로 사용
+    if (!urlKeywordId && !urlExhibitionId) {
+      if (work.sentenceCategoryIds.length > 0 && !selectedKeywordId) {
+        setSelectedKeywordId(work.sentenceCategoryIds[0]);
+        setSelectedExhibitionCategoryId(null);
+      } else if (work.exhibitionCategoryIds.length > 0 && !selectedExhibitionCategoryId) {
+        setSelectedExhibitionCategoryId(work.exhibitionCategoryIds[0]);
+        setSelectedKeywordId(null);
       }
-    };
-
-    void loadInitialData();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workId]);
+  }, [work, workId]);
 
   // 좌측 작업 목록 높이 측정
   useEffect(() => {
@@ -661,11 +633,9 @@ export default function WorkDetailPage() {
     [selectedKeywordId, selectedExhibitionCategoryId]
   );
 
-  // 카테고리 선택 핸들러
+  // 카테고리 선택 핸들러 - React Query hooks will handle data fetching
   const handleKeywordSelect = useCallback(
-    async (keywordId: string) => {
-      const allWorks = await getWorksByKeywordId(keywordId);
-      setRelatedWorks(allWorks);
+    (keywordId: string) => {
       setSelectedKeywordId(keywordId);
       setSelectedExhibitionCategoryId(null);
       setSelectedWorkId(null);
@@ -677,9 +647,7 @@ export default function WorkDetailPage() {
   );
 
   const handleExhibitionCategorySelect = useCallback(
-    async (categoryId: string) => {
-      const allWorks = await getWorksByExhibitionCategoryId(categoryId);
-      setRelatedWorks(allWorks);
+    (categoryId: string) => {
       setSelectedExhibitionCategoryId(categoryId);
       setSelectedKeywordId(null);
       setSelectedWorkId(null);

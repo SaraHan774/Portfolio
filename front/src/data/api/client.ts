@@ -20,20 +20,20 @@ let storage: FirebaseStorage;
 
 /**
  * Validate Firebase configuration
- * Throws error if required environment variables are missing
+ * Throws error if required config values are missing
  */
 const validateFirebaseConfig = (): void => {
-  const requiredKeys = [
-    'NEXT_PUBLIC_FIREBASE_API_KEY',
-    'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
-    'NEXT_PUBLIC_FIREBASE_APP_ID',
-  ] as const;
+  const requiredFields: Array<{ key: keyof typeof firebaseConfig; name: string }> = [
+    { key: 'apiKey', name: 'NEXT_PUBLIC_FIREBASE_API_KEY' },
+    { key: 'projectId', name: 'NEXT_PUBLIC_FIREBASE_PROJECT_ID' },
+    { key: 'appId', name: 'NEXT_PUBLIC_FIREBASE_APP_ID' },
+  ];
 
-  const missing = requiredKeys.filter((key) => !process.env[key]);
+  const missing = requiredFields.filter((field) => !firebaseConfig[field.key]);
 
   if (missing.length > 0) {
     throw new Error(
-      `Missing required Firebase environment variables: ${missing.join(', ')}. ` +
+      `Missing required Firebase configuration: ${missing.map(f => f.name).join(', ')}. ` +
         'Please check your .env file or environment configuration.'
     );
   }

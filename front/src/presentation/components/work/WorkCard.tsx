@@ -74,7 +74,7 @@ export default function WorkCard({ work }: WorkCardProps) {
             borderRadius: '2px',
             width: '80px', // PRD: 80px
             height: '80px', // PRD: 80px
-            border: isHovered ? '2px solid red' : '2px solid transparent', // PRD: 붉은색 프레임
+            border: isHovered ? '1px solid #b22222' : '1px solid transparent', // PRD: 붉은색 프레임
             transition: 'border-color 0.2s ease-out',
             boxSizing: 'border-box',
           }}

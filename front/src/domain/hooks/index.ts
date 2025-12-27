@@ -4,6 +4,7 @@
 export * from './useWorks';
 export * from './useCategories';
 export * from './useSiteSettings';
+export * from './useFilteredWorks';
 
 // Business logic hooks
 export * from './useWorkSelection';
