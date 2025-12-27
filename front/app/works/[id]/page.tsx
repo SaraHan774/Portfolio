@@ -9,7 +9,6 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Header,
   Footer,
   CategorySidebar,
   WorkListScroller,
@@ -729,8 +728,7 @@ export default function WorkDetailPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="flex-1 relative" style={{ paddingTop: '60px' }}>
+      <div className="flex-1 relative" style={{ paddingTop: '0' }}>
         {/* 카테고리 영역 */}
         <CategorySidebar
           sentenceCategories={sentenceCategories}

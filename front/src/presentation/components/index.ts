@@ -14,7 +14,6 @@ export * from './loading';
 // Layout components
 export { default as CategorySidebar } from './layout/CategorySidebar';
 export { default as Footer } from './layout/Footer';
-export { default as Header } from './layout/Header';
 export { default as MobileCategoryMenu } from './layout/MobileCategoryMenu';
 export { default as SelectedCategory } from './layout/SelectedCategory';
 export { default as Sidebar } from './layout/Sidebar';

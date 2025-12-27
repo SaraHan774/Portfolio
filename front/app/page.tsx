@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
-  Header,
   Footer,
   CategorySidebar,
   WorkListScroller,
@@ -125,7 +124,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header onMenuClick={() => setMobileMenuOpen(true)} />
       <MobileCategoryMenu
         open={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
@@ -137,8 +135,8 @@ export default function HomePage() {
         onExhibitionCategorySelect={handleExhibitionCategorySelect}
         selectedWorkIds={selectedWorkIds}
       />
-      {/* 상단 영역 없음 - PRD 기준 */}
-      <div className="flex-1 relative" style={{ paddingTop: '60px' }}>
+      {/* 상단 영역 없음 - PRD 기준, 헤더 제거됨 */}
+      <div className="flex-1 relative" style={{ paddingTop: '0' }}>
         {/* 카테고리 영역 - 작품 선택과 완전히 독립적 */}
         <CategorySidebar
           sentenceCategories={sentenceCategories}
