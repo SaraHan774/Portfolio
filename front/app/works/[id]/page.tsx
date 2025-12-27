@@ -529,12 +529,6 @@ export default function WorkDetailPage() {
                   exit={{ opacity: 0.85 }}
                   transition={{ duration: 0.15, ease: 'easeOut' }}
                 >
-                  {/* 좌측 고정 타임라인 UI */}
-                  <MediaTimeline
-                    mediaItems={sortedMedia}
-                    currentMediaId={currentImageId}
-                  />
-
                   {/* 컨텐츠 영역: 미디어 + 캡션 */}
                   <div
                     style={{
@@ -547,13 +541,26 @@ export default function WorkDetailPage() {
                     <div
                       style={{
                         width: '50%',
-                        paddingLeft: 'var(--space-12)',
+                        paddingLeft: sortedMedia.length > 1 ? 'calc(var(--space-12))' : 'var(--space-8)',
                         paddingRight: 'var(--space-6)',
                         paddingBottom: 'var(--space-10)',
                         position: 'relative',
                       }}
                     >
-                      <div ref={imageScrollContainerRef}>
+                      <div ref={imageScrollContainerRef} style={{ position: 'relative' }}>
+                        {/* 타임라인 UI */}
+                        {sortedMedia.length > 1 && (
+                          <MediaTimeline
+                            mediaItems={sortedMedia}
+                            currentMediaId={currentImageId}
+                            positionStyle={{
+                              position: 'fixed',
+                              left: 'var(--category-margin-left)',
+                              top: 0,
+                            }}
+                          />
+                        )}
+
                         {sortedMedia.map((item, index) => {
                           const isLast = index === sortedMedia.length - 1;
                           const isFirst = index === 0;

@@ -50,9 +50,8 @@ export default function FloatingWorkWindow({ work, position, onClick }: Floating
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'rgba(210, 210, 210, 0.95)',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-          filter: 'blur(30px)',
+          background: 'rgba(242, 242, 242)',
+          filter: 'blur(10px)',
         }}
       />
 
