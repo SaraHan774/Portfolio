@@ -7,5 +7,8 @@ export { Spinner, LoadingContainer } from './common';
 // Media
 export { FadeInImage } from './media';
 
+// Animation
+export { AnimatedCharacterText, DotIndicator } from './animation';
+
 // Layout
 // Will be populated with additional layout primitives

@@ -15,3 +15,4 @@ export * from './useFloatingPosition';
 export * from './useWorkListScroll';
 export * from './useKeywordState';
 export * from './useKeywordStyle';
+export * from './useClickAnimationTracking';

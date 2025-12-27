@@ -1,10 +1,9 @@
 'use client';
 
-import { memo, useRef, useEffect } from 'react';
+import { memo } from 'react';
 import { motion } from 'framer-motion';
-import { useKeywordState, useKeywordStyle } from '@/domain';
-import { KEYWORD_ANIMATION_VARIANTS } from '@/core/constants';
-import { categoryAnimationStore } from '@/core/utils';
+import { useKeywordState, useKeywordStyle, useClickAnimationTracking } from '@/domain';
+import { AnimatedCharacterText, DotIndicator } from '@/presentation/ui';
 import type { SentenceCategory as SentenceCategoryType, KeywordCategory } from '@/types';
 
 interface SentenceCategoryProps {
@@ -136,22 +135,7 @@ function AnimatedKeyword({
   onSelect: (keywordId: string) => void;
   onHover: (keywordId: string | null) => void;
 }) {
-  // 이 키워드가 사용자에 의해 클릭된 적이 있는지 확인 (페이지 이동 시에도 유지됨)
-  const hasBeenClickedBefore = categoryAnimationStore.hasBeenClicked(keyword.id);
-
-  // 방금 클릭했는지 추적 (점 애니메이션용)
-  const justClicked = useRef(false);
-
-  // justClicked 플래그 리셋
-  useEffect(() => {
-    if (justClicked.current && isSelected) {
-      setTimeout(() => {
-        justClicked.current = false;
-      }, 0);
-    }
-  }, [isSelected]);
-
-  // 상태 및 스타일 계산
+  // 클릭 가능 여부 확인 (state 먼저 계산 필요)
   const state = useKeywordState({
     keyword,
     isSelected,
@@ -159,34 +143,20 @@ function AnimatedKeyword({
     selectedWorkIds,
   });
 
-  const keywordStyle = useKeywordStyle(state);
-
-  // 글자 단위 애니메이션을 위해 텍스트를 문자 배열로 분리
-  const characters = text.split('');
-
-  // 클릭 가능 여부 확인
   const isClickable = state === 'clickable' || state === 'active' || state === 'hover';
 
-  // 애니메이션 상태: 사용자가 클릭한 적이 있을 때만 selected 상태 사용
-  // 첫 페이지 로드 시 selected=true여도 애니메이션 없이 정적으로 bold 표시
-  const animateState = isHovered ? 'hover' : (isSelected && hasBeenClickedBefore) ? 'selected' : 'normal';
+  // 클릭 애니메이션 추적 (점 fade-in 제어)
+  const { hasBeenClickedBefore, justClicked, handleClick } = useClickAnimationTracking({
+    itemId: keyword.id,
+    isSelected,
+    onSelect: () => onSelect(keyword.id),
+    isClickable,
+  });
 
-  // 초기 마운트 시 이미 선택된 상태이고 클릭된 적이 있다면, initial을 selected로 설정
-  const initialState = isSelected && hasBeenClickedBefore ? 'selected' : false;
-
-  // Handle click - mark as clicked BEFORE calling onSelect
-  const handleClick = () => {
-    if (isClickable) {
-      if (!hasBeenClickedBefore) {
-        categoryAnimationStore.markAsClicked(keyword.id);
-        justClicked.current = true;
-      }
-      onSelect(keyword.id);
-    }
-  };
+  const keywordStyle = useKeywordStyle(state);
 
   return (
-    <motion.span
+    <span
       onClick={handleClick}
       onMouseEnter={() => {
         if (state !== 'basic' && state !== 'disabled') {
@@ -195,47 +165,29 @@ function AnimatedKeyword({
       }}
       onMouseLeave={() => onHover(null)}
       style={keywordStyle}
-      initial={initialState}
-      animate={animateState}
     >
-      <motion.span
-        style={{ display: 'inline-block' }}
-        variants={KEYWORD_ANIMATION_VARIANTS.container}
-      >
-        {characters.map((char, charIndex) => (
-          <motion.span
-            key={charIndex}
-            style={{
-              display: 'inline-block',
-              // Always show correct fontWeight, regardless of animation state
-              fontWeight: isSelected ? 700 : 400,
-            }}
-            variants={hasBeenClickedBefore ? KEYWORD_ANIMATION_VARIANTS.character : undefined}
-          >
-            {char}
-          </motion.span>
-        ))}
-      </motion.span>
+      <AnimatedCharacterText
+        text={text}
+        isActive={isHovered || isSelected}
+        isSelected={isSelected}
+        hasBeenClickedBefore={hasBeenClickedBefore}
+        containerStyle={{ display: 'inline-block' }}
+        characterStyle={{
+          display: 'inline-block',
+          // Always show correct fontWeight, regardless of animation state
+          fontWeight: isSelected ? 700 : 400,
+        }}
+      />
 
       {/* Dot indicator for selected keyword */}
       {isSelected && (
-        <motion.span
-          initial={{ opacity: justClicked.current ? 0 : 1 }}
-          animate={{ opacity: 1 }}
-          transition={justClicked.current ? { duration: 0.3, ease: 'easeOut', delay: 0.4 } : { duration: 0 }}
-          style={{
-            position: 'absolute',
-            top: 'var(--dot-offset-top)', // -8px (center above text)
-            left: '50%',
-            transform: 'translateX(-50%)',
-            fontSize: '14px', // 10px + 4px increase
-            color: 'var(--dot-color)',
-            lineHeight: 1,
-          }}
-        >
-          ˙
-        </motion.span>
+        <DotIndicator
+          isVisible={isSelected}
+          justAppeared={justClicked}
+          delay={0.4}
+          position="top-center"
+        />
       )}
-    </motion.span>
+    </span>
   );
 }
