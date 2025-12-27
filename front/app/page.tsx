@@ -1,19 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
-  Header,
   Footer,
   CategorySidebar,
   WorkListScroller,
   MobileCategoryMenu,
-  Spinner
 } from '@/presentation';
+import { LoadingContainer } from '@/presentation/ui';
 import { useCategories, useCategorySelection, useUIState } from '@/state';
-import { getWorksByKeywordId, getWorksByExhibitionCategoryId } from '@/lib/services/worksService';
-import type { Work } from '@/types';
+import { useFilteredWorks } from '@/domain';
 
 // 카테고리 영역과 작업 목록 사이의 간격 (px)
 const CATEGORY_TO_WORKLIST_GAP = 24;
@@ -27,7 +25,11 @@ export default function HomePage() {
   const { selectedKeywordId, selectedExhibitionCategoryId, selectKeyword, selectExhibitionCategory } = useCategorySelection();
   const { mobileMenuOpen, setMobileMenuOpen } = useUIState();
 
-  const [works, setWorks] = useState<Work[]>([]);
+  // Fetch works using React Query - eliminates manual effects and duplication
+  const { works, hasData } = useFilteredWorks(
+    selectedKeywordId,
+    selectedExhibitionCategoryId
+  );
   
   // 카테고리 영역의 높이를 저장하는 상태
   const [sentenceCategoryHeight, setSentenceCategoryHeight] = useState<number>(0);
@@ -47,53 +49,6 @@ export default function HomePage() {
 
   // 선택된 카테고리의 작업 ID 목록 계산 (disabled 상태 계산용)
   const selectedWorkIds = useMemo(() => works.map(work => work.id), [works]);
-
-  // 키워드 선택 시 작품 필터링
-  // 카테고리 전환 시 이전 작업 목록이 잔상으로 보이는 것을 방지하기 위해
-  // 먼저 works를 초기화한 후 새 데이터를 로드
-  useEffect(() => {
-    if (selectedKeywordId) {
-      // 카테고리 전환 시 이전 작업 목록 즉시 초기화
-      setWorks([]);
-      
-      const loadWorks = async () => {
-        try {
-          const filteredWorks = await getWorksByKeywordId(selectedKeywordId);
-          setWorks(filteredWorks);
-        } catch (error) {
-          console.error('작업 로드 실패:', error);
-        }
-      };
-      void loadWorks();
-    }
-  }, [selectedKeywordId]);
-
-  // 전시명 카테고리 선택 시 작품 필터링
-  // 카테고리 전환 시 이전 작업 목록이 잔상으로 보이는 것을 방지하기 위해
-  // 먼저 works를 초기화한 후 새 데이터를 로드
-  useEffect(() => {
-    if (selectedExhibitionCategoryId) {
-      // 카테고리 전환 시 이전 작업 목록 즉시 초기화
-      setWorks([]);
-      
-      const loadWorks = async () => {
-        try {
-          const filteredWorks = await getWorksByExhibitionCategoryId(selectedExhibitionCategoryId);
-          setWorks(filteredWorks);
-        } catch (error) {
-          console.error('작업 로드 실패:', error);
-        }
-      };
-      void loadWorks();
-    }
-  }, [selectedExhibitionCategoryId]);
-
-  // 두 선택 모두 해제 시 작품 목록 초기화
-  useEffect(() => {
-    if (!selectedKeywordId && !selectedExhibitionCategoryId) {
-      setWorks([]);
-    }
-  }, [selectedKeywordId, selectedExhibitionCategoryId]);
 
   const handleKeywordSelect = useCallback((keywordId: string) => {
     selectKeyword(keywordId);
@@ -116,16 +71,11 @@ export default function HomePage() {
   }, [selectedKeywordId, selectedExhibitionCategoryId, router]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Spinner size={24} />
-      </div>
-    );
+    return <LoadingContainer size={24} />;
   }
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header onMenuClick={() => setMobileMenuOpen(true)} />
       <MobileCategoryMenu
         open={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
@@ -137,8 +87,8 @@ export default function HomePage() {
         onExhibitionCategorySelect={handleExhibitionCategorySelect}
         selectedWorkIds={selectedWorkIds}
       />
-      {/* 상단 영역 없음 - PRD 기준 */}
-      <div className="flex-1 relative" style={{ paddingTop: '60px' }}>
+      {/* 상단 영역 없음 - PRD 기준, 헤더 제거됨 */}
+      <div className="flex-1 relative" style={{ paddingTop: '0' }}>
         {/* 카테고리 영역 - 작품 선택과 완전히 독립적 */}
         <CategorySidebar
           sentenceCategories={sentenceCategories}
@@ -153,8 +103,8 @@ export default function HomePage() {
         />
 
         {/* 작업 목록 영역 - 좌측 (문장형 카테고리 선택 시) */}
-        {/* 카테고리 높이가 측정된 후에만 작업 목록을 렌더링 */}
-        {works.length > 0 && selectedKeywordId && sentenceCategoryHeight > 0 && (
+        {/* 카테고리 선택되고 데이터 로드 완료 후 작업 목록 렌더링 */}
+        {selectedKeywordId && sentenceCategoryHeight > 0 && hasData && (
           <div
             className="hidden lg:block absolute"
             style={{
@@ -181,8 +131,8 @@ export default function HomePage() {
         )}
 
         {/* 작업 목록 영역 - 우측 (전시명 카테고리 선택 시) */}
-        {/* 카테고리 높이가 측정된 후에만 작업 목록을 렌더링 */}
-        {works.length > 0 && selectedExhibitionCategoryId && exhibitionCategoryHeight > 0 && (
+        {/* 카테고리 선택되고 데이터 로드 완료 후 작업 목록 렌더링 */}
+        {selectedExhibitionCategoryId && exhibitionCategoryHeight > 0 && hasData && (
           <div
             className="hidden lg:block absolute"
             style={{
@@ -211,12 +161,14 @@ export default function HomePage() {
 
         {/* 중앙 컨텐츠 영역 */}
         <main
-          style={{
-            minHeight: 'calc(100vh - 120px)',
-            paddingTop: 'var(--space-6)',
-          }}
+            style={{
+                // 뷰포트 높이에서 120px 를 제외한 높이를 최소높이로 한다.
+                // 모바일에서 vh 는 깨질 수 있어서 dvh 사용함
+                minHeight: 'calc(100vh - 120px)',
+                paddingTop: 'var(--space-6)',
+            }}
         />
-        
+
       </div>
       <Footer />
     </div>

@@ -1,7 +1,7 @@
 // Custom hook for work filtering by category
 
 import { useMemo } from 'react';
-import type { Work } from '../../core/types';
+import type { Work } from '@/core/types';
 
 export interface UseWorkFilteringOptions {
   works: Work[] | undefined;

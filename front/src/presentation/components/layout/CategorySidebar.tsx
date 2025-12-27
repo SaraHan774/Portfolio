@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useMemo, useCallback, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { memo, useState, useMemo, useRef, useEffect } from 'react';
 import SentenceCategory from '../category/SentenceCategory';
 import TextCategory from '../category/TextCategory';
 import ScrollableCategoryList from '../category/ScrollableCategoryList';

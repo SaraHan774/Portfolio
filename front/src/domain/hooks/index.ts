@@ -4,6 +4,7 @@
 export * from './useWorks';
 export * from './useCategories';
 export * from './useSiteSettings';
+export * from './useFilteredWorks';
 
 // Business logic hooks
 export * from './useWorkSelection';
@@ -14,3 +15,5 @@ export * from './useFloatingPosition';
 export * from './useWorkListScroll';
 export * from './useKeywordState';
 export * from './useKeywordStyle';
+export * from './useClickAnimationTracking';
+export * from './useCaptionHoverEvents';

@@ -47,21 +47,20 @@ export const KEYWORD_ANIMATION_VARIANTS: Record<string, Variants> = {
 
 // Floating window animation
 export const FLOATING_WINDOW_ANIMATION = {
-  initial: { opacity: 0, y: -12, scale: 0.97 },
+  initial: { opacity: 0, y: -8, scale: 0.98 },
   animate: {
     opacity: 1,
     y: 0,
     scale: 1,
     transition: {
-      duration: 0.3,
-      ease: [0.16, 1, 0.3, 1],
+      duration: 0.4,
+      ease: [0.16, 1, 0.3, 1], // Custom easing for smooth fade in
     },
   },
   exit: {
     opacity: 0,
     transition: {
-      duration: 0.5,
-      ease: [0.4, 0, 0.2, 1],
+      duration: 0,
     },
   },
 } as const;

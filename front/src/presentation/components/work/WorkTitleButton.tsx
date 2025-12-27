@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { useThumbnailUrl } from '@/domain';
-import { KEYWORD_ANIMATION_VARIANTS } from '@/core/constants';
+import { useThumbnailUrl, useClickAnimationTracking } from '@/domain';
+import { AnimatedCharacterText, DotIndicator } from '@/presentation/ui';
 import type { Work } from '@/types';
 
 interface WorkTitleButtonProps {
@@ -32,24 +32,14 @@ export default function WorkTitleButton({
   anyWorkHovered = false,
 }: WorkTitleButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
-  
-  // 이전에 선택된 적이 있는지 추적 (점 애니메이션 제어용)
-  // 처음 선택될 때만 애니메이션 실행, 이후 선택 시에는 즉시 표시
-  const wasSelectedBefore = useRef(false);
-  const justSelected = useRef(false);
 
-  // 선택 상태가 true가 되면 wasSelectedBefore 업데이트
-  useEffect(() => {
-    if (isSelected && !wasSelectedBefore.current) {
-      // 처음 선택됨 - 애니메이션 필요
-      justSelected.current = true;
-      wasSelectedBefore.current = true;
-      // 다음 렌더에서 justSelected를 false로 설정
-      requestAnimationFrame(() => {
-        justSelected.current = false;
-      });
-    }
-  }, [isSelected]);
+  // 클릭 애니메이션 추적 (Works는 항상 클릭 가능)
+  const { hasBeenClickedBefore: wasSelectedBefore, justClicked: justSelected, handleClick } = useClickAnimationTracking({
+    itemId: work.id,
+    isSelected,
+    onSelect: onClick,
+    isClickable: true, // Works are always clickable
+  });
 
   // Use hook for thumbnail URL (includes YouTube fallback)
   const thumbnailUrl = useThumbnailUrl(work);
@@ -62,12 +52,8 @@ export default function WorkTitleButton({
   const shouldShowThumbnail =
     showThumbnail || (isHovered && hasThumbnail) || (anyWorkHovered && hasThumbnail);
 
-  // Animation state for character-by-character effect
-  const animateState = isHovered ? 'hover' : isSelected ? 'selected' : 'normal';
-
   // Format title with quotes and year
-  const displayText = `「'${work.title}'」${work.year ? `, ${work.year}` : ''}`;
-  const characters = displayText.split('');
+  const displayText = `「'${work.title}'」${work.year ? `,\u00A0${work.year}` : ''}`;
 
   // Container styling for dot positioning (no overflow)
   const containerStyle: React.CSSProperties = {
@@ -96,7 +82,7 @@ export default function WorkTitleButton({
 
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
@@ -113,24 +99,15 @@ export default function WorkTitleButton({
       {/* Container for title with dot indicator */}
       <div style={containerStyle}>
         {/* Dot indicator for selected work (positioned absolutely above) */}
-        {/* 
-          점 애니메이션 전략:
-          - 처음 선택될 때: fade-in 애니메이션 (justSelected.current = true)
-          - 이미 선택된 적 있는 작업 재선택: 즉시 표시 (애니메이션 없음)
-          - 다른 작업에서 이 작업으로 전환: 부드럽게 표시 (짧은 애니메이션)
-        */}
         {isSelected && (
-          <motion.span
-            initial={{ opacity: wasSelectedBefore.current ? 1 : 0 }}
-            animate={{ opacity: 1 }}
-            transition={
-              justSelected.current
-                ? { duration: 0.3, ease: 'easeOut', delay: 0.1 }
-                : { duration: 0 }
-            }
+          <DotIndicator
+            isVisible={isSelected}
+            justAppeared={justSelected}
+            delay={0.1} // Works use faster feedback (0.1s vs 0.4s for categories)
+            position="custom"
             style={{
               position: 'absolute',
-              top: '0px',
+              top: '3px',
               left: '50%',
               transform: 'translateX(-50%)',
               fontSize: '18px',
@@ -138,32 +115,20 @@ export default function WorkTitleButton({
               lineHeight: 1,
               zIndex: 10,
             }}
-          >
-            ˙
-          </motion.span>
+          />
         )}
 
         {/* 작업 제목 + 년도 with character-by-character animation */}
-        <motion.span
-          style={titleStyle}
-          initial={false}
-          animate={animateState}
-        >
-          <motion.span
-            style={{ display: 'inline-block' }}
-            variants={KEYWORD_ANIMATION_VARIANTS.container}
-          >
-            {characters.map((char, charIndex) => (
-              <motion.span
-                key={charIndex}
-                style={{ display: 'inline-block' }}
-                variants={KEYWORD_ANIMATION_VARIANTS.character}
-              >
-                {char}
-              </motion.span>
-            ))}
-          </motion.span>
-        </motion.span>
+        <span style={titleStyle}>
+          <AnimatedCharacterText
+            text={displayText}
+            isActive={isHovered || isSelected}
+            isSelected={isSelected}
+            hasBeenClickedBefore={wasSelectedBefore}
+            containerStyle={{ display: 'inline-block' }}
+            characterStyle={{ display: 'inline-block' }}
+          />
+        </span>
       </div>
 
       {/* 썸네일 공간 (항상 확보하여 레이아웃 안정성 유지) */}
@@ -189,9 +154,8 @@ export default function WorkTitleButton({
               left: 0,
               width: '100%',
               height: '100%',
-              borderRadius: '2px',
               overflow: 'hidden',
-              border: isHovered ? '2px solid red' : '2px solid transparent',
+              border: isHovered ? '1px solid #B22222' : '1px solid transparent',
               transition: 'border-color 0.2s ease-out',
               boxSizing: 'border-box',
             }}

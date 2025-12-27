@@ -1,9 +1,9 @@
 // Custom hooks for site settings data fetching with React Query
 
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
-import { queryKeys } from '../../data/cache/queryKeys';
-import { SettingsRepository } from '../../data/repository/SettingsRepository';
-import type { SiteSettings } from '../../core/types';
+import { queryKeys } from '@/src/data';
+import { SettingsRepository } from '@/src/data';
+import type { SiteSettings } from '@/core/types';
 
 /**
  * Fetch site settings

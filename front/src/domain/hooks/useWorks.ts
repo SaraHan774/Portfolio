@@ -1,9 +1,9 @@
 // Custom hooks for works data fetching with React Query
 
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
-import { queryKeys } from '../../data/cache/queryKeys';
-import { WorkRepository } from '../../data/repository/WorkRepository';
-import type { Work } from '../../core/types';
+import { queryKeys } from '@/src/data';
+import { WorkRepository } from '@/src/data';
+import type { Work } from '@/core/types';
 
 /**
  * Fetch all published works

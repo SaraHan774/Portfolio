@@ -5,7 +5,6 @@ import { getDb } from './client';
 import { mapFirestoreToSiteSettings, getDefaultSettings } from '../mappers';
 import { FIREBASE_COLLECTIONS, SETTINGS_DOC_ID } from '@/core/constants';
 import type { SiteSettings } from '@/core/types';
-import { FirestoreError } from '@/core/errors';
 
 /**
  * Fetch site settings
