@@ -1,6 +1,6 @@
 // Custom hook for click animation tracking logic
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { categoryAnimationStore } from '@/core/utils';
 
 export interface UseClickAnimationTrackingOptions {
@@ -62,18 +62,19 @@ export const useClickAnimationTracking = ({
   const hasBeenClickedBefore = categoryAnimationStore.hasBeenClicked(itemId);
 
   // Track whether the item was just clicked (for animation timing)
-  const justClicked = useRef(false);
+  // Using useState instead of useRef because this value is needed for rendering
+  const [justClicked, setJustClicked] = useState(false);
 
   // Reset justClicked flag after it's been used for initial animation
   useEffect(() => {
-    if (justClicked.current && isSelected) {
+    if (justClicked && isSelected) {
       // Use setTimeout(0) to reset on next tick (after render)
       // This ensures the animation has time to start before the flag is reset
       setTimeout(() => {
-        justClicked.current = false;
+        setJustClicked(false);
       }, 0);
     }
-  }, [isSelected]);
+  }, [isSelected, justClicked]);
 
   // Memoized click handler
   const handleClick = useCallback(() => {
@@ -82,7 +83,7 @@ export const useClickAnimationTracking = ({
       // This ensures hasBeenClickedBefore is true when the component re-renders with selected=true
       if (!hasBeenClickedBefore) {
         categoryAnimationStore.markAsClicked(itemId);
-        justClicked.current = true;
+        setJustClicked(true);
       }
 
       // Trigger the selection callback
@@ -92,7 +93,7 @@ export const useClickAnimationTracking = ({
 
   return {
     hasBeenClickedBefore,
-    justClicked: justClicked.current,
+    justClicked,
     handleClick,
   };
 };
