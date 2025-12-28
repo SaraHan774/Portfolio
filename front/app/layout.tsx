@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Nanum_Myeongjo } from "next/font/google";
 import "./globals.css";
-import { DynamicMetadata, ErrorBoundary } from '@/presentation';
+import { DynamicMetadata, ErrorBoundary, PortfolioLayout } from '@/presentation';
 import {
   CategoriesProvider,
   CategorySelectionProvider,
@@ -41,7 +41,9 @@ export default function RootLayout({
               <CategorySelectionProvider>
                 <WorkSelectionProvider>
                   <UIStateProvider>
-                    {children}
+                    <PortfolioLayout>
+                      {children}
+                    </PortfolioLayout>
                   </UIStateProvider>
                 </WorkSelectionProvider>
               </CategorySelectionProvider>

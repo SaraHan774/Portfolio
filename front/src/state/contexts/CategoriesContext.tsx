@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, ReactNode, useMemo } from 'react';
+import { createContext, useContext, ReactNode, useMemo, useCallback } from 'react';
 import { useSentenceCategories as useSentenceCategoriesQuery, useExhibitionCategories as useExhibitionCategoriesQuery } from '@/domain';
 import type { SentenceCategory, ExhibitionCategory } from '@/types';
 
@@ -60,9 +60,9 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
   const error = sentenceError || exhibitionError;
 
   // Combined refetch function
-  const refetch = async () => {
+  const refetch = useCallback(async () => {
     await Promise.all([refetchSentence(), refetchExhibition()]);
-  };
+  }, [refetchSentence, refetchExhibition]);
 
   // Selectors (derived state)
   const selectors = useMemo<CategoriesSelectors>(

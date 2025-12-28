@@ -1,7 +1,6 @@
 'use client';
 
 import { memo } from 'react';
-import { motion } from 'framer-motion';
 import { useKeywordState, useKeywordStyle, useClickAnimationTracking } from '@/domain';
 import { AnimatedCharacterText, DotIndicator } from '@/presentation/ui';
 import type { SentenceCategory as SentenceCategoryType, KeywordCategory } from '@/types';
