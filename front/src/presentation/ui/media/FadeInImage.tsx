@@ -57,7 +57,6 @@ export default function FadeInImage({
         position: 'relative',
         width: style.width || '100%',
         paddingBottom: `${aspectRatio * 100}%`,
-        borderRadius: style.borderRadius || '4px',
         overflow: 'hidden',
       }}
     >
@@ -74,7 +73,6 @@ export default function FadeInImage({
             background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
             backgroundSize: '200% 100%',
             animation: 'shimmer 1.5s infinite',
-            borderRadius: style.borderRadius || '4px',
           }}
         />
       )}
@@ -92,7 +90,6 @@ export default function FadeInImage({
           width: '100%',
           height: '100%',
           objectFit: 'cover',
-          borderRadius: style.borderRadius || '4px',
           opacity: isLoaded ? 1 : 0,
           transition: 'opacity 0.3s ease-in-out',
         }}

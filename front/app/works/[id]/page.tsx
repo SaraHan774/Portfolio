@@ -399,7 +399,6 @@ export default function WorkDetailPage() {
                               style={{
                                 width: '100%',
                                 height: 'auto',
-                                borderRadius: '4px',
                               }}
                             />
                           </div>
