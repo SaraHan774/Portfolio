@@ -5,6 +5,7 @@ export { ErrorBoundary } from './errors/ErrorBoundary';
 export { default as CategorySidebar } from './layout/CategorySidebar';
 export { default as Footer } from './layout/Footer';
 export { default as MobileCategoryMenu } from './layout/MobileCategoryMenu';
+export { default as PortfolioLayout } from './layout/PortfolioLayout';
 
 // Media components
 export { YouTubeEmbed } from './media';

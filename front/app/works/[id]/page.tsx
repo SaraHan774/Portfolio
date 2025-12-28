@@ -2,16 +2,21 @@
 
 /**
  * 작품 상세 페이지
- * 선택된 작품의 이미지/영상을 표시하고 관련 작품 탐색 기능 제공
+ * 
+ * PortfolioLayout에서 CategorySidebar와 WorkListScroller를 공유
+ * 이 페이지는 작품 이미지와 캡션만 렌더링
+ * 
+ * 주요 기능:
+ * - 작품 미디어(이미지/비디오) 표시
+ * - 스크롤에 따른 현재 보이는 이미지 추적
+ * - 캡션 내 작품 링크 hover/click 처리
+ * - 작품 상세 모달 표시
  */
 
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Footer,
-  CategorySidebar,
-  WorkListScroller,
   Spinner,
   FloatingWorkWindow,
   YouTubeEmbed,
@@ -21,8 +26,22 @@ import {
   MediaTimeline,
 } from '@/presentation';
 import { getMediaItems, hasMedia } from '@/core/utils';
-import { useCategories } from '@/state';
-import { useWork, useWorksByKeyword, useWorksByExhibitionCategory, useCaptionHoverEvents } from '@/domain';
+import { useCategorySelection } from '@/state';
+import { useWork, useCaptionHoverEvents } from '@/domain';
+
+/**
+ * 스크롤 감지 상수
+ */
+const SCROLL_CONSTANTS = {
+  /** 하단 도달 판정 임계값 (px) */
+  BOTTOM_THRESHOLD: 50,
+  /** IntersectionObserver 임계값 */
+  INTERSECTION_THRESHOLDS: [0, 0.5, 1] as number[],
+  /** 스크롤 이벤트 지연 시간 (ms) */
+  SCROLL_DELAY: 100,
+  /** 중앙 기준 점수 계산 기준값 */
+  CENTER_SCORE_BASE: 1000,
+} as const;
 
 /**
  * 캡션 렌더링 함수
@@ -71,7 +90,6 @@ function renderCaption(
 
 export default function WorkDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const workId = params.id as string;
 
@@ -79,26 +97,15 @@ export default function WorkDetailPage() {
   const urlKeywordId = searchParams.get('keywordId');
   const urlExhibitionId = searchParams.get('exhibitionId');
 
-  // 카테고리 데이터 (Context에서 가져옴 - 페이지 이동 시 깜빡임 방지)
-  const { sentenceCategories, exhibitionCategories } = useCategories();
+  // Global state에서 선택된 카테고리 정보 및 액션 가져오기
+  const { selectedKeywordId, selectedExhibitionCategoryId, selectKeyword, selectExhibitionCategory } = useCategorySelection();
 
   // 상태 관리
-  const [selectedKeywordId, setSelectedKeywordId] = useState<string | null>(urlKeywordId);
-  const [selectedExhibitionCategoryId, setSelectedExhibitionCategoryId] = useState<string | null>(urlExhibitionId);
   const [currentImageId, setCurrentImageId] = useState<string | null>(null);
-  const [selectedWorkId, setSelectedWorkId] = useState<string | null>(workId);
   const [modalWorkId, setModalWorkId] = useState<string | null>(null);
-  const [sentenceCategoryHeight, setSentenceCategoryHeight] = useState<number>(0);
-  const [exhibitionCategoryHeight, setExhibitionCategoryHeight] = useState<number>(0);
-  const [leftWorkListHeight, setLeftWorkListHeight] = useState<number>(0);
-  const [rightWorkListHeight, setRightWorkListHeight] = useState<number>(0);
 
-  // Fetch work data using domain hooks
+  // Fetch work data
   const { data: work, isLoading } = useWork(workId);
-  const { data: keywordWorks = [] } = useWorksByKeyword(selectedKeywordId || undefined);
-  const { data: exhibitionWorks = [] } = useWorksByExhibitionCategory(
-    selectedExhibitionCategoryId || undefined
-  );
 
   // Caption hover events 설정
   const { hoveredWorkId, hoverPosition, clearHover } = useCaptionHoverEvents({
@@ -109,19 +116,11 @@ export default function WorkDetailPage() {
     dependencies: [work, renderCaption],
   });
 
-  // Hover 중인 작업 데이터 (캡션 링크용)
+  // Hover 중인 작업 데이터
   const { data: hoveredWork } = useWork(hoveredWorkId || '');
-
-  // Determine related works based on selected category
-  const relatedWorks = selectedKeywordId ? keywordWorks : selectedExhibitionCategoryId ? exhibitionWorks : [];
 
   // Refs
   const imageScrollContainerRef = useRef<HTMLDivElement>(null);
-  const leftWorkListRef = useRef<HTMLDivElement>(null);
-  const rightWorkListRef = useRef<HTMLDivElement>(null);
-
-  // 선택된 카테고리의 작품 ID 목록 (disabled 상태 계산용)
-  const selectedWorkIds = useMemo(() => relatedWorks.map((w) => w.id), [relatedWorks]);
 
   // 모달이 열릴 때 hover 상태 초기화
   useEffect(() => {
@@ -130,11 +129,16 @@ export default function WorkDetailPage() {
     }
   }, [modalWorkId, clearHover]);
 
-  // 작품 데이터 로드 시 초기화
+  /**
+   * 작품 데이터 로드 시 카테고리 초기화
+   * 
+   * 1. URL 파라미터로 카테고리가 전달되면 해당 카테고리를 global state에 설정
+   * 2. URL 파라미터가 없으면 작품의 첫 번째 카테고리를 사용
+   * 
+   * 이 로직은 직접 URL로 접근 시 PortfolioLayout이 올바르게 초기화되도록 보장합니다.
+   */
   useEffect(() => {
     if (!work) return;
-
-    setSelectedWorkId(workId);
 
     // 첫 번째 미디어 ID 설정
     const mediaItems = getMediaItems(work);
@@ -142,98 +146,51 @@ export default function WorkDetailPage() {
       setCurrentImageId(mediaItems[0].data.id);
     }
 
+    // URL 파라미터가 있으면 global state 업데이트
+    if (urlKeywordId) {
+      selectKeyword(urlKeywordId);
+    } else if (urlExhibitionId) {
+      selectExhibitionCategory(urlExhibitionId);
+    } 
     // URL 파라미터가 없으면 작품의 첫 번째 카테고리를 기본값으로 사용
-    if (!urlKeywordId && !urlExhibitionId) {
+    else {
       if (work.sentenceCategoryIds.length > 0 && !selectedKeywordId) {
-        setSelectedKeywordId(work.sentenceCategoryIds[0]);
-        setSelectedExhibitionCategoryId(null);
+        selectKeyword(work.sentenceCategoryIds[0]);
       } else if (work.exhibitionCategoryIds.length > 0 && !selectedExhibitionCategoryId) {
-        setSelectedExhibitionCategoryId(work.exhibitionCategoryIds[0]);
-        setSelectedKeywordId(null);
+        selectExhibitionCategory(work.exhibitionCategoryIds[0]);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [work, workId]);
+  }, [work, workId, urlKeywordId, urlExhibitionId]);
 
-  // 좌측 작업 목록 높이 측정
+  /**
+   * 현재 보이는 이미지를 감지하는 로직
+   * 
+   * 로직:
+   * 1. 스크롤이 하단에 도달하면 마지막 이미지를 선택
+   * 2. 그 외의 경우 화면 중앙에 가장 가까운 이미지를 선택
+   */
   useEffect(() => {
-    const element = leftWorkListRef.current;
-    if (!element) {
-      setLeftWorkListHeight(0);
-      return;
-    }
-
-    const updateHeight = () => {
-      const height = element.getBoundingClientRect().height;
-      setLeftWorkListHeight(height);
-    };
-
-    updateHeight();
-
-    const resizeObserver = new ResizeObserver(() => {
-      updateHeight();
-    });
-    resizeObserver.observe(element);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [selectedKeywordId, relatedWorks]);
-
-  // 우측 작업 목록 높이 측정
-  useEffect(() => {
-    const element = rightWorkListRef.current;
-    if (!element) {
-      setRightWorkListHeight(0);
-      return;
-    }
-
-    const updateHeight = () => {
-      const height = element.getBoundingClientRect().height;
-      setRightWorkListHeight(height);
-    };
-
-    updateHeight();
-
-    const resizeObserver = new ResizeObserver(() => {
-      updateHeight();
-    });
-    resizeObserver.observe(element);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [selectedExhibitionCategoryId, relatedWorks]);
-
-  // Intersection Observer로 현재 보이는 이미지 감지
-  useEffect(() => {
-    if (!selectedWorkId) return;
-
-    const selectedWork =
-      relatedWorks.find((w) => w.id === selectedWorkId) ||
-      (selectedWorkId === workId ? work : null);
-
-    if (!selectedWork) return;
-
-    const mediaItems = getMediaItems(selectedWork);
-    if (mediaItems.length > 0) {
-      setCurrentImageId(mediaItems[0].data.id);
-    }
+    if (!work) return;
 
     const timeoutId = setTimeout(() => {
-      const imageElements = document.querySelectorAll('[data-image-id]');
       let lastTrackedImageId: string | null = null;
 
+      /**
+       * 현재 보이는 이미지 업데이트
+       */
       const updateCurrentImage = () => {
-        const allImages = Array.from(document.querySelectorAll('[data-image-id]'));
+        const allImages = Array.from(document.querySelectorAll<HTMLElement>('[data-image-id]'));
+        if (allImages.length === 0) return;
 
         const scrollTop = window.scrollY;
         const windowHeight = window.innerHeight;
         const documentHeight = document.documentElement.scrollHeight;
-        const isAtBottom = scrollTop + windowHeight >= documentHeight - 50;
+        const isAtBottom = scrollTop + windowHeight >= documentHeight - SCROLL_CONSTANTS.BOTTOM_THRESHOLD;
 
-        if (isAtBottom && allImages.length > 0) {
-          const lastImage = allImages[allImages.length - 1] as HTMLElement;
+        // 하단 도달 시 마지막 이미지 선택
+        if (isAtBottom) {
+          const lastImage = allImages[allImages.length - 1];
           const imageId = lastImage.getAttribute('data-image-id');
           if (imageId && imageId !== lastTrackedImageId) {
             lastTrackedImageId = imageId;
@@ -242,6 +199,7 @@ export default function WorkDetailPage() {
           return;
         }
 
+        // 화면 중앙에 가장 가까운 이미지 선택
         let bestImage: HTMLElement | null = null;
         let bestScore = -Infinity;
 
@@ -254,11 +212,11 @@ export default function WorkDetailPage() {
 
           if (isVisible) {
             const distanceFromCenter = Math.abs(imageCenter - viewportCenter);
-            const score = 1000 - distanceFromCenter;
+            const score = SCROLL_CONSTANTS.CENTER_SCORE_BASE - distanceFromCenter;
 
             if (score > bestScore) {
               bestScore = score;
-              bestImage = img as HTMLElement;
+              bestImage = img;
             }
           }
         });
@@ -272,51 +230,34 @@ export default function WorkDetailPage() {
         }
       };
 
+      // IntersectionObserver 설정
       const observer = new IntersectionObserver(
-        () => {
-          updateCurrentImage();
-        },
+        updateCurrentImage,
         {
           rootMargin: '0px',
-          threshold: [0, 0.5, 1],
+          threshold: SCROLL_CONSTANTS.INTERSECTION_THRESHOLDS,
         }
       );
 
+      // 모든 이미지 요소 관찰 시작
+      const imageElements = document.querySelectorAll('[data-image-id]');
       imageElements.forEach((el) => observer.observe(el));
 
-      const handleScroll = () => {
-        updateCurrentImage();
-      };
-      window.addEventListener('scroll', handleScroll, { passive: true });
+      // 스크롤 이벤트 리스너 등록
+      window.addEventListener('scroll', updateCurrentImage, { passive: true });
 
-      (
-        window as Window & {
-          __imageObserver?: IntersectionObserver;
-          __scrollHandler?: () => void;
-        }
-      ).__imageObserver = observer;
-      (
-        window as Window & {
-          __imageObserver?: IntersectionObserver;
-          __scrollHandler?: () => void;
-        }
-      ).__scrollHandler = handleScroll;
-    }, 100);
+      // 정리 함수
+      return () => {
+        clearTimeout(timeoutId);
+        observer.disconnect();
+        window.removeEventListener('scroll', updateCurrentImage);
+      };
+    }, SCROLL_CONSTANTS.SCROLL_DELAY);
 
     return () => {
       clearTimeout(timeoutId);
-      const windowWithHandlers = window as Window & {
-        __imageObserver?: IntersectionObserver;
-        __scrollHandler?: () => void;
-      };
-      if (windowWithHandlers.__imageObserver) {
-        windowWithHandlers.__imageObserver.disconnect();
-      }
-      if (windowWithHandlers.__scrollHandler) {
-        window.removeEventListener('scroll', windowWithHandlers.__scrollHandler);
-      }
     };
-  }, [selectedWorkId, work, relatedWorks, workId]);
+  }, [work, workId]);
 
   // 캡션 내 링크 클릭 이벤트 처리 (이벤트 위임)
   useEffect(() => {
@@ -344,291 +285,145 @@ export default function WorkDetailPage() {
     };
   }, [clearHover]);
 
-  // 작품 선택 핸들러 - URL 업데이트 포함
-  const handleWorkSelect = useCallback(
-    (newWorkId: string) => {
-      setSelectedWorkId(newWorkId);
-
-      const params = new URLSearchParams();
-      if (selectedKeywordId) {
-        params.set('keywordId', selectedKeywordId);
-      } else if (selectedExhibitionCategoryId) {
-        params.set('exhibitionId', selectedExhibitionCategoryId);
-      }
-
-      const queryString = params.toString();
-      const newUrl = `/works/${newWorkId}${queryString ? `?${queryString}` : ''}`;
-
-      window.history.replaceState(null, '', newUrl);
-    },
-    [selectedKeywordId, selectedExhibitionCategoryId]
-  );
-
-  // 카테고리 선택 핸들러 - React Query hooks will handle data fetching
-  const handleKeywordSelect = useCallback(
-    (keywordId: string) => {
-      setSelectedKeywordId(keywordId);
-      setSelectedExhibitionCategoryId(null);
-      setSelectedWorkId(null);
-
-      const newUrl = `/works/${workId}?keywordId=${keywordId}`;
-      router.replace(newUrl, { scroll: false });
-    },
-    [workId, router]
-  );
-
-  const handleExhibitionCategorySelect = useCallback(
-    (categoryId: string) => {
-      setSelectedExhibitionCategoryId(categoryId);
-      setSelectedKeywordId(null);
-      setSelectedWorkId(null);
-
-      const newUrl = `/works/${workId}?exhibitionId=${categoryId}`;
-      router.replace(newUrl, { scroll: false });
-    },
-    [workId, router]
-  );
-
-  // 컨텐츠 상단 패딩 계산
-  const contentPaddingTop = useMemo(() => {
-    const categoryStart = 64; // var(--space-8)
-    const gapBetweenCategoryAndWorkList = 24;
-    const gapBetweenWorkListAndContent = 40;
-
-    if (selectedKeywordId && leftWorkListHeight > 0) {
-      return `${categoryStart + sentenceCategoryHeight + gapBetweenCategoryAndWorkList + leftWorkListHeight + gapBetweenWorkListAndContent}px`;
-    } else if (selectedExhibitionCategoryId && rightWorkListHeight > 0) {
-      return `${categoryStart + exhibitionCategoryHeight + gapBetweenCategoryAndWorkList + rightWorkListHeight + gapBetweenWorkListAndContent}px`;
-    }
-    return '200px';
-  }, [
-    selectedKeywordId,
-    selectedExhibitionCategoryId,
-    leftWorkListHeight,
-    rightWorkListHeight,
-    sentenceCategoryHeight,
-    exhibitionCategoryHeight,
-  ]);
-
-  // 현재 선택된 작품 데이터
-  const displayWork = useMemo(() => {
-    if (!selectedWorkId) return null;
-    return (
-      relatedWorks.find((w) => w.id === selectedWorkId) ||
-      (selectedWorkId === workId ? work : null)
-    );
-  }, [selectedWorkId, relatedWorks, workId, work]);
-
   // 현재 작품의 미디어 아이템
   const sortedMedia = useMemo(() => {
-    if (!displayWork) return [];
-    return getMediaItems(displayWork);
-  }, [displayWork]);
+    if (!work) return [];
+    return getMediaItems(work);
+  }, [work]);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="flex-1 relative" style={{ paddingTop: '0' }}>
-        {/* 카테고리 영역 */}
-        <CategorySidebar
-          sentenceCategories={sentenceCategories}
-          exhibitionCategories={exhibitionCategories}
-          selectedKeywordId={selectedKeywordId}
-          selectedExhibitionCategoryId={selectedExhibitionCategoryId}
-          onKeywordSelect={handleKeywordSelect}
-          onExhibitionCategorySelect={handleExhibitionCategorySelect}
-          selectedWorkIds={selectedWorkIds}
-          onSentenceCategoryHeightChange={setSentenceCategoryHeight}
-          onExhibitionCategoryHeightChange={setExhibitionCategoryHeight}
-        />
-
-        {/* 작업 목록 영역 - 좌측 (문장형 카테고리 선택 시) */}
-        {relatedWorks.length > 0 && selectedKeywordId && (
-          <div
-            ref={leftWorkListRef}
-            className="hidden lg:block absolute"
-            style={{
-              left: 'var(--category-margin-left)',
-              top: `calc(var(--space-8) + ${sentenceCategoryHeight}px + 24px)`,
-              maxWidth: 'calc(70% - var(--content-gap) - var(--category-margin-left))',
-              zIndex: 100,
-            }}
-          >
-            <motion.div
-              initial={false}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-            >
-              <WorkListScroller
-                works={relatedWorks}
-                selectedWorkId={selectedWorkId}
-                onWorkSelect={handleWorkSelect}
-                showThumbnail={selectedWorkId === null}
-                direction="ltr"
-              />
-            </motion.div>
-          </div>
-        )}
-
-        {/* 작업 목록 영역 - 우측 (전시명 카테고리 선택 시) */}
-        {relatedWorks.length > 0 && selectedExhibitionCategoryId && (
-          <div
-            ref={rightWorkListRef}
-            className="hidden lg:block absolute"
-            style={{
-              right: 'var(--category-margin-right)',
-              top: `calc(var(--space-8) + ${exhibitionCategoryHeight}px + 24px)`,
-              textAlign: 'right',
-              maxWidth: 'calc(70% - var(--content-gap) - var(--category-margin-right))',
-              zIndex: 100,
-            }}
-          >
-            <motion.div
-              initial={false}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-            >
-              <WorkListScroller
-                works={relatedWorks}
-                selectedWorkId={selectedWorkId}
-                onWorkSelect={handleWorkSelect}
-                showThumbnail={selectedWorkId === null}
-                direction="rtl"
-              />
-            </motion.div>
-          </div>
-        )}
-
-        {/* 이미지 컨텐츠 영역 */}
-        {isLoading || !work ? (
-          <main
-            style={{
-              position: 'relative',
-              minHeight: 'calc(100vh - 60px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Spinner size={24} />
-          </main>
-        ) : (
-          <main
-            style={{
-              position: 'relative',
-              minHeight: 'calc(100vh - 60px)',
-              paddingTop: contentPaddingTop,
-            }}
-          >
-            {/* 선택된 작품의 미디어 표시 */}
-            <AnimatePresence mode="sync">
-              {selectedWorkId && displayWork && hasMedia(displayWork) && (
-                <motion.div
-                  key={selectedWorkId}
-                  initial={{ opacity: 0.85 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0.85 }}
-                  transition={{ duration: 0.15, ease: 'easeOut' }}
+    <>
+      {/* 이미지 컨텐츠 영역 */}
+      {isLoading || !work ? (
+        <main
+          style={{
+            position: 'relative',
+            minHeight: 'calc(100vh - 60px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Spinner size={24} />
+        </main>
+      ) : (
+        <main
+          style={{
+            position: 'relative',
+            minHeight: 'calc(100vh - 60px)',
+            // paddingTop 제거 - 이미지가 WorkListScroller 아래에 위치하도록
+          }}
+        >
+          {/* 선택된 작품의 미디어 표시 */}
+          <AnimatePresence mode="sync">
+            {work && hasMedia(work) && (
+              <motion.div
+                key={workId}
+                initial={{ opacity: 0.85 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0.85 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+              >
+                {/* 컨텐츠 영역: 미디어 + 캡션 */}
+                {/* 좌측에 이미지 표시 (PortfolioLayout이 paddingTop 제공) */}
+                <div
+                  style={{
+                    display: 'flex',
+                    width: '100%',
+                    justifyContent: 'flex-start', // 항상 좌측에 표시
+                  }}
                 >
-                  {/* 컨텐츠 영역: 미디어 + 캡션 */}
+                  {/* 미디어 영역 */}
                   <div
                     style={{
-                      display: 'flex',
-                      width: '100%',
-                      alignItems: 'flex-start',
+                      width: 'calc(50% - var(--content-gap))',
+                      paddingLeft: sortedMedia.length > 1 ? 'calc(var(--space-12))' : 'var(--space-8)',
+                      paddingRight: 'var(--space-6)',
+                      paddingBottom: 'var(--space-10)',
+                      position: 'relative',
                     }}
                   >
-                    {/* 좌측: 미디어 영역 (50%) */}
-                    <div
-                      style={{
-                        width: '50%',
-                        paddingLeft: sortedMedia.length > 1 ? 'calc(var(--space-12))' : 'var(--space-8)',
-                        paddingRight: 'var(--space-6)',
-                        paddingBottom: 'var(--space-10)',
-                        position: 'relative',
-                      }}
-                    >
-                      <div ref={imageScrollContainerRef} style={{ position: 'relative' }}>
-                        {/* 타임라인 UI */}
-                        {sortedMedia.length > 1 && (
-                          <MediaTimeline
-                            mediaItems={sortedMedia}
-                            currentMediaId={currentImageId}
-                            positionStyle={{
-                              position: 'fixed',
-                              left: 'var(--category-margin-left)',
-                              top: 0,
-                            }}
-                          />
-                        )}
+                    <div ref={imageScrollContainerRef} style={{ position: 'relative' }}>
+                      {/* 타임라인 UI */}
+                      {sortedMedia.length > 1 && (
+                        <MediaTimeline
+                          mediaItems={sortedMedia}
+                          currentMediaId={currentImageId}
+                          positionStyle={{
+                            position: 'fixed',
+                            left: 'var(--category-margin-left)',
+                            top: 0,
+                          }}
+                        />
+                      )}
 
-                        {sortedMedia.map((item, index) => {
-                          const isLast = index === sortedMedia.length - 1;
-                          const isFirst = index === 0;
+                      {sortedMedia.map((item, index) => {
+                        const isLast = index === sortedMedia.length - 1;
+                        const isFirst = index === 0;
 
-                          if (item.type === 'video') {
-                            return (
-                              <div
-                                key={item.data.id}
-                                className="work-media-container"
-                                style={{
-                                  position: 'relative',
-                                  width: '100%',
-                                  scrollSnapAlign: 'start',
-                                  scrollMarginTop: '280px',
-                                }}
-                              >
-                                <YouTubeEmbed video={item.data} isLast={isLast} />
-                              </div>
-                            );
-                          }
-
+                        if (item.type === 'video') {
                           return (
                             <div
                               key={item.data.id}
-                              data-image-id={item.data.id}
-                              className="work-image-container"
+                              className="work-media-container"
                               style={{
-                                marginBottom: isLast ? 0 : 'var(--space-10)',
                                 position: 'relative',
                                 width: '100%',
                                 scrollSnapAlign: 'start',
                                 scrollMarginTop: '280px',
                               }}
                             >
-                              <FadeInImage
-                                src={item.data.url}
-                                alt={displayWork.title}
-                                width={item.data.width}
-                                height={item.data.height}
-                                priority={isFirst}
-                                style={{
-                                  width: '100%',
-                                  height: 'auto',
-                                  borderRadius: '4px',
-                                }}
-                              />
+                              <YouTubeEmbed video={item.data} isLast={isLast} />
                             </div>
                           );
-                        })}
-                      </div>
+                        }
+
+                        return (
+                          <div
+                            key={item.data.id}
+                            data-image-id={item.data.id}
+                            className="work-image-container"
+                            style={{
+                              marginBottom: isLast ? 0 : 'var(--space-10)',
+                              position: 'relative',
+                              width: '100%',
+                              scrollSnapAlign: 'start',
+                              scrollMarginTop: '280px',
+                            }}
+                          >
+                            <FadeInImage
+                              src={item.data.url}
+                              alt={work.title}
+                              width={item.data.width}
+                              height={item.data.height}
+                              priority={isFirst}
+                              style={{
+                                width: '100%',
+                                height: 'auto',
+                                borderRadius: '4px',
+                              }}
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
+                </div>
 
-                  {/* 우측: 캡션 - fixed로 하단 고정 */}
-                  {displayWork.caption && (
-                    <CaptionWithBoundary
-                      caption={displayWork.caption}
-                      captionId={displayWork.id}
-                      renderCaption={renderCaption}
-                      mediaContainerRef={imageScrollContainerRef}
-                    />
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </main>
-        )}
-      </div>
+                {/* 우측: 캡션 - fixed로 하단 고정 */}
+                {work.caption && (
+                  <CaptionWithBoundary
+                    caption={work.caption}
+                    captionId={work.id}
+                    renderCaption={renderCaption}
+                    mediaContainerRef={imageScrollContainerRef}
+                  />
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </main>
+      )}
 
       {/* 작품 상세 모달 */}
       <AnimatePresence>
@@ -655,8 +450,6 @@ export default function WorkDetailPage() {
           />
         )}
       </AnimatePresence>
-
-      <Footer />
-    </div>
+    </>
   );
 }

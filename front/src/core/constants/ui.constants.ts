@@ -34,6 +34,17 @@ export const LAYOUT = {
   CATEGORY_MARGIN_RIGHT: '48px',
   CONTENT_GAP: '32px',
   SPACE_UNIT: 8, // 8px base spacing
+  CATEGORY_START: 64, // var(--space-8) 상단 카테고리 시작 위치 (px)
+  WORKLIST_GAP: 24, // 카테고리와 작업 목록 사이 간격 (px)
+  WORKLIST_CONTENT_GAP: 40, // 작업 목록과 메인 컨텐츠 사이 간격 (px)
+} as const;
+
+// WorkListScroller 높이 (Layout Shift 방지용)
+export const WORKLIST_SCROLLER = {
+  // 최소 높이: 타이틀(~30px) + 썸네일(80px) + 여백(~50px)
+  MIN_HEIGHT: 160,
+  // 타이틀만 있을 때 높이
+  TITLE_ONLY_HEIGHT: 40,
 } as const;
 
 // Typography
