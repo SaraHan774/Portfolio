@@ -3,7 +3,8 @@
 /**
  * 미디어 타임라인 컴포넌트
  *
- * - Page: viewport 기준, 미디어 영역만 점선 표시
+ * - Page: 전체 페이지 스크롤에 비례하여 Thumb이 점선을 따라 이동
+ *         점선은 viewport 내에서 미디어가 보이는 영역만 표시
  * - Modal: 전체 미디어 영역에 점선, viewport 중앙에 검은 점
  */
 
@@ -213,27 +214,22 @@ export default function MediaTimeline({
     );
   } else {
     // Page 렌더링
-    // 미디어 전체 범위
-    const totalMediaHeight = mediaBounds.lastBottom - mediaBounds.firstTop;
-
     // viewport 내에서 보이는 미디어 영역 계산 (점선 표시 범위)
     const trackStart = Math.max(0, mediaBounds.firstTop - scrollPosition);
     const trackEnd = Math.min(viewportHeight, mediaBounds.lastBottom - scrollPosition);
     const trackHeight = trackEnd - trackStart;
 
-    // 스크롤 가능한 전체 범위 (미디어 시작부터 끝까지, viewport 높이 고려)
-    const scrollableRange = totalMediaHeight - viewportHeight;
-
-    // 현재 스크롤 위치가 미디어 시작점부터 얼마나 진행되었는지 계산
-    const scrollProgress = scrollPosition - mediaBounds.firstTop;
-
-    // 스크롤 비율 (0: 최상단, 1: 최하단)
-    const scrollRatio = scrollableRange > 0
-      ? Math.max(0, Math.min(1, scrollProgress / scrollableRange))
+    // 전체 페이지 스크롤 비율 계산
+    const documentHeight = typeof document !== 'undefined'
+      ? document.documentElement.scrollHeight
+      : 0;
+    const scrollableHeight = documentHeight - viewportHeight;
+    const pageScrollRatio = scrollableHeight > 0
+      ? Math.max(0, Math.min(1, scrollPosition / scrollableHeight))
       : 0;
 
-    // 점(thumb)의 위치: 점선 내에서 스크롤 비율에 따라 배치
-    const thumbPosition = trackStart + trackHeight * scrollRatio;
+    // 점(thumb)의 위치: 점선 내에서 전체 페이지 스크롤 비율에 따라 배치
+    const thumbPosition = trackStart + trackHeight * pageScrollRatio;
 
     // 점선이 viewport 내에 보이는지 확인
     const isVisible = trackHeight > 0;
@@ -267,7 +263,7 @@ export default function MediaTimeline({
           }}
         />
 
-        {/* Thumb (검은 점) - 스크롤 비율에 따라 점선을 따라 이동 */}
+        {/* Thumb (검은 점) - 전체 페이지 스크롤 비율에 따라 점선을 따라 이동 */}
         <div
           style={{
             position: 'absolute',
