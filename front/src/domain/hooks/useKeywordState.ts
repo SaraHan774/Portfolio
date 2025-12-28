@@ -1,38 +1,41 @@
 // Custom hook for keyword state calculation logic
 
 import { useMemo } from 'react';
-import type { KeywordCategory, CategoryState } from '../../core/types';
+import type { CategoryState, WorkOrder } from '@/core/types';
 
-export interface UseKeywordStateOptions {
-  /** The keyword to calculate state for */
-  keyword: KeywordCategory;
-  /** Whether this keyword is currently selected */
+export interface UseKeywordStateOptions<T extends { workOrders?: WorkOrder[] }> {
+  /** The keyword or category to calculate state for */
+  keyword: T;
+  /** Whether this item is currently selected */
   isSelected: boolean;
-  /** Whether this keyword is currently hovered */
+  /** Whether this item is currently hovered */
   isHovered: boolean;
   /** IDs of works in the currently selected category (for disabled state) */
   selectedWorkIds?: string[];
 }
 
 /**
- * Calculate the display state of a keyword based on selection and work associations
+ * Calculate the display state of a keyword or category based on selection and work associations
+ *
+ * This hook is generic and works with any type that has a workOrders property,
+ * including KeywordCategory and ExhibitionCategory.
  *
  * State priority:
- * 1. active: Keyword is selected
- * 2. hover: Mouse is over keyword
- * 3. disabled: Category is selected but keyword has no common works
- * 4. clickable: Keyword is interactive and available
- * 5. basic: Keyword is non-interactive
+ * 1. active: Item is selected
+ * 2. hover: Mouse is over item
+ * 3. disabled: Category is selected but item has no common works
+ * 4. clickable: Item is interactive and available
+ * 5. basic: Item is non-interactive
  *
  * @param options - State calculation options
  * @returns Current category state
  */
-export const useKeywordState = ({
+export const useKeywordState = <T extends { workOrders?: WorkOrder[] }>({
   keyword,
   isSelected,
   isHovered,
   selectedWorkIds = [],
-}: UseKeywordStateOptions): CategoryState => {
+}: UseKeywordStateOptions<T>): CategoryState => {
   return useMemo(() => {
     // Active state: Currently selected
     if (isSelected) {

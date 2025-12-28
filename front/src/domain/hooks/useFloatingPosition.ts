@@ -26,10 +26,11 @@ export interface UseFloatingPositionOptions {
 /**
  * Calculate and adjust floating window position to stay within viewport bounds
  *
- * Strategy:
- * - Default: Center-aligned below the target position
- * - If overflow right: Align to right edge
- * - If overflow bottom: Position above the target
+ * Strategy (Dropdown Menu Style):
+ * - Default: Top-left aligned above the target position
+ * - If not enough space above: Position below the target
+ * - If overflow right: Shift left to fit within viewport
+ * - If overflow left: Align to left edge with padding
  * - Always maintain edge padding from viewport boundaries
  *
  * Performance Note:
@@ -59,28 +60,48 @@ export const useFloatingPosition = ({
       const windowWidth = window.innerWidth;
       const windowHeight = window.innerHeight;
 
-      // Start with center-aligned position below the target
-      let x = position.x - dimensions.width / 2; // Center align
-      let y = position.y + offsetY; // Below target with offset
+      // Start with left-aligned position
+      let x = position.x + offsetX;
 
-      // Right boundary check: If overflows right edge, align to right
+      // Vertical positioning: Default above, fallback below
+      let y: number;
+      const spaceAbove = position.y;
+      const spaceBelow = windowHeight - position.y;
+
+      // Check if there's enough space above (prefer above like dropdown menu)
+      if (spaceAbove >= dimensions.height + offsetY + edgePadding) {
+        // Position above the target
+        y = position.y - dimensions.height - offsetY;
+      } else if (spaceBelow >= dimensions.height + offsetY + edgePadding) {
+        // Not enough space above, position below
+        y = position.y + offsetY;
+      } else {
+        // Not enough space either way, position where there's more space
+        if (spaceAbove > spaceBelow) {
+          y = edgePadding; // Top of viewport
+        } else {
+          y = position.y + offsetY; // Below target
+        }
+      }
+
+      // Right boundary check: If overflows right edge, shift left
       if (x + dimensions.width > windowWidth - edgePadding) {
         x = windowWidth - dimensions.width - edgePadding;
       }
 
-      // Bottom boundary check: If overflows bottom, position above target
-      if (y + dimensions.height > windowHeight - edgePadding) {
-        y = position.y - dimensions.height - offsetY; // Above target
-      }
-
-      // Left boundary check
+      // Left boundary check: Ensure minimum padding from left edge
       if (x < edgePadding) {
         x = edgePadding;
       }
 
-      // Top boundary check
+      // Top boundary check: Ensure minimum padding from top edge
       if (y < edgePadding) {
         y = edgePadding;
+      }
+
+      // Bottom boundary check: Ensure minimum padding from bottom edge
+      if (y + dimensions.height > windowHeight - edgePadding) {
+        y = windowHeight - dimensions.height - edgePadding;
       }
 
       setAdjustedPosition({ x, y });

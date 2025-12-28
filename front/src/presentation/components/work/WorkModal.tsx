@@ -6,13 +6,15 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { getWorkById } from '@/lib/services/worksService';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useWork, useCaptionHoverEvents } from '@/domain';
 import { getMediaItems } from '@/core/utils';
 import { Spinner } from '@/presentation';
 import { YouTubeEmbed } from '../media';
 import ModalImage from './ModalImage';
-import type { Work } from '@/types';
+import FloatingWorkWindow from './FloatingWorkWindow';
+import { OverlayScrollbarsComponent } from 'overlayscrollbars-react';
+import 'overlayscrollbars/overlayscrollbars.css';
 
 interface WorkModalProps {
   /** 표시할 작품 ID */
@@ -35,9 +37,28 @@ export default function WorkModal({
   onWorkClick,
   renderCaption,
 }: WorkModalProps) {
-  const [modalWork, setModalWork] = useState<Work | null>(null);
+  // Fetch work data using domain hook
+  const { data: modalWork } = useWork(workId);
+
+  // Caption hover events 설정
+  const { hoveredWorkId, hoverPosition, clearHover } = useCaptionHoverEvents({
+    containerSelector: '[data-is-modal="true"]',
+    hoverDelay: 400,
+    hideDelay: 200,
+    currentWorkId: modalWork?.id,
+    dependencies: [modalWork],
+  });
+
+  // Hover 중인 작업 데이터
+  const { data: hoveredWork } = useWork(hoveredWorkId || '');
+
   const [modalCurrentImageId, setModalCurrentImageId] = useState<string | null>(null);
-  const modalImageScrollContainerRef = useRef<HTMLDivElement>(null);
+  const overlayScrollbarsRef = useRef<any>(null);
+
+  // 모달 작품이 변경될 때 hover 상태 초기화
+  useEffect(() => {
+    clearHover();
+  }, [workId, clearHover]);
 
   // 모달 열릴 때 배경 스크롤 방지
   useEffect(() => {
@@ -47,31 +68,31 @@ export default function WorkModal({
     };
   }, []);
 
-  // 모달 작업 데이터 로드
+  // 첫 번째 미디어 ID 설정 및 스크롤 초기화
   useEffect(() => {
-    const loadModalWork = async () => {
-      const work = await getWorkById(workId);
-      setModalWork(work);
-      if (work) {
-        // 이미지와 영상을 통합하여 첫 번째 미디어 ID 설정
-        const mediaItems = getMediaItems(work);
-        if (mediaItems.length > 0) {
-          setModalCurrentImageId(mediaItems[0].data.id);
-        }
+    if (modalWork) {
+      const mediaItems = getMediaItems(modalWork);
+      if (mediaItems.length > 0) {
+        setModalCurrentImageId(mediaItems[0].data.id);
       }
       // 스크롤 초기화 (다른 작품으로 이동 시)
-      if (modalImageScrollContainerRef.current) {
-        modalImageScrollContainerRef.current.scrollTop = 0;
+      if (overlayScrollbarsRef.current) {
+        const { viewport } = overlayScrollbarsRef.current.elements();
+        if (viewport) {
+          viewport.scrollTop = 0;
+        }
       }
-    };
-    void loadModalWork();
-  }, [workId]);
+    }
+  }, [modalWork, workId]);
 
   // 모달 내 이미지 Intersection Observer + 스크롤 끝 감지
   useEffect(() => {
-    if (!modalWork || !modalCurrentImageId || !modalImageScrollContainerRef.current) return;
+    if (!modalWork || !modalCurrentImageId || !overlayScrollbarsRef.current) return;
 
-    const container = modalImageScrollContainerRef.current;
+    const { viewport } = overlayScrollbarsRef.current.elements();
+    if (!viewport) return;
+
+    const container = viewport as HTMLElement;
     const imageElements = container.querySelectorAll('[data-image-id]');
     const sortedMedia = getMediaItems(modalWork);
     let lastTrackedImageId: string | null = null;
@@ -132,7 +153,7 @@ export default function WorkModal({
         updateCurrentImage();
       },
       {
-        root: modalImageScrollContainerRef.current,
+        root: container,
         rootMargin: '-20% 0px -60% 0px',
         threshold: [0, 0.25, 0.5, 0.75, 1],
       }
@@ -152,38 +173,31 @@ export default function WorkModal({
     };
   }, [modalWork, modalCurrentImageId]);
 
-  // 모달 내 링크 클릭 이벤트 처리
+  // 모달 내 링크 클릭 이벤트 처리 (이벤트 위임)
   useEffect(() => {
-    if (!modalWork) return;
-
     const handleLinkClick = (e: Event) => {
-      e.preventDefault();
       const target = e.target as HTMLElement;
       const link = target.closest('a[data-work-id]') as HTMLElement;
-      if (link) {
+
+      // 모달 내부 캡션의 링크만 처리
+      const modalCaptionContainer = link?.closest('[data-is-modal="true"]');
+      if (link && modalCaptionContainer) {
+        e.preventDefault();
         const clickedWorkId = link.getAttribute('data-work-id');
         if (clickedWorkId) {
+          clearHover(); // Hover 상태 초기화
           onWorkClick(clickedWorkId);
         }
       }
     };
 
-    const captionContainers = document.querySelectorAll('[data-is-modal="true"]');
-    const links: HTMLElement[] = [];
-    captionContainers.forEach((container) => {
-      const containerLinks = container.querySelectorAll('a[data-work-id]');
-      containerLinks.forEach((link) => {
-        links.push(link as HTMLElement);
-        link.addEventListener('click', handleLinkClick);
-      });
-    });
+    // document.body에 이벤트 위임으로 부착 (동적 링크 포함)
+    document.body.addEventListener('click', handleLinkClick);
 
     return () => {
-      links.forEach((link) => {
-        link.removeEventListener('click', handleLinkClick);
-      });
+      document.body.removeEventListener('click', handleLinkClick);
     };
-  }, [modalWork, onWorkClick]);
+  }, [onWorkClick, clearHover]);
 
   // 로딩 상태
   if (!modalWork) {
@@ -255,7 +269,6 @@ export default function WorkModal({
         }}
         style={{
           backgroundColor: 'var(--color-gray-200)',
-          borderRadius: '8px',
           maxWidth: '1200px',
           maxHeight: '90vh',
           width: '100%',
@@ -305,24 +318,12 @@ export default function WorkModal({
           <h2
             style={{
               fontSize: 'var(--font-size-lg)',
-              fontWeight: 'var(--font-weight-bold)',
               color: 'var(--color-text-primary)',
               margin: 0,
               textAlign: 'center',
             }}
           >
-            {`「'${modalWork.title}'」`}
-            {modalWork.year && (
-              <span
-                style={{
-                  fontWeight: 'var(--font-weight-normal)',
-                  color: 'var(--color-text-secondary)',
-                  marginLeft: '8px',
-                }}
-              >
-                {modalWork.year}
-              </span>
-            )}
+              {`「‘${modalWork.title}’」${modalWork.year ? `,\u00A0${modalWork.year}` : ''}`}
           </h2>
         </div>
 
@@ -339,103 +340,39 @@ export default function WorkModal({
           <div
             style={{
               width: '65%',
-              display: 'flex',
               position: 'relative',
             }}
           >
-            {/* 타임라인 UI - 미디어가 2개 이상일 때만 표시 */}
-            {modalMediaItems.length > 1 && (
-              <div
-                style={{
-                  position: 'sticky',
-                  top: 'var(--space-6)',
-                  height: 'fit-content',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  paddingLeft: 'var(--space-4)',
-                  paddingRight: 'var(--space-2)',
-                  zIndex: 10,
-                }}
-              >
-                {(() => {
-                  const activeIndex = modalMediaItems.findIndex(
-                    (item) => item.data.id === modalCurrentImageId
-                  );
-
-                  return modalMediaItems.map((item, index) => {
-                    const isActive = modalCurrentImageId === item.data.id;
-                    const isLast = index === modalMediaItems.length - 1;
-
-                    const getLineHeight = () => {
-                      if (index === activeIndex) return '80px';
-                      else if (index === activeIndex - 1) return '50px';
-                      else return '25px';
-                    };
-
-                    return (
-                      <div
-                        key={item.data.id}
-                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
-                      >
-                        <button
-                          onClick={() => {
-                            const element = modalImageScrollContainerRef.current?.querySelector(
-                              `[data-image-id="${item.data.id}"]`
-                            );
-                            if (element) {
-                              element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }
-                          }}
-                          style={{
-                            width: isActive ? '8px' : '5px',
-                            height: isActive ? '8px' : '5px',
-                            borderRadius: '50%',
-                            backgroundColor: isActive
-                              ? 'var(--color-text-primary)'
-                              : 'var(--color-gray-400)',
-                            border: 'none',
-                            cursor: 'pointer',
-                            transition: 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                            padding: 0,
-                          }}
-                          aria-label={`미디어 ${index + 1}로 이동`}
-                        />
-                        {!isLast && (
-                          <div
-                            style={{
-                              width: '1px',
-                              height: getLineHeight(),
-                              backgroundImage:
-                                'linear-gradient(var(--color-gray-300) 50%, transparent 50%)',
-                              backgroundSize: '1px 5px',
-                              backgroundRepeat: 'repeat-y',
-                              margin: '5px 0',
-                              transition: 'height 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                            }}
-                          />
-                        )}
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            )}
-
             {/* 미디어 스크롤 영역 (이미지 + 영상) */}
-            <div
-              ref={modalImageScrollContainerRef}
-              className="image-scroll-container"
+            <OverlayScrollbarsComponent
+              element="div"
+              className="os-theme-dotted-left"
+              options={{
+                scrollbars: {
+                  autoHide: 'never',
+                  autoHideDelay: 0,
+                },
+                overflow: {
+                  x: 'hidden',
+                  y: 'scroll',
+                },
+              }}
+              events={{
+                initialized: (instance) => {
+                  overlayScrollbarsRef.current = instance;
+                  console.log('OverlayScrollbars initialized:', instance);
+                },
+              }}
               style={{
-                flex: 1,
-                height: 'calc(90vh - 100px)',
-                overflowY: 'auto',
-                padding: 'var(--space-6)',
-                paddingLeft: modalMediaItems.length > 1 ? 'var(--space-2)' : 'var(--space-6)',
-                scrollbarWidth: 'none',
-                scrollbarColor: 'transparent transparent',
+                height: 'calc(80vh - 80px)',
               }}
             >
+              <div style={{
+                // paddingTop: 'var(--space-6)',
+                paddingRight: 'var(--space-6)',
+                // paddingBottom: 'var(--space-6)',
+                paddingLeft: 'calc(var(--space-4) + 20px + var(--space-4))',
+              }}>
               {modalMediaItems.map((item, index) => {
                 const isLast = index === modalMediaItems.length - 1;
 
@@ -454,7 +391,8 @@ export default function WorkModal({
                   />
                 );
               })}
-            </div>
+              </div>
+            </OverlayScrollbarsComponent>
           </div>
 
           {/* 우측: 캡션 (고정, 정중앙) */}
@@ -472,8 +410,11 @@ export default function WorkModal({
             }}
             onWheel={(e) => {
               // 캡션 영역에서 스크롤 시 이미지 영역으로 전달
-              if (modalImageScrollContainerRef.current) {
-                modalImageScrollContainerRef.current.scrollTop += e.deltaY;
+              if (overlayScrollbarsRef.current) {
+                const { viewport } = overlayScrollbarsRef.current.elements();
+                if (viewport) {
+                  viewport.scrollTop += e.deltaY;
+                }
               }
             }}
           >
@@ -490,6 +431,22 @@ export default function WorkModal({
             )}
           </div>
         </div>
+
+        {/* FloatingWorkWindow - Caption hover */}
+        <AnimatePresence>
+          {hoveredWork && hoverPosition && (
+            <div data-floating-window="true" style={{ zIndex: 1100, position: 'absolute' }}>
+              <FloatingWorkWindow
+                work={hoveredWork}
+                position={hoverPosition}
+                onClick={(clickedWorkId) => {
+                  onWorkClick(clickedWorkId);
+                  clearHover();
+                }}
+              />
+            </div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </motion.div>
   );

@@ -1,7 +1,7 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
-import { getSentenceCategories, getExhibitionCategories } from '@/lib/services/categoriesService';
+import { createContext, useContext, ReactNode, useMemo } from 'react';
+import { useSentenceCategories as useSentenceCategoriesQuery, useExhibitionCategories as useExhibitionCategoriesQuery } from '@/domain';
 import type { SentenceCategory, ExhibitionCategory } from '@/types';
 
 /**
@@ -40,36 +40,29 @@ interface CategoriesContextType extends CategoriesState, CategoriesActions, Cate
 const CategoriesContext = createContext<CategoriesContextType | undefined>(undefined);
 
 export function CategoriesProvider({ children }: { children: ReactNode }) {
-  const [sentenceCategories, setSentenceCategories] = useState<SentenceCategory[]>([]);
-  const [exhibitionCategories, setExhibitionCategories] = useState<ExhibitionCategory[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  // Use domain hooks for data fetching with React Query
+  const {
+    data: sentenceCategories = [],
+    isLoading: isSentenceLoading,
+    error: sentenceError,
+    refetch: refetchSentence,
+  } = useSentenceCategoriesQuery();
 
-  // Load categories function
-  const loadCategories = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const [sentences, exhibitions] = await Promise.all([
-        getSentenceCategories(),
-        getExhibitionCategories(),
-      ]);
-      setSentenceCategories(sentences);
-      setExhibitionCategories(exhibitions);
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to load categories');
-      setError(error);
-      console.error('[CategoriesContext] Failed to load categories:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const {
+    data: exhibitionCategories = [],
+    isLoading: isExhibitionLoading,
+    error: exhibitionError,
+    refetch: refetchExhibition,
+  } = useExhibitionCategoriesQuery();
+
+  // Combined loading and error states
+  const isLoading = isSentenceLoading || isExhibitionLoading;
+  const error = sentenceError || exhibitionError;
+
+  // Combined refetch function
+  const refetch = async () => {
+    await Promise.all([refetchSentence(), refetchExhibition()]);
   };
-
-  // Load categories once on mount
-  useEffect(() => {
-    loadCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Selectors (derived state)
   const selectors = useMemo<CategoriesSelectors>(
@@ -91,11 +84,11 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
       isLoading,
       error,
       // Actions
-      refetch: loadCategories,
+      refetch,
       // Selectors
       ...selectors,
     }),
-    [sentenceCategories, exhibitionCategories, isLoading, error, selectors]
+    [sentenceCategories, exhibitionCategories, isLoading, error, selectors, refetch]
   );
 
   return <CategoriesContext.Provider value={value}>{children}</CategoriesContext.Provider>;

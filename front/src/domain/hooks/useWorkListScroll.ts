@@ -1,6 +1,6 @@
 // Custom hook for work list horizontal scroll logic
 
-import { useState, useEffect, useRef, useCallback, RefObject } from 'react';
+import React, {useState, useEffect, useRef, useCallback, RefObject} from 'react';
 
 export interface UseWorkListScrollOptions {
   /** Scroll direction */

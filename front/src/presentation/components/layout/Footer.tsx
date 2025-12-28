@@ -1,31 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { getSiteSettings } from '@/lib/services/settingsService';
+import {useSiteSettings} from '@/domain';
 
 export default function Footer() {
-  const [footerText, setFooterText] = useState('');
+    const {data: settings} = useSiteSettings();
 
-  useEffect(() => {
-    const loadSettings = async () => {
-      const settings = await getSiteSettings();
-      setFooterText(settings.footerText);
-    };
-    loadSettings();
-  }, []);
-
-  return (
-    <footer
-      style={{
-        height: '60px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 'var(--font-size-xs)',
-        color: 'var(--color-text-muted)',
-      }}
-    >
-      {footerText}
-    </footer>
-  );
+    return (
+        <footer
+            style={{
+                height: '60px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',   // 오른쪽 정렬
+                paddingRight: 'var(--space-6)',
+                paddingBottom: 'var(--space-4)', // 원하면
+                fontSize: 'var(--font-size-xs)',
+                color: 'var(--color-text-muted)',
+            }}
+        >
+            {settings?.footerText || ''}
+        </footer>
+    );
 }

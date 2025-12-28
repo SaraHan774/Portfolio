@@ -3,14 +3,14 @@
 /* 디자인 시스템 CSS 변수 (PRD 기준) */
 :root {
   /* 기본 색상 */
-  --color-black: #000000;
+  --color-black: #0C0C0C;
   --color-white: #FFFFFF;
   --color-gray-100: #F5F5F5;
   --color-gray-200: #E5E5E5;
   --color-gray-300: #D4D4D4;
-  --color-gray-400: #A3A3A3;
+  --color-gray-400: #A9A9A9;
   --color-gray-500: #737373;
-  --color-gray-600: #525252;
+  --color-gray-600: #A9A9A9;
   --color-gray-700: #404040;
   --color-gray-800: #262626;
   --color-gray-900: #171717;
@@ -312,5 +312,75 @@ img {
   width: 0;
   height: 0;
   display: none;
+}
+
+/* OverlayScrollbars 커스텀 테마 - 좌측 배치, 점선 track + 둥근 thumb */
+
+/* 모든 OverlayScrollbars 요소 강제 표시 */
+[data-overlayscrollbars-initialize] {
+  position: relative;
+}
+
+/* 스크롤바 컨테이너 */
+.os-theme-dotted-left [data-overlayscrollbars-contents] {
+  box-sizing: border-box;
+}
+
+/* 세로 스크롤바 - 좌측 배치 (모달 좌측과 간격) */
+.os-theme-dotted-left [data-overlayscrollbars-overflow-y="scroll"] .os-scrollbar-vertical,
+.os-theme-dotted-left .os-scrollbar-vertical {
+  left: var(--space-4) !important;
+  right: auto !important;
+  width: 20px !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Track 배경 투명 + 점선 (메인 페이지 MediaTimeline과 동일) */
+.os-theme-dotted-left .os-scrollbar-vertical .os-scrollbar-track {
+  background: transparent !important;
+  width: 100% !important;
+  position: relative;
+}
+
+.os-theme-dotted-left .os-scrollbar-vertical .os-scrollbar-track::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-image: linear-gradient(var(--color-gray-300) 50%, transparent 50%);
+  background-size: 1px 6px;
+  background-repeat: repeat-y;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Handle(Thumb) - 둥근 점, 점선 중앙에 위치 */
+.os-theme-dotted-left .os-scrollbar-vertical .os-scrollbar-handle {
+  background: var(--color-gray-600) !important;
+  border-radius: 50% !important;
+  width: 10px !important;
+  min-width: 10px !important;
+  max-width: 10px !important;
+  height: 10px !important;
+  min-height: 10px !important;
+  max-height: 10px !important;
+  left: 5px !important;
+  right: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 1;
+  margin: 0 !important;
+}
+
+.os-theme-dotted-left .os-scrollbar-vertical .os-scrollbar-handle:hover {
+  background: var(--color-text-primary) !important;
+}
+
+/* 가로 스크롤바 숨김 */
+.os-theme-dotted-left .os-scrollbar-horizontal {
+  display: none !important;
 }
 

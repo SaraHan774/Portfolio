@@ -1,13 +1,13 @@
 // Custom hooks for categories data fetching with React Query
 
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
-import { queryKeys } from '../../data/cache/queryKeys';
-import { CategoryRepository } from '../../data/repository/CategoryRepository';
+import { queryKeys } from '@/src/data';
+import { CategoryRepository } from '@/src/data';
 import type {
   SentenceCategory,
   ExhibitionCategory,
   KeywordCategory,
-} from '../../core/types';
+} from '@/core/types';
 
 /**
  * Fetch all active sentence categories with their keywords

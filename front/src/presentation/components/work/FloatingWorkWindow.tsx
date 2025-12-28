@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useFloatingPosition, useThumbnailUrl } from '@/domain';
 import { FLOATING_WINDOW_ANIMATION } from '@/core/constants';
@@ -22,89 +22,87 @@ export default function FloatingWorkWindow({ work, position, onClick }: Floating
   const adjustedPosition = useFloatingPosition({
     position,
     dimensions: WINDOW_DIMENSIONS,
-    offset: { x: 0, y: 8 },
-    edgePadding: 10,
+    offset: { x: -200, y: 10 },
+    edgePadding: 20,
   });
 
   const thumbnailUrl = useThumbnailUrl(work);
   const hasThumbnail = !!thumbnailUrl;
 
-  const description = work.shortDescription ||
-    (work.fullDescription?.length > 100
-      ? work.fullDescription.substring(0, 100) + '...'
-      : work.fullDescription || '');
-
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        {...FLOATING_WINDOW_ANIMATION}
-        className="floating-work-window"
-        data-floating-window="true"
+    <motion.div
+      {...FLOATING_WINDOW_ANIMATION}
+      className="floating-work-window"
+      data-floating-window="true"
+      style={{
+        position: 'fixed',
+        left: `${adjustedPosition.x}px`,
+        top: `${adjustedPosition.y}px`,
+        zIndex: 1000,
+        pointerEvents: 'auto',
+        filter: 'drop-shadow(0 8px 40px rgba(0, 0, 0, 0.08))',
+      }}
+      onMouseEnter={(e) => e.stopPropagation()}
+      onMouseLeave={(e) => e.stopPropagation()}
+    >
+      {/* Soft edge gradient background */}
+      <div
         style={{
-          position: 'fixed',
-          left: `${adjustedPosition.x}px`,
-          top: `${adjustedPosition.y}px`,
-          zIndex: 1000,
-          pointerEvents: 'auto',
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(242, 242, 242)',
+          filter: 'blur(10px)',
         }}
-        onMouseEnter={(e) => e.stopPropagation()}
-        onMouseLeave={(e) => e.stopPropagation()}
+      />
+
+      {/* 메인 컨텐츠 */}
+      <div
+        style={{
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '20px',
+          cursor: 'pointer',
+          padding: '30px',
+        }}
+        onClick={() => onClick?.(work.id)}
       >
-        {/* 회색 배경 + fade out 테두리 */}
-        <div
+        {/* 작품명 + 년도 */}
+        <span
           style={{
-            position: 'relative',
-            background: 'var(--color-gray-200)',
-            borderRadius: '4px',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04)',
-            padding: '16px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '12px',
-            cursor: 'pointer',
-            maxWidth: '200px',
+            fontSize: '14px',
+            fontWeight: 'var(--font-weight-normal)',
+            color: 'var(--color-text-primary)',
+            textAlign: 'center',
+            whiteSpace: 'nowrap',
           }}
-          onClick={() => onClick?.(work.id)}
         >
-          {/* 작품명 + 년도 */}
-          <span
+          {`「'${work.title}'」${work.year ? `,\u00A0${work.year}` : ''}`}
+        </span>
+
+        {/* 썸네일 */}
+        {hasThumbnail && (
+          <div
             style={{
-              fontSize: '14px',
-              fontWeight: 'var(--font-weight-normal)',
-              color: 'var(--color-text-primary)',
-              textAlign: 'center',
-              whiteSpace: 'nowrap',
+              width: '80px',
+              height: '80px',
+              position: 'relative',
+              overflow: 'hidden',
             }}
           >
-            {`「'${work.title}'」, ${work.year || ''}`}
-          </span>
-
-          {/* 썸네일 */}
-          {hasThumbnail && (
-            <div
+            <Image
+              src={thumbnailUrl}
+              alt={work.title}
+              fill
+              sizes="80px"
               style={{
-                width: '120px',
-                height: '120px',
-                position: 'relative',
-                overflow: 'hidden',
-                borderRadius: '4px',
+                objectFit: 'cover',
               }}
-            >
-              <Image
-                src={thumbnailUrl}
-                alt={work.title}
-                fill
-                sizes="120px"
-                style={{
-                  objectFit: 'cover',
-                }}
-              />
-            </div>
-          )}
-        </div>
-      </motion.div>
-    </AnimatePresence>
+            />
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 }
-

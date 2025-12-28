@@ -5,7 +5,7 @@
  * FadeInImage를 래핑하여 모달에 적합한 스타일 적용
  */
 
-import { FadeInImage } from '../media';
+import { FadeInImage } from '@/presentation/ui';
 import type { WorkImage } from '@/types';
 
 interface ModalImageProps {
