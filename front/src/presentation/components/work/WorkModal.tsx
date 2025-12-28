@@ -52,8 +52,14 @@ export default function WorkModal({
   // Hover 중인 작업 데이터
   const { data: hoveredWork } = useWork(hoveredWorkId || '');
 
+  interface OverlayScrollbarsInstance {
+    elements: () => {
+      viewport: HTMLElement | null;
+    };
+  }
+
   const [modalCurrentImageId, setModalCurrentImageId] = useState<string | null>(null);
-  const overlayScrollbarsRef = useRef<any>(null);
+  const overlayScrollbarsRef = useRef<OverlayScrollbarsInstance | null>(null);
 
   // 모달 작품이 변경될 때 hover 상태 초기화
   useEffect(() => {
@@ -73,6 +79,7 @@ export default function WorkModal({
     if (modalWork) {
       const mediaItems = getMediaItems(modalWork);
       if (mediaItems.length > 0) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setModalCurrentImageId(mediaItems[0].data.id);
       }
       // 스크롤 초기화 (다른 작품으로 이동 시)

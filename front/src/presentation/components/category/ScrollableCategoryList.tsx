@@ -84,6 +84,7 @@ export default function ScrollableCategoryList({
   // 뷰포트 리사이즈 및 컨텐츠 변경 감지
   useEffect(() => {
     // 초기 체크
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     checkScrollability();
 
     // 뷰포트 리사이즈 시 재계산
@@ -116,12 +117,13 @@ export default function ScrollableCategoryList({
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container || !isScrollable) return;
-    
+
     // 초기 상태 설정
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     updateScrollPosition();
-    
+
     container.addEventListener('scroll', updateScrollPosition, { passive: true });
-    
+
     return () => {
       container.removeEventListener('scroll', updateScrollPosition);
     };

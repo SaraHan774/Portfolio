@@ -22,6 +22,10 @@ const LAYOUT_CONSTANTS = {
   ANIMATION_DURATION: 0.3,
   /** 전환 애니메이션 타이밍 */
   TRANSITION_EASE: 'easeOut',
+  /** 카테고리 예상 높이 (측정 전 사용, Layout Shift 방지) */
+  ESTIMATED_CATEGORY_HEIGHT: 100,
+  /** WorkListScroller 예상 높이 (측정 전 사용, Layout Shift 방지) */
+  ESTIMATED_WORKLIST_HEIGHT: 80,
 } as const;
 
 interface PortfolioLayoutProps {
@@ -54,11 +58,14 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
   // 카테고리 영역의 높이를 저장하는 상태
   const [sentenceCategoryHeight, setSentenceCategoryHeight] = useState<number>(0);
   const [exhibitionCategoryHeight, setExhibitionCategoryHeight] = useState<number>(0);
-  
+
   // WorkListScroller 높이를 저장하는 상태
   const [workListScrollerHeight, setWorkListScrollerHeight] = useState<number>(0);
   const leftWorkListRef = useRef<HTMLDivElement>(null);
   const rightWorkListRef = useRef<HTMLDivElement>(null);
+
+  // 페이드 아웃 상태 (카테고리 변경 시 부드러운 전환)
+  const [isFadingOut, setIsFadingOut] = useState<boolean>(false);
 
   // 높이 변경 콜백
   const handleSentenceCategoryHeightChange = useCallback((height: number) => {
@@ -148,13 +155,19 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
     return `${totalHeight}px`;
   }, [selectedKeywordId, selectedExhibitionCategoryId, sentenceCategoryHeight, exhibitionCategoryHeight, workListScrollerHeight, hasData]);
 
-  // 카테고리 선택 핸들러
+  // 카테고리 선택 핸들러 (페이드 아웃과 동시에 라우팅)
   const handleKeywordSelect = useCallback((keywordId: string) => {
     selectKeyword(keywordId);
-    
+
     // 작품 상세 페이지에서 카테고리 선택 시 홈으로 이동
     if (pathname.startsWith('/works/')) {
+      // 페이드 아웃 시작과 동시에 라우팅
+      setIsFadingOut(true);
       router.push(`/?keywordId=${keywordId}`);
+      // 400ms 후 페이드 아웃 상태 리셋
+      setTimeout(() => {
+        setIsFadingOut(false);
+      }, 400);
     }
     // 홈 페이지에서도 URL 업데이트 (다른 카테고리에서 전환 시)
     else if (pathname === '/') {
@@ -165,10 +178,16 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
 
   const handleExhibitionCategorySelect = useCallback((categoryId: string) => {
     selectExhibitionCategory(categoryId);
-    
+
     // 작품 상세 페이지에서 카테고리 선택 시 홈으로 이동
     if (pathname.startsWith('/works/')) {
+      // 페이드 아웃 시작과 동시에 라우팅
+      setIsFadingOut(true);
       router.push(`/?exhibitionId=${categoryId}`);
+      // 400ms 후 페이드 아웃 상태 리셋
+      setTimeout(() => {
+        setIsFadingOut(false);
+      }, 400);
     }
     // 홈 페이지에서도 URL 업데이트 (다른 카테고리에서 전환 시)
     else if (pathname === '/') {
@@ -200,7 +219,6 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
       return {
         position: 'left' as const,
         top: LAYOUT_CONSTANTS.BASE_TOP_OFFSET + sentenceCategoryHeight + LAYOUT_CONSTANTS.CATEGORY_TO_WORKLIST_GAP,
-        ref: leftWorkListRef,
       };
     }
 
@@ -208,12 +226,14 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
       return {
         position: 'right' as const,
         top: LAYOUT_CONSTANTS.BASE_TOP_OFFSET + exhibitionCategoryHeight + LAYOUT_CONSTANTS.CATEGORY_TO_WORKLIST_GAP,
-        ref: rightWorkListRef,
       };
     }
 
     return null;
   }, [selectedKeywordId, selectedExhibitionCategoryId, sentenceCategoryHeight, exhibitionCategoryHeight, hasData]);
+
+  // WorkListScroller ref 선택
+  const currentWorkListRef = selectedKeywordId ? leftWorkListRef : rightWorkListRef;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -247,7 +267,7 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
         {/* 작업 목록 영역 - 좌측 또는 우측 */}
         {workListConfig && (
           <div
-            ref={workListConfig.ref}
+            ref={currentWorkListRef}
             className="hidden lg:block absolute"
             style={{
               ...(workListConfig.position === 'left' && { left: 'var(--category-margin-left)' }),
@@ -261,11 +281,11 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
             }}
           >
             <motion.div
-              initial={false}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ 
-                duration: LAYOUT_CONSTANTS.ANIMATION_DURATION, 
-                ease: LAYOUT_CONSTANTS.TRANSITION_EASE 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{
+                duration: LAYOUT_CONSTANTS.ANIMATION_DURATION,
+                ease: LAYOUT_CONSTANTS.TRANSITION_EASE
               }}
             >
               <WorkListScroller
@@ -280,10 +300,20 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
         )}
 
         {/* 페이지별 컨텐츠 - paddingTop으로 WorkListScroller와 겹치지 않도록 */}
-        <div 
-          style={{ 
+        <div
+          style={{
             paddingTop: contentPaddingTop,
-            transition: `padding-top ${LAYOUT_CONSTANTS.ANIMATION_DURATION}s ${LAYOUT_CONSTANTS.TRANSITION_EASE}`,
+            position: isFadingOut ? 'fixed' : 'relative',
+            top: isFadingOut ? 0 : 'auto',
+            left: isFadingOut ? 0 : 'auto',
+            right: isFadingOut ? 0 : 'auto',
+            width: isFadingOut ? '100%' : 'auto',
+            opacity: isFadingOut ? 0 : 1,
+            transition: isFadingOut
+              ? 'opacity 0.4s ease-out'
+              : `padding-top ${LAYOUT_CONSTANTS.ANIMATION_DURATION}s ${LAYOUT_CONSTANTS.TRANSITION_EASE}, opacity 0.4s ease-out`,
+            pointerEvents: isFadingOut ? 'none' : 'auto',
+            zIndex: isFadingOut ? 1000 : 'auto',
           }}
         >
           {children}
