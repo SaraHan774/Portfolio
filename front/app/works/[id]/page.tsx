@@ -64,7 +64,7 @@ function renderCaption(
     if (linkWorkId) {
       link.setAttribute('href', '#');
       link.style.color = 'var(--color-text-primary)';
-      link.style.textDecoration = 'underline';
+      link.style.fontWeight = 'bold';
       link.style.cursor = 'pointer';
       link.setAttribute('data-caption-id', captionId);
       link.setAttribute('data-work-id', linkWorkId);
@@ -311,7 +311,6 @@ export default function WorkDetailPage() {
           style={{
             position: 'relative',
             minHeight: 'calc(100vh - 60px)',
-            // paddingTop 제거 - 이미지가 WorkListScroller 아래에 위치하도록
           }}
         >
           {/* 선택된 작품의 미디어 표시 */}
