@@ -136,8 +136,8 @@ const CategorySidebar = memo(function CategorySidebar({
         className="hidden lg:block absolute"
         style={{
           left: 'var(--category-margin-left)', // 48px
-          top: 'var(--space-8)', // 헤더 바로 아래 (64px)
-          maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-left))',
+          top: 'var(--space-4)', // 헤더 바로 아래 (64px)
+          maxWidth: 'calc(70% - var(--content-gap) - var(--category-margin-left))',
           zIndex: 100,
         }}
       >
@@ -171,9 +171,9 @@ const CategorySidebar = memo(function CategorySidebar({
         className="hidden lg:block absolute"
         style={{
           right: 'var(--category-margin-right)', // 48px
-          top: 'var(--space-8)', // 헤더 바로 아래 (64px)
+          top: 'var(--space-4)', // 헤더 바로 아래 (64px)
           textAlign: 'right',
-          maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-right))',
+          maxWidth: 'calc(70% - var(--content-gap) - var(--category-margin-right))',
           zIndex: 100,
         }}
       >

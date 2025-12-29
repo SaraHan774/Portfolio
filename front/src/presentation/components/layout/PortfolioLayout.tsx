@@ -8,7 +8,7 @@ import WorkListScroller from '../work/WorkListScroller';
 import MobileCategoryMenu from './MobileCategoryMenu';
 import Footer from './Footer';
 import { useCategories, useCategorySelection, useUIState } from '@/state';
-import { useFilteredWorks } from '@/domain';
+import { useFilteredWorks, useScrollLock } from '@/domain';
 
 /**
  * 레이아웃 상수
@@ -49,6 +49,9 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
   const { mobileMenuOpen, setMobileMenuOpen } = useUIState();
   const { sentenceCategories, exhibitionCategories } = useCategories();
 
+  // Scroll lock hook
+  const { lockScroll, unlockScroll } = useScrollLock();
+
   // Fetch works (선택된 카테고리에 해당하는 작품 목록)
   const { works, hasData } = useFilteredWorks(
     selectedKeywordId,
@@ -66,6 +69,31 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
 
   // 페이드 아웃 상태 (카테고리 변경 시 부드러운 전환)
   const [isFadingOut, setIsFadingOut] = useState<boolean>(false);
+  // 페이드 아웃 시작 시점의 paddingTop 고정값
+  const [frozenPaddingTop, setFrozenPaddingTop] = useState<string | null>(null);
+  // 새 페이지 fade in 상태
+  const [shouldFadeIn, setShouldFadeIn] = useState<boolean>(false);
+  // Race condition 방지를 위한 fade sequence ID
+  const fadeSequenceIdRef = useRef<number>(0);
+
+  // pathname 변경 감지 (fade out 중 라우팅 발생 시 새 페이지 fade in 처리)
+  useEffect(() => {
+    if (isFadingOut && pathname === '/') {
+      // 새 페이지로 전환되었음 - fade in 준비
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShouldFadeIn(true);
+    } else if (!pathname.startsWith('/works/')) {
+      // 일반적인 홈 페이지 진입
+      setShouldFadeIn(false);
+    }
+  }, [pathname, isFadingOut]);
+
+  // Cleanup: unmount 시 scroll lock 해제
+  useEffect(() => {
+    return () => {
+      unlockScroll();
+    };
+  }, [unlockScroll]);
 
   // 높이 변경 콜백
   const handleSentenceCategoryHeightChange = useCallback((height: number) => {
@@ -155,46 +183,76 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
     return `${totalHeight}px`;
   }, [selectedKeywordId, selectedExhibitionCategoryId, sentenceCategoryHeight, exhibitionCategoryHeight, workListScrollerHeight, hasData]);
 
-  // 카테고리 선택 핸들러 (페이드 아웃과 동시에 라우팅)
+  // 카테고리 선택 핸들러 (라우팅 후 페이드 아웃)
   const handleKeywordSelect = useCallback((keywordId: string) => {
-    selectKeyword(keywordId);
-
     // 작품 상세 페이지에서 카테고리 선택 시 홈으로 이동
     if (pathname.startsWith('/works/')) {
-      // 페이드 아웃 시작과 동시에 라우팅
+      // Race condition 방지: 새로운 sequence ID 생성
+      const currentSequenceId = ++fadeSequenceIdRef.current;
+
+      // 현재 paddingTop 고정
+      setFrozenPaddingTop(contentPaddingTop);
+      // 페이드 아웃 시작
       setIsFadingOut(true);
+      // 스크롤 잠금
+      lockScroll();
+
+      // 즉시 라우팅 시작 (새 페이지가 뒤에서 준비됨)
+      selectKeyword(keywordId);
       router.push(`/?keywordId=${keywordId}`);
-      // 400ms 후 페이드 아웃 상태 리셋
+
+      // 450ms 후 fade in 시작 (현재 sequence인 경우만 실행)
       setTimeout(() => {
-        setIsFadingOut(false);
-      }, 400);
+        if (currentSequenceId === fadeSequenceIdRef.current) {
+          setIsFadingOut(false);
+          setFrozenPaddingTop(null);
+          setShouldFadeIn(false);
+          unlockScroll();
+        }
+      }, 450);
     }
     // 홈 페이지에서도 URL 업데이트 (다른 카테고리에서 전환 시)
     else if (pathname === '/') {
+      selectKeyword(keywordId);
       // exhibitionId가 있으면 제거하고 keywordId로 교체
       router.push(`/?keywordId=${keywordId}`);
     }
-  }, [selectKeyword, pathname, router]);
+  }, [selectKeyword, pathname, router, contentPaddingTop, lockScroll, unlockScroll]);
 
   const handleExhibitionCategorySelect = useCallback((categoryId: string) => {
-    selectExhibitionCategory(categoryId);
-
     // 작품 상세 페이지에서 카테고리 선택 시 홈으로 이동
     if (pathname.startsWith('/works/')) {
-      // 페이드 아웃 시작과 동시에 라우팅
+      // Race condition 방지: 새로운 sequence ID 생성
+      const currentSequenceId = ++fadeSequenceIdRef.current;
+
+      // 현재 paddingTop 고정
+      setFrozenPaddingTop(contentPaddingTop);
+      // 페이드 아웃 시작
       setIsFadingOut(true);
+      // 스크롤 잠금
+      lockScroll();
+
+      // 즉시 라우팅 시작 (새 페이지가 뒤에서 준비됨)
+      selectExhibitionCategory(categoryId);
       router.push(`/?exhibitionId=${categoryId}`);
-      // 400ms 후 페이드 아웃 상태 리셋
+
+      // 450ms 후 fade in 시작 (현재 sequence인 경우만 실행)
       setTimeout(() => {
-        setIsFadingOut(false);
-      }, 400);
+        if (currentSequenceId === fadeSequenceIdRef.current) {
+          setIsFadingOut(false);
+          setFrozenPaddingTop(null);
+          setShouldFadeIn(false);
+          unlockScroll();
+        }
+      }, 450);
     }
     // 홈 페이지에서도 URL 업데이트 (다른 카테고리에서 전환 시)
     else if (pathname === '/') {
+      selectExhibitionCategory(categoryId);
       // keywordId가 있으면 제거하고 exhibitionId로 교체
       router.push(`/?exhibitionId=${categoryId}`);
     }
-  }, [selectExhibitionCategory, pathname, router]);
+  }, [selectExhibitionCategory, pathname, router, contentPaddingTop, lockScroll, unlockScroll]);
 
   // 작품 선택 핸들러
   const handleWorkSelect = useCallback((workId: string) => {
@@ -302,17 +360,13 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
         {/* 페이지별 컨텐츠 - paddingTop으로 WorkListScroller와 겹치지 않도록 */}
         <div
           style={{
-            paddingTop: contentPaddingTop,
-            position: isFadingOut ? 'fixed' : 'relative',
-            top: isFadingOut ? 0 : 'auto',
-            left: isFadingOut ? 0 : 'auto',
-            right: isFadingOut ? 0 : 'auto',
-            width: isFadingOut ? '100%' : 'auto',
-            opacity: isFadingOut ? 0 : 1,
-            transition: isFadingOut
+            paddingTop: frozenPaddingTop || contentPaddingTop,
+            opacity: (isFadingOut || shouldFadeIn) ? 0 : 1,
+            transition: (isFadingOut || shouldFadeIn)
               ? 'opacity 0.4s ease-out'
-              : `padding-top ${LAYOUT_CONSTANTS.ANIMATION_DURATION}s ${LAYOUT_CONSTANTS.TRANSITION_EASE}, opacity 0.4s ease-out`,
-            pointerEvents: isFadingOut ? 'none' : 'auto',
+              : `padding-top ${LAYOUT_CONSTANTS.ANIMATION_DURATION}s ${LAYOUT_CONSTANTS.TRANSITION_EASE}`,
+            pointerEvents: (isFadingOut || shouldFadeIn) ? 'none' : 'auto',
+            position: 'relative',
             zIndex: isFadingOut ? 1000 : 'auto',
           }}
         >

@@ -9,6 +9,7 @@ import {
   UIStateProvider,
   QueryProvider
 } from '@/state';
+import React from "react";
 
 const nanumMyeongjo = Nanum_Myeongjo({
   weight: ['400', '700'],

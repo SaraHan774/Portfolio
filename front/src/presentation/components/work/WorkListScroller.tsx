@@ -43,61 +43,84 @@ export default function WorkListScroller({
 
   return (
     <div style={{ position: 'relative', width: '100%' }}>
-      {/* Left indicator - Text level (...) - Fixed next to text */}
-      {showLeftArrow && (
-        <button
-          onClick={() => scroll('left')}
-          style={{
-            position: 'absolute',
-            left: '-40px', // Gap from list
-            top: '12px', // Text level fixed position
-            background: 'var(--color-white)',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '4px',
-            zIndex: 20,
-            fontSize: '12px',
-            color: '#B3B3B3',
-            opacity: 0.7,
-            transition: 'opacity 0.2s ease',
-            letterSpacing: '2px',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
-          aria-label="Scroll left"
-        >
-          ...
-        </button>
+      {/* RTL (우측 배치): 왼쪽에 오버플로우 인디케이터 << ... */}
+      {direction === 'rtl' && showLeftArrow && (
+        <>
+          {/* Non-clickable ... - 항상 타이틀 레벨에 표시 */}
+          <div
+            style={{
+              position: 'absolute',
+              left: '-40px',
+              top: '12px',
+              background: 'var(--color-white)',
+              padding: '4px',
+              zIndex: 20,
+              fontSize: '12px',
+              color: '#B3B3B3',
+              opacity: 0.7,
+              letterSpacing: '2px',
+              pointerEvents: 'none',
+            }}
+          >
+            ...
+          </div>
+
+          {/* Clickable << - 썸네일이 안 보일 때는 타이틀 레벨에 */}
+          {!anyWorkHovered && (
+            <button
+              onClick={() => scroll('left')}
+              style={{
+                position: 'absolute',
+                left: '-70px',
+                top: '12px',
+                background: 'var(--color-white)',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                zIndex: 20,
+                fontSize: '14px',
+                color: '#000000',
+                opacity: 0.7,
+                transition: 'opacity 0.2s ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
+              aria-label="Scroll left"
+            >
+              {'<<'}
+            </button>
+          )}
+
+          {/* Clickable << - 썸네일이 보일 때는 썸네일 레벨에 */}
+          {anyWorkHovered && (
+            <button
+              onClick={() => scroll('left')}
+              style={{
+                position: 'absolute',
+                left: '-40px',
+                bottom: '24px',
+                background: 'var(--color-white)',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                zIndex: 20,
+                fontSize: '14px',
+                color: '#000000',
+                opacity: 0.7,
+                transition: 'opacity 0.2s ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
+              aria-label="Scroll left"
+            >
+              {'<<'}
+            </button>
+          )}
+        </>
       )}
 
-      {/* Left indicator - Thumbnail level (<<) - Fixed next to thumbnail */}
-      {showLeftArrow && (showThumbnail || anyWorkHovered) && (
-        <button
-          onClick={() => scroll('left')}
-          style={{
-            position: 'absolute',
-            left: '-40px', // Gap from list
-            bottom: '24px', // Thumbnail bottom fixed position
-            background: 'var(--color-white)',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '4px',
-            zIndex: 20,
-            fontSize: '14px',
-            color: '#B3B3B3',
-            opacity: 0.7,
-            transition: 'opacity 0.2s ease',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
-          aria-label="Scroll left"
-        >
-          {'<<'}
-        </button>
-      )}
-
-      {/* Left fading edge - Extends to indicator */}
-      {showLeftArrow && (
+      {/* Left fading edge - RTL only */}
+      {direction === 'rtl' && showLeftArrow && (
         <div
           style={{
             position: 'absolute',
@@ -133,8 +156,8 @@ export default function WorkListScroller({
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           paddingBottom: '4px',
-          paddingLeft: showLeftArrow ? '8px' : '0',
-          paddingRight: showRightArrow ? '8px' : '0',
+          paddingLeft: direction === 'rtl' && showLeftArrow ? '8px' : '0',
+          paddingRight: direction === 'ltr' && showRightArrow ? '8px' : '0',
         }}
       >
         {works.map((w) => (
@@ -149,8 +172,8 @@ export default function WorkListScroller({
         ))}
       </div>
 
-      {/* Right fading edge - Extends to indicator */}
-      {showRightArrow && (
+      {/* Right fading edge - LTR only */}
+      {direction === 'ltr' && showRightArrow && (
         <div
           style={{
             position: 'absolute',
@@ -166,57 +189,80 @@ export default function WorkListScroller({
         />
       )}
 
-      {/* Right indicator - Text level (...) - Fixed next to text */}
-      {showRightArrow && (
-        <button
-          onClick={() => scroll('right')}
-          style={{
-            position: 'absolute',
-            right: '-40px', // Gap from list
-            top: '12px', // Text level fixed position
-            background: 'var(--color-white)',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '4px',
-            zIndex: 20,
-            fontSize: '12px',
-            color: '#B3B3B3',
-            opacity: 0.7,
-            transition: 'opacity 0.2s ease',
-            letterSpacing: '2px',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
-          aria-label="Scroll right"
-        >
-          ...
-        </button>
-      )}
+      {/* LTR (좌측 배치): 오른쪽에 오버플로우 인디케이터 ... >> */}
+      {direction === 'ltr' && showRightArrow && (
+        <>
+          {/* Non-clickable ... - 항상 타이틀 레벨에 표시 */}
+          <div
+            style={{
+              position: 'absolute',
+              right: '-40px',
+              top: '12px',
+              background: 'var(--color-white)',
+              padding: '4px',
+              zIndex: 20,
+              fontSize: '12px',
+              color: '#B3B3B3',
+              opacity: 0.7,
+              letterSpacing: '2px',
+              pointerEvents: 'none',
+            }}
+          >
+            ...
+          </div>
 
-      {/* Right indicator - Thumbnail level (>>) - Fixed next to thumbnail */}
-      {showRightArrow && (showThumbnail || anyWorkHovered) && (
-        <button
-          onClick={() => scroll('right')}
-          style={{
-            position: 'absolute',
-            right: '-40px', // Gap from list
-            bottom: '24px', // Thumbnail bottom fixed position
-            background: 'var(--color-white)',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '4px',
-            zIndex: 20,
-            fontSize: '14px',
-            color: '#B3B3B3',
-            opacity: 0.7,
-            transition: 'opacity 0.2s ease',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
-          aria-label="Scroll right"
-        >
-          {'>>'}
-        </button>
+          {/* Clickable >> - 썸네일이 안 보일 때는 타이틀 레벨에 */}
+          {!anyWorkHovered && (
+            <button
+              onClick={() => scroll('right')}
+              style={{
+                position: 'absolute',
+                right: '-70px',
+                top: '12px',
+                background: 'var(--color-white)',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                zIndex: 20,
+                fontSize: '14px',
+                color: '#000000',
+                opacity: 0.7,
+                transition: 'opacity 0.2s ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
+              aria-label="Scroll right"
+            >
+              {'>>'}
+            </button>
+          )}
+
+          {/* Clickable >> - 썸네일이 보일 때는 썸네일 레벨에 */}
+          {anyWorkHovered && (
+            <button
+              onClick={() => scroll('right')}
+              style={{
+                position: 'absolute',
+                right: '-40px',
+                bottom: '24px',
+                background: 'var(--color-white)',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                zIndex: 20,
+                fontSize: '14px',
+                color: '#000000',
+                opacity: 0.7,
+                transition: 'opacity 0.2s ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
+              aria-label="Scroll right"
+            >
+              {'>>'}
+            </button>
+          )}
+        </>
       )}
     </div>
   );
