@@ -63,6 +63,7 @@ export default function WorkTitleButton({
       return () => {
         if (loadingTimerRef.current) {
           clearTimeout(loadingTimerRef.current);
+          loadingTimerRef.current = null;
         }
       };
     }
@@ -81,6 +82,7 @@ export default function WorkTitleButton({
     setShowSkeleton(false);
     if (loadingTimerRef.current) {
       clearTimeout(loadingTimerRef.current);
+      loadingTimerRef.current = null;
     }
   };
 
