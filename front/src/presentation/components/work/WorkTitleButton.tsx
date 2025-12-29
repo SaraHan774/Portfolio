@@ -52,11 +52,10 @@ export default function WorkTitleButton({
   // Reset loading state when thumbnail URL changes
   useEffect(() => {
     if (thumbnailUrl) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setImageLoaded(false);
       setShowSkeleton(false);
 
-      // Start 1-second timer to show skeleton if image hasn't loaded
+      // Start 500ms timer to show skeleton if image hasn't loaded
       loadingTimerRef.current = setTimeout(() => {
         setShowSkeleton(true);
       }, 500);
