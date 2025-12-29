@@ -13,7 +13,7 @@ interface FloatingWorkWindowProps {
 }
 
 const WINDOW_DIMENSIONS = {
-  width: 320,
+  width: 360,
   height: 180,
 };
 
@@ -41,6 +41,7 @@ export default function FloatingWorkWindow({ work, position, onClick }: Floating
         zIndex: 1000,
         pointerEvents: 'auto',
         filter: 'drop-shadow(0 8px 40px rgba(0, 0, 0, 0.08))',
+        minWidth:'300px'
       }}
       onMouseEnter={(e) => e.stopPropagation()}
       onMouseLeave={(e) => e.stopPropagation()}
@@ -50,7 +51,7 @@ export default function FloatingWorkWindow({ work, position, onClick }: Floating
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'rgba(242, 242, 242)',
+          background: 'rgba(230, 230, 230)',
           filter: 'blur(10px)',
         }}
       />
@@ -78,7 +79,7 @@ export default function FloatingWorkWindow({ work, position, onClick }: Floating
             whiteSpace: 'nowrap',
           }}
         >
-          {`「'${work.title}'」${work.year ? `,\u00A0${work.year}` : ''}`}
+          {`「‘${work.title}’」${work.year ? `,\u00A0${work.year}` : ''}`}
         </span>
 
         {/* 썸네일 */}
