@@ -53,7 +53,7 @@ export default function WorkTitleButton({
     showThumbnail || (isHovered && hasThumbnail) || (anyWorkHovered && hasThumbnail);
 
   // Format title with quotes and year
-  const displayText = `「'${work.title}'」${work.year ? `,\u00A0${work.year}` : ''}`;
+  const displayText = `「‘${work.title}’」${work.year ? `,\u00A0${work.year}` : ''}`;
 
   // Container styling for dot positioning (no overflow)
   const containerStyle: React.CSSProperties = {
