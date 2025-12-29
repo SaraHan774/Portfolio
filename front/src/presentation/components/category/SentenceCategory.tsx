@@ -163,6 +163,10 @@ function AnimatedKeyword({
         }
       }}
       onMouseLeave={() => onHover(null)}
+      role={isClickable ? 'button' : undefined}
+      aria-label={isClickable ? `Select ${keyword.name} keyword` : undefined}
+      aria-pressed={isClickable ? isSelected : undefined}
+      tabIndex={isClickable ? 0 : undefined}
       style={keywordStyle}
     >
       <AnimatedCharacterText

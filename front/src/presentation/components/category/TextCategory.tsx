@@ -93,6 +93,10 @@ const TextCategory = memo(function TextCategory({
         }
       }}
       onMouseLeave={() => onHover(null)}
+      role={isClickable ? 'button' : undefined}
+      aria-label={isClickable ? `Select ${category.title} category` : undefined}
+      aria-pressed={isClickable ? isSelected : undefined}
+      tabIndex={isClickable ? 0 : undefined}
       style={{
         fontSize: 'var(--category-font-size)',
         lineHeight: 'var(--line-height-relaxed)',

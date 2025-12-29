@@ -132,6 +132,8 @@ export default function WorkTitleButton({
       onClick={handleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      aria-label={`View ${work.title} details`}
+      aria-pressed={isSelected}
       style={{
         background: 'none',
         border: 'none',
