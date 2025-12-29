@@ -43,8 +43,6 @@ export interface Work {
   caption?: string;
   sentenceCategoryIds: string[];
   exhibitionCategoryIds: string[];
-  /** @deprecated Use exhibitionCategoryIds instead */
-  textCategoryIds?: string[];
   isPublished: boolean;
   viewCount?: number;
   createdAt: Date;

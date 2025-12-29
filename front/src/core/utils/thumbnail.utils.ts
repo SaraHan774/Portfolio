@@ -36,17 +36,3 @@ export const getYouTubeThumbnailUrl = (
     ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
     : null;
 };
-
-/**
- * Check if work has any thumbnail
- */
-export const hasThumbnail = (work: Work): boolean => {
-  return getThumbnailUrl(work) !== null;
-};
-
-/**
- * Get thumbnail from image
- */
-export const getImageThumbnailUrl = (image: WorkImage): string => {
-  return image.thumbnailUrl || image.url;
-};

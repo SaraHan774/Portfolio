@@ -1,7 +1,7 @@
 // Tests for thumbnail utility functions
 
 import { describe, it, expect } from 'vitest';
-import { getThumbnailUrl, hasThumbnail, getYouTubeThumbnailUrl } from '../thumbnail.utils';
+import { getThumbnailUrl, getYouTubeThumbnailUrl } from '../thumbnail.utils';
 import { mockWork, mockWorkVideo } from '../../../__tests__/utils/mock-data';
 
 describe('thumbnail.utils', () => {
@@ -52,26 +52,6 @@ describe('thumbnail.utils', () => {
     it('should return null when no thumbnail available', () => {
       const work = mockWork({ images: [], videos: [] });
       expect(getThumbnailUrl(work)).toBeNull();
-    });
-  });
-
-  describe('hasThumbnail', () => {
-    it('should return true when work has image thumbnail', () => {
-      const work = mockWork();
-      expect(hasThumbnail(work)).toBe(true);
-    });
-
-    it('should return true when work has video thumbnail', () => {
-      const work = mockWork({
-        images: [],
-        videos: [mockWorkVideo()],
-      });
-      expect(hasThumbnail(work)).toBe(true);
-    });
-
-    it('should return false when work has no thumbnail', () => {
-      const work = mockWork({ images: [], videos: [] });
-      expect(hasThumbnail(work)).toBe(false);
     });
   });
 

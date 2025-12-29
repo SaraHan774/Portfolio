@@ -39,9 +39,5 @@ export interface ExhibitionCategory {
   updatedAt: Date;
 }
 
-// 하위 호환성을 위한 별칭 (deprecated)
-/** @deprecated Use ExhibitionCategory instead */
-export type TextCategory = ExhibitionCategory;
-
 // 카테고리 상태 타입 정의
 export type CategoryState = 'basic' | 'clickable' | 'hover' | 'active' | 'disabled';

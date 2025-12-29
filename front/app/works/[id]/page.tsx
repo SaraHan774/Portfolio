@@ -25,7 +25,7 @@ import {
   CaptionWithBoundary,
   MediaTimeline,
 } from '@/presentation';
-import { getMediaItems, hasMedia } from '@/core/utils';
+import { getMediaItems } from '@/core/utils';
 import { useCategorySelection } from '@/state';
 import { useWork, useCaptionHoverEvents } from '@/domain';
 
@@ -315,7 +315,7 @@ export default function WorkDetailPage() {
         >
           {/* 선택된 작품의 미디어 표시 */}
           <AnimatePresence mode="sync">
-            {work && hasMedia(work) && (
+            {work && ((work.images?.length || 0) > 0 || (work.videos?.length || 0) > 0) && (
               <motion.div
                 key={workId}
                 initial={{ opacity: 0.85 }}
