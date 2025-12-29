@@ -8,7 +8,7 @@ import WorkListScroller from '../work/WorkListScroller';
 import MobileCategoryMenu from './MobileCategoryMenu';
 import Footer from './Footer';
 import { useCategories, useCategorySelection, useUIState } from '@/state';
-import { useFilteredWorks, useScrollLock } from '@/domain';
+import { useFilteredWorks, useScrollLock, useSelectedWorkId } from '@/domain';
 
 /**
  * 레이아웃 상수
@@ -42,7 +42,6 @@ interface PortfolioLayoutProps {
  */
 export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
   const router = useRouter();
-  const pathname = usePathname();
 
   // Global state
   const { selectedKeywordId, selectedExhibitionCategoryId, selectKeyword, selectExhibitionCategory } = useCategorySelection();
@@ -108,10 +107,7 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
   const selectedWorkIds = useMemo(() => works.map(work => work.id), [works]);
 
   // 현재 선택된 작품 ID (URL에서 가져옴)
-  const selectedWorkId = useMemo(() => {
-    const match = pathname.match(/\/works\/([^/]+)/);
-    return match ? match[1] : null;
-  }, [pathname]);
+  const selectedWorkId = useSelectedWorkId();
 
   // WorkListScroller 높이 측정 (좌측)
   useEffect(() => {

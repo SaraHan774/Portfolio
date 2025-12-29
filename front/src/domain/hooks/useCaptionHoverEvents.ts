@@ -32,6 +32,9 @@ export interface UseCaptionHoverEventsReturn {
  * Caption 내 작업 링크에 마우스를 올리면 FloatingWorkWindow를 표시하기 위한
  * 이벤트 리스너와 safe zone 로직을 제공합니다.
  *
+ * Note: This hook provides caption-specific hover tracking with safe zones.
+ * It is distinct from UIStateContext hover state, which is for general work hover tracking.
+ *
  * Features:
  * - 링크에 mouseenter/mouseleave 이벤트 자동 부착
  * - MutationObserver로 동적 DOM 변경 감지

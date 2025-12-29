@@ -9,9 +9,12 @@ export interface HoverPosition {
 
 /**
  * UI state
+ *
+ * Note: Hover state in UIStateContext is for general work hover tracking (e.g., FloatingWorkWindow).
+ * For caption-specific hover with safe zones, use useCaptionHoverEvents hook instead.
  */
 export interface UIState {
-  // Hover states
+  // General hover states (for FloatingWorkWindow, etc.)
   hoveredWorkId: string | null;
   hoverPosition: HoverPosition;
 
