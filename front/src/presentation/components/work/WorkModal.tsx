@@ -242,7 +242,7 @@ export default function WorkModal({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'transparent',
         zIndex: 1000,
         display: 'flex',
         alignItems: 'center',
@@ -275,19 +275,29 @@ export default function WorkModal({
           },
         }}
         style={{
-          backgroundColor: 'var(--color-gray-200)',
           maxWidth: '1200px',
           maxHeight: '90vh',
           width: '100%',
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
-          overflow: 'hidden',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04)',
+          overflow: 'visible',
+          border: 'none',
         }}
         onClick={(e) => e.stopPropagation()}
         className="modal-content"
       >
+        {/* Soft edge blur background */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(230, 230, 230)',
+            filter: 'blur(3px)',
+            zIndex: 0,
+          }}
+        />
+
         {/* 닫기 버튼 */}
         <button
           onClick={onClose}
@@ -318,8 +328,10 @@ export default function WorkModal({
         {/* 상단: 작품명 */}
         <div
           style={{
+            position: 'relative',
             padding: 'var(--space-6)',
             paddingBottom: 'var(--space-4)',
+            zIndex: 1,
           }}
         >
           <h2
@@ -341,6 +353,8 @@ export default function WorkModal({
             flex: 1,
             overflow: 'hidden',
             position: 'relative',
+            zIndex: 1,
+            borderRadius: '0 0 4px 4px',
           }}
         >
           {/* 좌측: 타임라인 + 미디어 영역 */}
