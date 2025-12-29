@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useThumbnailUrl, useClickAnimationTracking } from '@/domain';
@@ -77,14 +77,24 @@ export default function WorkTitleButton({
     showThumbnail || (isHovered && hasThumbnail) || (anyWorkHovered && hasThumbnail);
 
   // Handle image load completion
-  const handleImageLoad = () => {
+  const handleImageLoad = useCallback(() => {
     setImageLoaded(true);
     setShowSkeleton(false);
     if (loadingTimerRef.current) {
       clearTimeout(loadingTimerRef.current);
       loadingTimerRef.current = null;
     }
-  };
+  }, []);
+
+  // Handle image load error
+  const handleImageError = useCallback(() => {
+    setImageLoaded(true); // Hide skeleton
+    setShowSkeleton(false);
+    if (loadingTimerRef.current) {
+      clearTimeout(loadingTimerRef.current);
+      loadingTimerRef.current = null;
+    }
+  }, []);
 
   // Format title with quotes and year
   const displayText = `「‘${work.title}’」${work.year ? `,\u00A0${work.year}` : ''}`;
@@ -206,6 +216,7 @@ export default function WorkTitleButton({
               sizes="80px"
               style={{ objectFit: 'cover' }}
               onLoad={handleImageLoad}
+              onError={handleImageError}
             />
           </motion.div>
         )}
