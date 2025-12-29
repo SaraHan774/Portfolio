@@ -68,11 +68,9 @@ export const useClickAnimationTracking = ({
   // Reset justClicked flag after it's been used for initial animation
   useEffect(() => {
     if (justClicked && isSelected) {
-      // Use setTimeout(0) to reset on next tick (after render)
-      // This ensures the animation has time to start before the flag is reset
-      setTimeout(() => {
-        setJustClicked(false);
-      }, 0);
+      // Reset justClicked on next render cycle
+      // React's batching ensures the animation starts before this resets
+      setJustClicked(false);
     }
   }, [isSelected, justClicked]);
 

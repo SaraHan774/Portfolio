@@ -111,7 +111,9 @@ export default function YouTubeEmbed({ video, isLast = false }: YouTubeEmbedProp
     // 약간의 딜레이 후 초기화 (DOM 준비 대기)
     const timer = setTimeout(initPlayer, 100);
     return () => clearTimeout(timer);
-  }, [isVisible, isApiReady, pureVideoId, playerContainerId]);
+    // playerContainerId is derived from video.id and doesn't need to be in dependencies
+    // pureVideoId already captures the video identity
+  }, [isVisible, isApiReady, pureVideoId]);
 
   // 컴포넌트 언마운트 시 플레이어 정리
   useEffect(() => {

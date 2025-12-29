@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useThumbnailUrl, useClickAnimationTracking } from '@/domain';
@@ -97,7 +97,10 @@ export default function WorkTitleButton({
   }, []);
 
   // Format title with quotes and year
-  const displayText = `「‘${work.title}’」${work.year ? `,\u00A0${work.year}` : ''}`;
+  const displayText = useMemo(
+    () => `「'${work.title}'」${work.year ? `,\u00A0${work.year}` : ''}`,
+    [work.title, work.year]
+  );
 
   // Container styling for dot positioning (no overflow)
   const containerStyle: React.CSSProperties = {

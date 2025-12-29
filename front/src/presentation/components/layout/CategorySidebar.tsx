@@ -74,14 +74,18 @@ const CategorySidebar = memo(function CategorySidebar({
     
     // 초기 높이 측정
     measureHeight();
-    
+
     // ResizeObserver로 높이 변화 감지
     const resizeObserver = new ResizeObserver(() => {
-      measureHeight();
+      try {
+        measureHeight();
+      } catch (error) {
+        console.error('ResizeObserver error (sentence categories):', error);
+      }
     });
-    
+
     resizeObserver.observe(element);
-    
+
     return () => {
       resizeObserver.disconnect();
     };
@@ -109,11 +113,15 @@ const CategorySidebar = memo(function CategorySidebar({
     
     // ResizeObserver로 높이 변화 감지
     const resizeObserver = new ResizeObserver(() => {
-      measureHeight();
+      try {
+        measureHeight();
+      } catch (error) {
+        console.error('ResizeObserver error (exhibition categories):', error);
+      }
     });
-    
+
     resizeObserver.observe(element);
-    
+
     return () => {
       resizeObserver.disconnect();
     };

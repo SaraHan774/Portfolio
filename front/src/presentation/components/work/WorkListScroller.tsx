@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useWorkListScroll } from '@/domain';
 import type { Work } from '@/types';
 import WorkTitleButton from './WorkTitleButton';
@@ -37,9 +37,18 @@ export default function WorkListScroller({
   // Track if mouse is in the container (for thumbnail display)
   // 마우스가 컨테이너 안에 있으면 썸네일 표시
   const [isMouseInContainer, setIsMouseInContainer] = useState(false);
-  
+
   // 썸네일 표시 여부: showThumbnail이 true이거나 마우스가 컨테이너 안에 있으면 표시
   const anyWorkHovered = showThumbnail || isMouseInContainer;
+
+  // Memoized event handlers to prevent unnecessary re-renders
+  const handleMouseEnter = useCallback(() => {
+    setIsMouseInContainer(true);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setIsMouseInContainer(false);
+  }, []);
 
   return (
     <div style={{ position: 'relative', width: '100%' }}>
@@ -139,14 +148,8 @@ export default function WorkListScroller({
       {/* Scroll container */}
       <div
         ref={scrollContainerRef}
-        onMouseEnter={() => {
-          // 마우스가 컨테이너에 들어오면 썸네일 표시
-          setIsMouseInContainer(true);
-        }}
-        onMouseLeave={() => {
-          // 마우스가 컨테이너에서 나가면 썸네일 숨김 (showThumbnail이 false인 경우)
-          setIsMouseInContainer(false);
-        }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         style={{
           display: 'flex',
           flexDirection: direction === 'rtl' ? 'row-reverse' : 'row',

@@ -112,7 +112,7 @@ const AnimatedCharacterText = memo(function AnimatedCharacterText({
     >
       {characters.map((char, index) => (
         <motion.span
-          key={index}
+          key={`${text}-${index}`}
           style={resolvedCharacterStyle}
           variants={hasBeenClickedBefore ? characterVariants : undefined}
         >
