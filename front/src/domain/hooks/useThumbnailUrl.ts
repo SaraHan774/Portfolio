@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import type { Work } from '@/types';
+import { extractPureYouTubeVideoId } from '@/core/utils';
 
 /**
  * Calculate thumbnail URL from work data
@@ -27,11 +28,8 @@ export const useThumbnailUrl = (work: Work | undefined): string | undefined => {
 
     // Fallback to YouTube thumbnail if no images
     const firstVideo = work.videos?.[0];
-    const youtubeVideoId = firstVideo?.youtubeVideoId
-      ?.split('?')[0]
-      ?.split('&')[0];
-
-    if (youtubeVideoId) {
+    if (firstVideo?.youtubeVideoId) {
+      const youtubeVideoId = extractPureYouTubeVideoId(firstVideo.youtubeVideoId);
       return `https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`;
     }
 
@@ -62,11 +60,8 @@ export const getThumbnailUrl = (work: Work | undefined): string | undefined => {
 
   // Fallback to YouTube thumbnail if no images
   const firstVideo = work.videos?.[0];
-  const youtubeVideoId = firstVideo?.youtubeVideoId
-    ?.split('?')[0]
-    ?.split('&')[0];
-
-  if (youtubeVideoId) {
+  if (firstVideo?.youtubeVideoId) {
+    const youtubeVideoId = extractPureYouTubeVideoId(firstVideo.youtubeVideoId);
     return `https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`;
   }
 
