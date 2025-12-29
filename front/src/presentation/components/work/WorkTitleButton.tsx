@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useThumbnailUrl, useClickAnimationTracking } from '@/domain';
 import { AnimatedCharacterText, DotIndicator } from '@/presentation/ui';
+import ThumbnailSkeleton from './ThumbnailSkeleton';
 import type { Work } from '@/types';
 
 interface WorkTitleButtonProps {
@@ -32,6 +33,9 @@ export default function WorkTitleButton({
   anyWorkHovered = false,
 }: WorkTitleButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(false);
+  const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 클릭 애니메이션 추적 (Works는 항상 클릭 가능)
   const { hasBeenClickedBefore: wasSelectedBefore, justClicked: justSelected, handleClick } = useClickAnimationTracking({
@@ -45,12 +49,41 @@ export default function WorkTitleButton({
   const thumbnailUrl = useThumbnailUrl(work);
   const hasThumbnail = !!thumbnailUrl;
 
+  // Reset loading state when thumbnail URL changes
+  useEffect(() => {
+    if (thumbnailUrl) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setImageLoaded(false);
+      setShowSkeleton(false);
+
+      // Start 1-second timer to show skeleton if image hasn't loaded
+      loadingTimerRef.current = setTimeout(() => {
+        setShowSkeleton(true);
+      }, 500);
+
+      return () => {
+        if (loadingTimerRef.current) {
+          clearTimeout(loadingTimerRef.current);
+        }
+      };
+    }
+  }, [thumbnailUrl]);
+
   // Show thumbnail logic:
   // - Always show if showThumbnail=true (home page)
   // - Show on hover if showThumbnail=false (detail page)
   // - Also show if any work in the container is hovered (detail page)
   const shouldShowThumbnail =
     showThumbnail || (isHovered && hasThumbnail) || (anyWorkHovered && hasThumbnail);
+
+  // Handle image load completion
+  const handleImageLoad = () => {
+    setImageLoaded(true);
+    setShowSkeleton(false);
+    if (loadingTimerRef.current) {
+      clearTimeout(loadingTimerRef.current);
+    }
+  };
 
   // Format title with quotes and year
   const displayText = `「‘${work.title}’」${work.year ? `,\u00A0${work.year}` : ''}`;
@@ -141,11 +174,16 @@ export default function WorkTitleButton({
           boxSizing: 'border-box',
         }}
       >
+        {/* 스켈레톤 UI: 로딩 중이고 1초 이상 걸릴 때 표시 */}
+        {shouldShowThumbnail && hasThumbnail && showSkeleton && !imageLoaded && (
+          <ThumbnailSkeleton width="80px" height="80px" />
+        )}
+
         {/* 썸네일: 홈에서는 항상 표시, 상세페이지에서는 hover 시에만 표시 */}
         {shouldShowThumbnail && hasThumbnail && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
+            animate={{ opacity: imageLoaded ? 1 : 0, scale: imageLoaded ? 1 : 0.95 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             style={{
@@ -166,6 +204,7 @@ export default function WorkTitleButton({
               fill
               sizes="80px"
               style={{ objectFit: 'cover' }}
+              onLoad={handleImageLoad}
             />
           </motion.div>
         )}
