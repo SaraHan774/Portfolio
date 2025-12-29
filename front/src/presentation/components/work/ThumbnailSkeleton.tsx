@@ -7,7 +7,7 @@ interface ThumbnailSkeletonProps {
 
 /**
  * Skeleton UI for thumbnail loading state
- * Shown when image loading takes longer than 1 second
+ * Shown when image loading takes longer than 500ms
  */
 export default function ThumbnailSkeleton({
   width = '80px',
