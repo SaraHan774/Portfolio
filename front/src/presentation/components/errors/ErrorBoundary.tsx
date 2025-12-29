@@ -47,7 +47,31 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     // Call optional error handler
     this.props.onError?.(error, errorInfo);
 
-    // TODO: Log to error reporting service (e.g., Sentry)
+    /**
+     * TODO: Implement error reporting service integration
+     *
+     * Steps:
+     * 1. Install @sentry/nextjs
+     *    npm install @sentry/nextjs
+     *
+     * 2. Configure sentry.client.config.ts and sentry.server.config.ts
+     *    Run: npx @sentry/wizard@latest -i nextjs
+     *
+     * 3. Add NEXT_PUBLIC_SENTRY_DSN to environment variables
+     *    Create .env.local with:
+     *    NEXT_PUBLIC_SENTRY_DSN=your_sentry_dsn_here
+     *
+     * 4. Implement error reporting here:
+     *    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+     *      Sentry.captureException(error, {
+     *        contexts: {
+     *          react: {
+     *            componentStack: errorInfo.componentStack,
+     *          },
+     *        },
+     *      });
+     *    }
+     */
   }
 
   render(): ReactNode {
