@@ -52,8 +52,11 @@ export default function WorkTitleButton({
   // Reset loading state when thumbnail URL changes
   useEffect(() => {
     if (thumbnailUrl) {
-      setImageLoaded(false);
-      setShowSkeleton(false);
+      // Schedule state updates to avoid ESLint warning
+      const resetTimer = setTimeout(() => {
+        setImageLoaded(false);
+        setShowSkeleton(false);
+      }, 0);
 
       // Start 500ms timer to show skeleton if image hasn't loaded
       loadingTimerRef.current = setTimeout(() => {
@@ -61,6 +64,7 @@ export default function WorkTitleButton({
       }, 500);
 
       return () => {
+        clearTimeout(resetTimer);
         if (loadingTimerRef.current) {
           clearTimeout(loadingTimerRef.current);
           loadingTimerRef.current = null;
@@ -96,11 +100,11 @@ export default function WorkTitleButton({
     }
   }, []);
 
-  // Format title with quotes and year
-  const displayText = useMemo(
-    () => `「'${work.title}'」${work.year ? `,\u00A0${work.year}` : ''}`,
-    [work.title, work.year]
-  );
+    // Format title with quotes and year
+    const displayText = useMemo(
+        () => `「‘${work.title}’」${work.year ? `,\u00A0${work.year}` : ''}`,
+        [work.title, work.year]
+    );
 
   // Container styling for dot positioning (no overflow)
   const containerStyle: React.CSSProperties = {

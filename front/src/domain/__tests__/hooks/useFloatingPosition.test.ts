@@ -147,8 +147,6 @@ describe('useFloatingPosition', () => {
       })
     );
 
-    const initialPosition = result.current;
-
     // Simulate window resize
     Object.defineProperty(window, 'innerWidth', { value: 800, writable: true });
     window.dispatchEvent(new Event('resize'));

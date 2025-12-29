@@ -1,6 +1,6 @@
 // 미디어 관련 유틸리티 함수들
 
-import type { Work, WorkImage, WorkVideo, MediaItem } from '@/types';
+import type { Work, MediaItem } from '@/types';
 
 /**
  * 이미지와 영상을 통합 미디어 배열로 변환하는 헬퍼 함수

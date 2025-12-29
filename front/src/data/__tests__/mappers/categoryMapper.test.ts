@@ -10,7 +10,7 @@ import {
   findKeywordById,
   findSentenceCategoryByKeywordId,
 } from '../../mappers/categoryMapper';
-import type { SentenceCategory, ExhibitionCategory } from '@/core/types';
+import type { SentenceCategory } from '@/core/types';
 
 describe('categoryMapper', () => {
   describe('mapFirestoreToSentenceCategory', () => {

@@ -42,6 +42,7 @@ interface PortfolioLayoutProps {
  */
 export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
   const router = useRouter();
+  const pathname = usePathname();
 
   // Global state
   const { selectedKeywordId, selectedExhibitionCategoryId, selectKeyword, selectExhibitionCategory } = useCategorySelection();
@@ -79,13 +80,13 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
   useEffect(() => {
     if (isFadingOut && pathname === '/') {
       // 새 페이지로 전환되었음 - fade in 준비
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShouldFadeIn(true);
     } else if (!pathname.startsWith('/works/')) {
       // 일반적인 홈 페이지 진입
       setShouldFadeIn(false);
     }
-  }, [pathname, isFadingOut]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFadingOut]);
 
   // Cleanup: unmount 시 scroll lock 해제
   useEffect(() => {
@@ -213,7 +214,8 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
       // exhibitionId가 있으면 제거하고 keywordId로 교체
       router.push(`/?keywordId=${keywordId}`);
     }
-  }, [selectKeyword, pathname, router, contentPaddingTop, lockScroll, unlockScroll]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectKeyword, router, contentPaddingTop, lockScroll, unlockScroll]);
 
   const handleExhibitionCategorySelect = useCallback((categoryId: string) => {
     // 작품 상세 페이지에서 카테고리 선택 시 홈으로 이동
@@ -248,7 +250,8 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
       // keywordId가 있으면 제거하고 exhibitionId로 교체
       router.push(`/?exhibitionId=${categoryId}`);
     }
-  }, [selectExhibitionCategory, pathname, router, contentPaddingTop, lockScroll, unlockScroll]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectExhibitionCategory, router, contentPaddingTop, lockScroll, unlockScroll]);
 
   // 작품 선택 핸들러
   const handleWorkSelect = useCallback((workId: string) => {

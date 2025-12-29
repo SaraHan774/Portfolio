@@ -111,8 +111,8 @@ export default function YouTubeEmbed({ video, isLast = false }: YouTubeEmbedProp
     // 약간의 딜레이 후 초기화 (DOM 준비 대기)
     const timer = setTimeout(initPlayer, 100);
     return () => clearTimeout(timer);
-    // playerContainerId is derived from video.id and doesn't need to be in dependencies
-    // pureVideoId already captures the video identity
+    // playerContainerId is stable (derived from video.id) and doesn't change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVisible, isApiReady, pureVideoId]);
 
   // 컴포넌트 언마운트 시 플레이어 정리
@@ -374,6 +374,7 @@ export default function YouTubeEmbed({ video, isLast = false }: YouTubeEmbedProp
         </>
       ) : (
         // 로딩 전 플레이스홀더 (썸네일)
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={`https://img.youtube.com/vi/${pureVideoId}/maxresdefault.jpg`}
           alt={video.title || 'YouTube 영상'}
