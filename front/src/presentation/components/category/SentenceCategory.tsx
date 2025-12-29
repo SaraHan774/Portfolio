@@ -83,7 +83,7 @@ const SentenceCategory = memo(function SentenceCategory({
   return (
     <div
       style={{
-        fontSize: 'var(--font-size-lg)',
+        fontSize: 'var(--font-size-sm)',
         lineHeight: 'var(--line-height-relaxed)',
         color: 'var(--color-text-secondary)',
       }}

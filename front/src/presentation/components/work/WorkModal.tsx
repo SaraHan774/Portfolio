@@ -247,7 +247,6 @@ export default function WorkModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 'var(--space-6)',
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -276,13 +275,13 @@ export default function WorkModal({
         }}
         style={{
           maxWidth: '1200px',
-          maxHeight: '90vh',
           width: '100%',
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
           overflow: 'visible',
           border: 'none',
+            paddingBottom: '40px',
         }}
         onClick={(e) => e.stopPropagation()}
         className="modal-content"
@@ -385,7 +384,7 @@ export default function WorkModal({
                 },
               }}
               style={{
-                height: 'calc(80vh - 80px)',
+                height: 'calc(70vh - 80px)',
               }}
             >
               <div style={{
@@ -424,10 +423,11 @@ export default function WorkModal({
               alignItems: 'center',
               justifyContent: 'center',
               padding: 'var(--space-6)',
+              paddingRight: 'calc(var(--space-6) + var(--space-8))',
               position: 'sticky',
               top: 0,
               alignSelf: 'flex-start',
-              height: 'calc(90vh - 100px)',
+              height: 'calc(70vh - 100px)',
             }}
             onWheel={(e) => {
               // 캡션 영역에서 스크롤 시 이미지 영역으로 전달
@@ -443,9 +443,6 @@ export default function WorkModal({
               <div
                 className="work-caption"
                 data-is-modal="true"
-                style={{
-                  maxWidth: '280px',
-                }}
               >
                 {renderCaption(modalWork.caption, `modal-${modalWork.id}`, true)}
               </div>

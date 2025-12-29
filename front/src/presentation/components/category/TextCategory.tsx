@@ -60,6 +60,7 @@ const TextCategory = memo(function TextCategory({
         characterStyle={(isActive) => ({
           display: 'inline-block',
           color: isActive ? 'transparent' : 'var(--color-category-clickable)',
+          fontSize: 'var(--font-size-sm)',
           WebkitTextStroke: isActive ? '0.7px var(--color-category-hover-stroke)' : '0px transparent',
           transition: 'color 0.1s ease-out, -webkit-text-stroke 0.1s ease-out',
           fontWeight: isSelected ? 700 : 400,

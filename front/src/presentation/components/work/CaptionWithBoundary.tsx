@@ -76,9 +76,9 @@ export default function CaptionWithBoundary({
         position: 'fixed',
         left: 'calc(50% + var(--space-16) + 5%)',
         bottom: `${captionBottom}px`,
-        width: '200px',
         maxWidth: 'calc(50% - var(--space-12) - 5%)',
         maxHeight: 'calc(100vh - 200px)',
+        paddingRight: 'var(--category-margin-right)',
         zIndex: 40,
         transition: 'bottom 0.15s ease-out',
       }}
