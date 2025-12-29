@@ -247,7 +247,6 @@ export default function WorkModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 'var(--space-6)',
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -276,13 +275,13 @@ export default function WorkModal({
         }}
         style={{
           maxWidth: '1200px',
-          maxHeight: '70vh',
           width: '100%',
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
           overflow: 'visible',
           border: 'none',
+            paddingBottom: '40px',
         }}
         onClick={(e) => e.stopPropagation()}
         className="modal-content"
