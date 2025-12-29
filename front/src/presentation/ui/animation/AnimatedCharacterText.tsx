@@ -95,12 +95,32 @@ const AnimatedCharacterText = memo(function AnimatedCharacterText({
   // If selected and clicked before, start in 'selected' state (no animation)
   const initialState = isSelected && hasBeenClickedBefore ? 'selected' : false;
 
-  // Resolve character styles (handle function or object)
+  // Resolve character styles with default stroke transition
   const resolvedCharacterStyle = useMemo(() => {
+    // Base style with stroke transition
+    const baseStyle: React.CSSProperties = {
+      display: 'inline-block',
+      transition: 'color 0.2s ease-in-out, -webkit-text-stroke 0.2s ease-in-out',
+    };
+
+    // If characterStyle is a function, merge with base
     if (typeof characterStyle === 'function') {
-      return characterStyle(isActive);
+      return {
+        ...baseStyle,
+        ...characterStyle(isActive),
+      };
     }
-    return characterStyle;
+
+    // If characterStyle is provided as object, merge with base
+    if (characterStyle) {
+      return {
+        ...baseStyle,
+        ...characterStyle,
+      };
+    }
+
+    // Default: just base style
+    return baseStyle;
   }, [characterStyle, isActive]);
 
   return (
