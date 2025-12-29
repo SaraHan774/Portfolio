@@ -2,10 +2,10 @@
 
 /**
  * 작품 상세 페이지
- * 
+ *
  * PortfolioLayout에서 CategorySidebar와 WorkListScroller를 공유
  * 이 페이지는 작품 이미지와 캡션만 렌더링
- * 
+ *
  * 주요 기능:
  * - 작품 미디어(이미지/비디오) 표시
  * - 스크롤에 따른 현재 보이는 이미지 추적
@@ -14,7 +14,7 @@
  */
 
 import { useParams, useSearchParams } from 'next/navigation';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Spinner,
@@ -24,6 +24,7 @@ import {
   WorkModal,
   CaptionWithBoundary,
   MediaTimeline,
+  AnimatedCharacterText,
 } from '@/presentation';
 import { getMediaItems } from '@/core/utils';
 import { useCategorySelection } from '@/state';
@@ -44,8 +45,54 @@ const SCROLL_CONSTANTS = {
 } as const;
 
 /**
+ * Caption 내부의 작품 링크 컴포넌트
+ */
+function CaptionLink({
+  workId,
+  captionId,
+  text,
+}: {
+  workId: string;
+  captionId: string;
+  text: string;
+}) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <a
+      href="#"
+      data-caption-id={captionId}
+      data-work-id={workId}
+      style={{
+        cursor: 'pointer',
+        textDecoration: 'none',
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <AnimatedCharacterText
+        text={text}
+        isActive={isHovered}
+        isSelected={false}
+        hasBeenClickedBefore={true}
+        characterStyle={(isActive) =>
+          isActive
+            ? {
+                color: 'transparent',
+                WebkitTextStroke: '0.7px var(--color-category-hover-stroke)',
+              }
+            : {
+                color: 'var(--color-text-primary)',
+              }
+        }
+      />
+    </a>
+  );
+}
+
+/**
  * 캡션 렌더링 함수
- * 캡션 HTML 문자열을 파싱하여 작품 링크에 스타일과 이벤트 속성 추가
+ * 캡션 HTML 문자열을 파싱하여 작품 링크에 AnimatedCharacterText 적용
  */
 function renderCaption(
   caption: string | undefined,
@@ -56,35 +103,68 @@ function renderCaption(
 
   const parser = new DOMParser();
   const doc = parser.parseFromString(caption, 'text/html');
-  const links = doc.querySelectorAll('a[data-work-id]');
 
-  links.forEach((linkElement) => {
-    const link = linkElement as HTMLElement;
-    const linkWorkId = link.getAttribute('data-work-id');
-    if (linkWorkId) {
-      link.setAttribute('href', '#');
-      link.style.color = 'var(--color-text-primary)';
-      link.style.fontWeight = 'bold';
-      link.style.cursor = 'pointer';
-      link.setAttribute('data-caption-id', captionId);
-      link.setAttribute('data-work-id', linkWorkId);
+  // HTML 노드를 React 요소로 변환하는 재귀 함수
+  const convertNodeToReact = (node: Node, index: number): React.ReactNode => {
+    // 텍스트 노드
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.textContent;
     }
-  });
+
+    // 요소 노드
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as HTMLElement;
+      const tagName = element.tagName.toLowerCase();
+
+      // 작품 링크인 경우
+      if (tagName === 'a' && element.getAttribute('data-work-id')) {
+        const linkWorkId = element.getAttribute('data-work-id');
+        const linkText = element.textContent || '';
+
+        return (
+          <CaptionLink
+            key={`${captionId}-link-${index}`}
+            workId={linkWorkId || ''}
+            captionId={captionId}
+            text={linkText}
+          />
+        );
+      }
+
+      // 일반 요소 (p, span 등)
+      const children = Array.from(element.childNodes).map((child, childIndex) =>
+        convertNodeToReact(child, childIndex)
+      );
+
+      return React.createElement(
+        tagName,
+        { key: `${captionId}-${tagName}-${index}` },
+        ...children
+      );
+    }
+
+    return null;
+  };
+
+  const bodyChildren = Array.from(doc.body.childNodes).map((node, index) =>
+    convertNodeToReact(node, index)
+  );
 
   return (
     <div
       key={captionId}
       data-caption-container-id={captionId}
       data-is-modal={isModal ? 'true' : 'false'}
-      dangerouslySetInnerHTML={{ __html: doc.body.innerHTML }}
       style={{
-        fontSize: 'var(--font-size-xs)',
-        color: 'var(--color-category-disabled)',
+        fontSize: 'var(--font-size-sm)',
+        color: 'var(--color-gray-700)',
         lineHeight: 'var(--line-height-normal)',
-        maxWidth: '200px',
         textAlign: 'left',
+        whiteSpace: 'pre-wrap',
       }}
-    />
+    >
+      {bodyChildren}
+    </div>
   );
 }
 
