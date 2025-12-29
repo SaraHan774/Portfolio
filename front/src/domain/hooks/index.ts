@@ -17,3 +17,4 @@ export * from './useKeywordState';
 export * from './useKeywordStyle';
 export * from './useClickAnimationTracking';
 export * from './useCaptionHoverEvents';
+export * from './useScrollLock';

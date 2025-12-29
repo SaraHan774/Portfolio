@@ -8,7 +8,7 @@ import WorkListScroller from '../work/WorkListScroller';
 import MobileCategoryMenu from './MobileCategoryMenu';
 import Footer from './Footer';
 import { useCategories, useCategorySelection, useUIState } from '@/state';
-import { useFilteredWorks } from '@/domain';
+import { useFilteredWorks, useScrollLock } from '@/domain';
 
 /**
  * 레이아웃 상수
@@ -49,6 +49,9 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
   const { mobileMenuOpen, setMobileMenuOpen } = useUIState();
   const { sentenceCategories, exhibitionCategories } = useCategories();
 
+  // Scroll lock hook
+  const { lockScroll, unlockScroll } = useScrollLock();
+
   // Fetch works (선택된 카테고리에 해당하는 작품 목록)
   const { works, hasData } = useFilteredWorks(
     selectedKeywordId,
@@ -70,17 +73,27 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
   const [frozenPaddingTop, setFrozenPaddingTop] = useState<string | null>(null);
   // 새 페이지 fade in 상태
   const [shouldFadeIn, setShouldFadeIn] = useState<boolean>(false);
+  // Race condition 방지를 위한 fade sequence ID
+  const fadeSequenceIdRef = useRef<number>(0);
 
   // pathname 변경 감지 (fade out 중 라우팅 발생 시 새 페이지 fade in 처리)
   useEffect(() => {
     if (isFadingOut && pathname === '/') {
       // 새 페이지로 전환되었음 - fade in 준비
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShouldFadeIn(true);
     } else if (!pathname.startsWith('/works/')) {
       // 일반적인 홈 페이지 진입
       setShouldFadeIn(false);
     }
   }, [pathname, isFadingOut]);
+
+  // Cleanup: unmount 시 scroll lock 해제
+  useEffect(() => {
+    return () => {
+      unlockScroll();
+    };
+  }, [unlockScroll]);
 
   // 높이 변경 콜백
   const handleSentenceCategoryHeightChange = useCallback((height: number) => {
@@ -174,23 +187,28 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
   const handleKeywordSelect = useCallback((keywordId: string) => {
     // 작품 상세 페이지에서 카테고리 선택 시 홈으로 이동
     if (pathname.startsWith('/works/')) {
+      // Race condition 방지: 새로운 sequence ID 생성
+      const currentSequenceId = ++fadeSequenceIdRef.current;
+
       // 현재 paddingTop 고정
       setFrozenPaddingTop(contentPaddingTop);
       // 페이드 아웃 시작
       setIsFadingOut(true);
       // 스크롤 잠금
-      document.body.style.overflow = 'hidden';
+      lockScroll();
 
       // 즉시 라우팅 시작 (새 페이지가 뒤에서 준비됨)
       selectKeyword(keywordId);
       router.push(`/?keywordId=${keywordId}`);
 
-      // 450ms 후 fade in 시작
+      // 450ms 후 fade in 시작 (현재 sequence인 경우만 실행)
       setTimeout(() => {
-        setIsFadingOut(false);
-        setFrozenPaddingTop(null);
-        setShouldFadeIn(false);
-        document.body.style.overflow = '';
+        if (currentSequenceId === fadeSequenceIdRef.current) {
+          setIsFadingOut(false);
+          setFrozenPaddingTop(null);
+          setShouldFadeIn(false);
+          unlockScroll();
+        }
       }, 450);
     }
     // 홈 페이지에서도 URL 업데이트 (다른 카테고리에서 전환 시)
@@ -199,28 +217,33 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
       // exhibitionId가 있으면 제거하고 keywordId로 교체
       router.push(`/?keywordId=${keywordId}`);
     }
-  }, [selectKeyword, pathname, router, contentPaddingTop]);
+  }, [selectKeyword, pathname, router, contentPaddingTop, lockScroll, unlockScroll]);
 
   const handleExhibitionCategorySelect = useCallback((categoryId: string) => {
     // 작품 상세 페이지에서 카테고리 선택 시 홈으로 이동
     if (pathname.startsWith('/works/')) {
+      // Race condition 방지: 새로운 sequence ID 생성
+      const currentSequenceId = ++fadeSequenceIdRef.current;
+
       // 현재 paddingTop 고정
       setFrozenPaddingTop(contentPaddingTop);
       // 페이드 아웃 시작
       setIsFadingOut(true);
       // 스크롤 잠금
-      document.body.style.overflow = 'hidden';
+      lockScroll();
 
       // 즉시 라우팅 시작 (새 페이지가 뒤에서 준비됨)
       selectExhibitionCategory(categoryId);
       router.push(`/?exhibitionId=${categoryId}`);
 
-      // 450ms 후 fade in 시작
+      // 450ms 후 fade in 시작 (현재 sequence인 경우만 실행)
       setTimeout(() => {
-        setIsFadingOut(false);
-        setFrozenPaddingTop(null);
-        setShouldFadeIn(false);
-        document.body.style.overflow = '';
+        if (currentSequenceId === fadeSequenceIdRef.current) {
+          setIsFadingOut(false);
+          setFrozenPaddingTop(null);
+          setShouldFadeIn(false);
+          unlockScroll();
+        }
       }, 450);
     }
     // 홈 페이지에서도 URL 업데이트 (다른 카테고리에서 전환 시)
@@ -229,7 +252,7 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
       // keywordId가 있으면 제거하고 exhibitionId로 교체
       router.push(`/?exhibitionId=${categoryId}`);
     }
-  }, [selectExhibitionCategory, pathname, router, contentPaddingTop]);
+  }, [selectExhibitionCategory, pathname, router, contentPaddingTop, lockScroll, unlockScroll]);
 
   // 작품 선택 핸들러
   const handleWorkSelect = useCallback((workId: string) => {
