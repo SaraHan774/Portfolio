@@ -15,6 +15,8 @@ export default function ThumbnailSkeleton({
 }: ThumbnailSkeletonProps) {
   return (
     <motion.div
+      role="status"
+      aria-label="썸네일 로딩 중"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -46,6 +48,7 @@ export default function ThumbnailSkeleton({
           height: '100%',
           background:
             'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%)',
+          willChange: 'transform',
         }}
       />
     </motion.div>
