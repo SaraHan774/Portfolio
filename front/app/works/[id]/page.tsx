@@ -210,11 +210,20 @@ export default function WorkDetailPage() {
   }, [modalWorkId, clearHover]);
 
   /**
+   * 동적으로 document title 업데이트 (클라이언트 사이드 SEO)
+   */
+  useEffect(() => {
+    if (work) {
+      document.title = `${work.title} | Portfolio`;
+    }
+  }, [work]);
+
+  /**
    * 작품 데이터 로드 시 카테고리 초기화
-   * 
+   *
    * 1. URL 파라미터로 카테고리가 전달되면 해당 카테고리를 global state에 설정
    * 2. URL 파라미터가 없으면 작품의 첫 번째 카테고리를 사용
-   * 
+   *
    * 이 로직은 직접 URL로 접근 시 PortfolioLayout이 올바르게 초기화되도록 보장합니다.
    */
   useEffect(() => {
@@ -231,7 +240,7 @@ export default function WorkDetailPage() {
       selectKeyword(urlKeywordId);
     } else if (urlExhibitionId) {
       selectExhibitionCategory(urlExhibitionId);
-    } 
+    }
     // URL 파라미터가 없으면 작품의 첫 번째 카테고리를 기본값으로 사용
     else {
       if (work.sentenceCategoryIds.length > 0 && !selectedKeywordId) {
@@ -245,7 +254,7 @@ export default function WorkDetailPage() {
 
   /**
    * 현재 보이는 이미지를 감지하는 로직
-   * 
+   *
    * 로직:
    * 1. 스크롤이 하단에 도달하면 마지막 이미지를 선택
    * 2. 그 외의 경우 화면 중앙에 가장 가까운 이미지를 선택

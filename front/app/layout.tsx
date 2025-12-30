@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Nanum_Myeongjo } from "next/font/google";
 import "./globals.css";
-import { DynamicMetadata, ErrorBoundary, PortfolioLayout } from '@/presentation';
+import { ErrorBoundary, PortfolioLayout } from '@/presentation';
 import {
   CategoriesProvider,
   CategorySelectionProvider,
@@ -18,10 +18,13 @@ const nanumMyeongjo = Nanum_Myeongjo({
   variable: "--font-nanum-myeongjo",
 });
 
-// 기본 메타데이터 (SEO용 폴백)
+// 기본 메타데이터 (하드코딩)
 export const metadata: Metadata = {
-  title: "Portfolio | 작품 갤러리",
+  title: "Portfolio",
   description: "여백의 미를 살린 미니멀한 디지털 갤러리",
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({
@@ -37,7 +40,6 @@ export default function RootLayout({
       >
         <ErrorBoundary>
           <QueryProvider>
-            <DynamicMetadata />
             <CategoriesProvider>
               <CategorySelectionProvider>
                 <WorkSelectionProvider>
