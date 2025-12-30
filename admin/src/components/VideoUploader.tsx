@@ -51,7 +51,7 @@ const VideoUploader = ({ value = [], onChange, maxCount = 10 }: VideoUploaderPro
   const handleAddVideo = () => {
     const videoId = extractYouTubeVideoId(youtubeUrl);
     if (!videoId) {
-      message.error('유효한 YouTube URL을 입력해주세요.');
+      message.error('유효한 YouTube HTTPS URL을 입력해주세요. (예: https://www.youtube.com/watch?v=xxx)');
       return;
     }
 
@@ -61,7 +61,7 @@ const VideoUploader = ({ value = [], onChange, maxCount = 10 }: VideoUploaderPro
     }
 
     const newVideo: WorkVideo = {
-      id: `video-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `video-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       youtubeUrl: youtubeUrl,
       youtubeVideoId: videoId,
       embedUrl: createYouTubeEmbedUrl(videoId),

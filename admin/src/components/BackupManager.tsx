@@ -21,6 +21,8 @@ import {
 } from '@ant-design/icons';
 import { useCreateBackup, useReadBackupFile, useRestoreBackup } from '../domain/hooks';
 import type { BackupData, RestoreOptions } from '../core/types';
+import { getErrorDisplayInfo } from '../core/utils/errorMessages';
+import { getAndClearPartialFailure } from '../data/repository/backupRepository';
 
 const { Text, Title } = Typography;
 
@@ -48,9 +50,15 @@ const BackupManager = () => {
       message.success('백업 파일이 다운로드되었습니다.');
     } catch (error) {
       console.error('백업 생성 실패:', error);
+      const errorInfo = getErrorDisplayInfo(error);
       modal.error({
-        title: '백업 실패',
-        content: '백업 파일을 생성하는 중 오류가 발생했습니다.',
+        title: errorInfo.title,
+        content: (
+          <div>
+            <p>{errorInfo.message}</p>
+            {errorInfo.action && <p style={{ marginTop: 8, color: '#666' }}>{errorInfo.action}</p>}
+          </div>
+        ),
       });
     }
   };
@@ -58,6 +66,16 @@ const BackupManager = () => {
   // 백업 파일 선택
   const handleFileSelect = async (file: File) => {
     try {
+      // 파일 크기 검증 (50MB 제한)
+      const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+      if (file.size > MAX_FILE_SIZE) {
+        modal.error({
+          title: '파일 크기 초과',
+          content: `백업 파일의 크기가 너무 큽니다. (최대 50MB)\n현재 파일: ${(file.size / 1024 / 1024).toFixed(2)}MB`,
+        });
+        return false;
+      }
+
       const data = await readBackupFileMutation.mutateAsync(file);
       setBackupData(data);
       setRestoreConfirmed(false); // 확인 상태 초기화
@@ -65,9 +83,15 @@ const BackupManager = () => {
       return false; // Upload 컴포넌트의 자동 업로드 방지
     } catch (error) {
       console.error('파일 읽기 실패:', error);
+      const errorInfo = getErrorDisplayInfo(error);
       modal.error({
-        title: '파일 읽기 실패',
-        content: error instanceof Error ? error.message : '백업 파일을 읽을 수 없습니다.',
+        title: errorInfo.title,
+        content: (
+          <div>
+            <p>{errorInfo.message}</p>
+            {errorInfo.action && <p style={{ marginTop: 8, color: '#666' }}>{errorInfo.action}</p>}
+          </div>
+        ),
       });
       return false;
     }
@@ -149,7 +173,27 @@ const BackupManager = () => {
             options: restoreOptions,
           });
 
-          message.success('데이터가 성공적으로 복원되었습니다.');
+          // 부분 복원 실패 체크
+          const partialFailure = getAndClearPartialFailure();
+          if (partialFailure) {
+            modal.warning({
+              title: '일부 데이터 복원 실패',
+              content: (
+                <div>
+                  <p>
+                    {partialFailure.succeeded}개 항목은 성공했으나, 일부 항목({partialFailure.failed})의
+                    복원에 실패했습니다.
+                  </p>
+                  <p style={{ marginTop: 8, color: '#666' }}>
+                    복원된 데이터를 확인하고, 실패한 항목은 다시 시도해주세요.
+                  </p>
+                </div>
+              ),
+            });
+          } else {
+            message.success('데이터가 성공적으로 복원되었습니다.');
+          }
+
           setPreviewModalVisible(false);
           setBackupData(null);
           setRestoreConfirmed(false);
@@ -157,12 +201,18 @@ const BackupManager = () => {
           // 페이지 새로고침
           setTimeout(() => {
             window.location.reload();
-          }, 1000);
+          }, 1500);
         } catch (error) {
           console.error('복원 실패:', error);
+          const errorInfo = getErrorDisplayInfo(error);
           modal.error({
-            title: '복원 실패',
-            content: '데이터 복원 중 오류가 발생했습니다.',
+            title: errorInfo.title,
+            content: (
+              <div>
+                <p>{errorInfo.message}</p>
+                {errorInfo.action && <p style={{ marginTop: 8, color: '#666' }}>{errorInfo.action}</p>}
+              </div>
+            ),
           });
         }
       },

@@ -144,6 +144,34 @@ export const validateBackupData = (data: unknown): data is BackupData => {
     return false;
   }
 
+  // 버전 검증 (현재 지원하는 버전: 1.0)
+  if (backup.version !== '1.0') {
+    console.error(`지원하지 않는 백업 버전: ${backup.version}`);
+    return false;
+  }
+
+  // 타임스탬프 검증 (유효한 ISO 8601 형식인지 확인)
+  const timestamp = new Date(backup.timestamp);
+  if (isNaN(timestamp.getTime())) {
+    console.error(`유효하지 않은 타임스탬프: ${backup.timestamp}`);
+    return false;
+  }
+
+  // 타임스탬프가 미래가 아닌지 확인 (시스템 시간 조작 방지)
+  const now = new Date();
+  if (timestamp > now) {
+    console.error(`타임스탬프가 미래 시간입니다: ${backup.timestamp}`);
+    return false;
+  }
+
+  // 타임스탬프가 너무 오래되지 않았는지 확인 (10년 이내)
+  const tenYearsAgo = new Date();
+  tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
+  if (timestamp < tenYearsAgo) {
+    console.error(`타임스탬프가 너무 오래되었습니다: ${backup.timestamp}`);
+    return false;
+  }
+
   // 데이터 구조 검증
   if (
     !Array.isArray(backup.data.works) ||
@@ -152,6 +180,28 @@ export const validateBackupData = (data: unknown): data is BackupData => {
     !backup.data.settings
   ) {
     return false;
+  }
+
+  // 메타데이터 검증 (있는 경우)
+  if (backup.metadata) {
+    if (
+      typeof backup.metadata.workCount !== 'number' ||
+      typeof backup.metadata.sentenceCategoryCount !== 'number' ||
+      typeof backup.metadata.exhibitionCategoryCount !== 'number'
+    ) {
+      console.error('메타데이터 타입이 올바르지 않습니다');
+      return false;
+    }
+
+    // 메타데이터 카운트가 실제 데이터와 일치하는지 확인
+    if (
+      backup.metadata.workCount !== backup.data.works.length ||
+      backup.metadata.sentenceCategoryCount !== backup.data.sentenceCategories.length ||
+      backup.metadata.exhibitionCategoryCount !== backup.data.exhibitionCategories.length
+    ) {
+      console.error('메타데이터 카운트가 실제 데이터와 일치하지 않습니다');
+      return false;
+    }
   }
 
   return true;
