@@ -100,8 +100,44 @@ describe('string utils', () => {
       expect(extractYouTubeVideoId('https://www.youtube.com/embed/dQw4w9WgXcQ')).toBe('dQw4w9WgXcQ');
     });
 
+    it('should extract ID from /v/ URL', () => {
+      expect(extractYouTubeVideoId('https://www.youtube.com/v/dQw4w9WgXcQ')).toBe('dQw4w9WgXcQ');
+    });
+
+    it('should extract ID from URL with query parameters', () => {
+      expect(extractYouTubeVideoId('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10s')).toBe('dQw4w9WgXcQ');
+    });
+
+    it('should extract ID from URL without protocol', () => {
+      expect(extractYouTubeVideoId('youtube.com/watch?v=dQw4w9WgXcQ')).toBe('dQw4w9WgXcQ');
+    });
+
+    it('should extract ID from URL without www', () => {
+      expect(extractYouTubeVideoId('https://youtube.com/watch?v=dQw4w9WgXcQ')).toBe('dQw4w9WgXcQ');
+    });
+
     it('should return null for invalid URL', () => {
       expect(extractYouTubeVideoId('https://example.com/video')).toBeNull();
+    });
+
+    it('should return null for too short video ID', () => {
+      expect(extractYouTubeVideoId('https://www.youtube.com/watch?v=abc')).toBeNull();
+    });
+
+    it('should return null for too long video ID', () => {
+      expect(extractYouTubeVideoId('https://www.youtube.com/watch?v=dQw4w9WgXcQ123')).toBeNull();
+    });
+
+    it('should return null for Vimeo URL', () => {
+      expect(extractYouTubeVideoId('https://vimeo.com/123456789')).toBeNull();
+    });
+
+    it('should return null for YouTube channel URL', () => {
+      expect(extractYouTubeVideoId('https://www.youtube.com/channel/UCxxx')).toBeNull();
+    });
+
+    it('should return null for YouTube playlist URL', () => {
+      expect(extractYouTubeVideoId('https://www.youtube.com/playlist?list=PLxxx')).toBeNull();
     });
   });
 

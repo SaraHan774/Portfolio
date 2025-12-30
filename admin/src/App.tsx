@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ConfigProvider, Spin } from 'antd';
+import { ConfigProvider, Spin, App as AntdApp } from 'antd';
 import koKR from 'antd/locale/ko_KR';
 import MainLayout from './layouts/MainLayout';
 import Login from './pages/Login';
@@ -58,32 +58,34 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ConfigProvider locale={koKR}>
-        <BrowserRouter>
-          <AuthInitializer>
-            <Routes>
-              {/* 로그인 페이지 (인증 필요 없음) */}
-              <Route path="/login" element={<Login />} />
+        <AntdApp>
+          <BrowserRouter>
+            <AuthInitializer>
+              <Routes>
+                {/* 로그인 페이지 (인증 필요 없음) */}
+                <Route path="/login" element={<Login />} />
 
-              {/* 인증이 필요한 페이지들 */}
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <MainLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<Navigate to="/dashboard" replace />} />
-                <Route path="dashboard" element={<Dashboard />} />
-                <Route path="works" element={<WorksList />} />
-                <Route path="works/new" element={<WorkForm />} />
-                <Route path="works/:id" element={<WorkForm />} />
-                <Route path="categories" element={<Categories />} />
-                <Route path="settings" element={<Settings />} />
-              </Route>
-            </Routes>
-          </AuthInitializer>
-        </BrowserRouter>
+                {/* 인증이 필요한 페이지들 */}
+                <Route
+                  path="/*"
+                  element={
+                    <ProtectedRoute>
+                      <MainLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<Navigate to="/dashboard" replace />} />
+                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="works" element={<WorksList />} />
+                  <Route path="works/new" element={<WorkForm />} />
+                  <Route path="works/:id" element={<WorkForm />} />
+                  <Route path="categories" element={<Categories />} />
+                  <Route path="settings" element={<Settings />} />
+                </Route>
+              </Routes>
+            </AuthInitializer>
+          </BrowserRouter>
+        </AntdApp>
       </ConfigProvider>
     </QueryClientProvider>
   );

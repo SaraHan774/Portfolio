@@ -17,8 +17,9 @@ import {
   Image,
   Spin,
   notification,
+  App,
 } from 'antd';
-import { SaveOutlined, EyeOutlined, CloseOutlined, FileTextOutlined, EditOutlined, PlusOutlined, PictureOutlined, HighlightOutlined, FolderOutlined, ExclamationCircleOutlined, LoadingOutlined, CheckCircleOutlined, VideoCameraOutlined } from '@ant-design/icons';
+import { SaveOutlined, EyeOutlined, CloseOutlined, FileTextOutlined, EditOutlined, PlusOutlined, PictureOutlined, HighlightOutlined, FolderOutlined, ExclamationCircleOutlined, LoadingOutlined, CheckCircleOutlined, VideoCameraOutlined, WarningOutlined } from '@ant-design/icons';
 import { useWork, useCreateWork, useUpdateWork } from '../domain';
 import { useSentenceCategories, useExhibitionCategories } from '../domain';
 import type { WorkImage, WorkVideo } from '../core/types';
@@ -26,6 +27,7 @@ import ImageUploader from '../components/ImageUploader';
 import VideoUploader from '../components/VideoUploader';
 import MediaOrderManager from '../components/MediaOrderManager';
 import CaptionEditor from '../components/CaptionEditor';
+import { getErrorDisplayInfo, logErrorForDev } from '../core/utils/errorMessages';
 import './WorkForm.css';
 
 const { Title } = Typography;
@@ -45,6 +47,7 @@ const WorkForm = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [form] = Form.useForm();
+  const { modal } = App.useApp();
   const isEditMode = !!id;
   const [images, setImages] = useState<WorkImage[]>([]);
   const [videos, setVideos] = useState<WorkVideo[]>([]);
@@ -146,20 +149,56 @@ const WorkForm = () => {
 
       // 이미지 또는 영상 최소 1개 확인
       if (images.length === 0 && videos.length === 0) {
-        notification.warning({
-          message: '미디어 필요',
-          description: '게시하려면 최소 1개의 이미지 또는 영상을 업로드해주세요.',
-          placement: 'topRight',
+        modal.warning({
+          title: '미디어 필요',
+          content: (
+            <div>
+              <p style={{ fontSize: '14px', marginBottom: '12px' }}>
+                게시하려면 최소 1개의 이미지 또는 영상을 업로드해주세요.
+              </p>
+              <div
+                style={{
+                  padding: '10px',
+                  background: '#fff7e6',
+                  borderRadius: '4px',
+                  borderLeft: '3px solid #faad14',
+                }}
+              >
+                <strong style={{ color: '#d48806' }}>📸 필요 항목:</strong>{' '}
+                <span style={{ fontSize: '13px' }}>이미지 또는 영상 1개 이상</span>
+              </div>
+            </div>
+          ),
+          okText: '확인',
+          width: 450,
         });
         return;
       }
 
       // 대표 썸네일 확인 (이미지가 있는 경우에만)
       if (images.length > 0 && !thumbnailImageId) {
-        notification.warning({
-          message: '썸네일 필요',
-          description: '게시하려면 대표 썸네일을 선택해주세요.',
-          placement: 'topRight',
+        modal.warning({
+          title: '썸네일 필요',
+          content: (
+            <div>
+              <p style={{ fontSize: '14px', marginBottom: '12px' }}>
+                게시하려면 대표 썸네일을 선택해주세요.
+              </p>
+              <div
+                style={{
+                  padding: '10px',
+                  background: '#fff7e6',
+                  borderRadius: '4px',
+                  borderLeft: '3px solid #faad14',
+                }}
+              >
+                <strong style={{ color: '#d48806' }}>🖼️ 설정 방법:</strong>{' '}
+                <span style={{ fontSize: '13px' }}>이미지 카드에서 "대표 썸네일" 버튼 클릭</span>
+              </div>
+            </div>
+          ),
+          okText: '확인',
+          width: 450,
         });
         return;
       }
@@ -208,30 +247,97 @@ const WorkForm = () => {
 
       navigate('/works');
     } catch (error) {
-      console.error('게시 실패:', error);
+      // 개발 환경에서 에러 로깅
+      logErrorForDev(error, 'handleSave');
+
       setIsSaving(false);
       setSavingMessage('');
 
-      // 폼 유효성 검사 실패 시 토스트로 알림
+      // 폼 유효성 검사 실패 시 - 필드로 스크롤하고 Modal 표시
       if (error && typeof error === 'object' && 'errorFields' in error) {
         const errorFields = (error as { errorFields: Array<{ name: string[]; errors: string[] }> }).errorFields;
         const firstError = errorFields[0];
         if (firstError && firstError.errors.length > 0) {
-          notification.warning({
-            message: '입력 확인 필요',
-            description: firstError.errors[0],
-            placement: 'topRight',
-          });
           // 첫 번째 에러 필드로 스크롤
           form.scrollToField(firstError.name);
+
+          // Modal로 명확하게 표시
+          modal.warning({
+            title: '입력 확인 필요',
+            content: (
+              <div>
+                <p style={{ fontSize: '14px', marginBottom: '12px' }}>
+                  {firstError.errors[0]}
+                </p>
+                <div
+                  style={{
+                    padding: '10px',
+                    background: '#fff7e6',
+                    borderRadius: '4px',
+                    borderLeft: '3px solid #faad14',
+                  }}
+                >
+                  <strong style={{ color: '#d48806' }}>📝 필드:</strong>{' '}
+                  <span style={{ fontSize: '13px' }}>{firstError.name.join(' > ')}</span>
+                </div>
+              </div>
+            ),
+            okText: '확인',
+            width: 450,
+          });
         }
         return;
       }
 
-      notification.error({
-        message: '게시 실패',
-        description: '작업 게시에 실패했습니다. 다시 시도해주세요.',
-        placement: 'topRight',
+      // 에러 정보 추출
+      const errorInfo = getErrorDisplayInfo(error);
+
+      // 심각한 에러의 경우 - Modal 사용 (상세 정보 제공)
+      modal.error({
+        title: (
+          <span>
+            <WarningOutlined style={{ color: '#ff4d4f', marginRight: '8px' }} />
+            {errorInfo.title}
+          </span>
+        ),
+        content: (
+          <div>
+            <p style={{ marginBottom: '12px', fontSize: '14px' }}>
+              {errorInfo.message}
+            </p>
+            {errorInfo.action && (
+              <div
+                style={{
+                  padding: '12px',
+                  background: '#f0f5ff',
+                  borderRadius: '4px',
+                  borderLeft: '3px solid #1890ff',
+                }}
+              >
+                <strong style={{ color: '#1890ff' }}>해결 방법:</strong>
+                <p style={{ marginTop: '4px', marginBottom: 0, fontSize: '13px' }}>
+                  {errorInfo.action}
+                </p>
+              </div>
+            )}
+            {errorInfo.technical && import.meta.env.DEV && (
+              <div
+                style={{
+                  marginTop: '12px',
+                  padding: '8px',
+                  background: '#f5f5f5',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  color: '#666',
+                }}
+              >
+                <strong>기술 정보:</strong> {errorInfo.technical}
+              </div>
+            )}
+          </div>
+        ),
+        okText: '확인',
+        width: 500,
       });
     }
   };
@@ -243,10 +349,28 @@ const WorkForm = () => {
 
       // 제목은 필수
       if (!formValues.title?.trim()) {
-        notification.warning({
-          message: '제목 필요',
-          description: '임시 저장하려면 최소한 제목을 입력해주세요.',
-          placement: 'topRight',
+        modal.warning({
+          title: '제목 필요',
+          content: (
+            <div>
+              <p style={{ fontSize: '14px', marginBottom: '12px' }}>
+                임시 저장하려면 최소한 제목을 입력해주세요.
+              </p>
+              <div
+                style={{
+                  padding: '10px',
+                  background: '#fff7e6',
+                  borderRadius: '4px',
+                  borderLeft: '3px solid #faad14',
+                }}
+              >
+                <strong style={{ color: '#d48806' }}>📝 필수 필드:</strong>{' '}
+                <span style={{ fontSize: '13px' }}>작업 제목</span>
+              </div>
+            </div>
+          ),
+          okText: '확인',
+          width: 450,
         });
         return;
       }
@@ -295,14 +419,61 @@ const WorkForm = () => {
         navigate('/works');
       }
     } catch (error) {
-      console.error('임시 저장 실패:', error);
+      // 개발 환경에서 에러 로깅
+      logErrorForDev(error, 'handleDraftSave');
+
       setIsSaving(false);
       setSavingMessage('');
 
-      notification.error({
-        message: '임시 저장 실패',
-        description: '임시 저장에 실패했습니다. 다시 시도해주세요.',
-        placement: 'topRight',
+      // 에러 정보 추출
+      const errorInfo = getErrorDisplayInfo(error);
+
+      // 심각한 에러의 경우 - Modal 사용 (상세 정보 제공)
+      modal.error({
+        title: (
+          <span>
+            <WarningOutlined style={{ color: '#ff4d4f', marginRight: '8px' }} />
+            {errorInfo.title}
+          </span>
+        ),
+        content: (
+          <div>
+            <p style={{ marginBottom: '12px', fontSize: '14px' }}>
+              {errorInfo.message}
+            </p>
+            {errorInfo.action && (
+              <div
+                style={{
+                  padding: '12px',
+                  background: '#f0f5ff',
+                  borderRadius: '4px',
+                  borderLeft: '3px solid #1890ff',
+                }}
+              >
+                <strong style={{ color: '#1890ff' }}>해결 방법:</strong>
+                <p style={{ marginTop: '4px', marginBottom: 0, fontSize: '13px' }}>
+                  {errorInfo.action}
+                </p>
+              </div>
+            )}
+            {errorInfo.technical && import.meta.env.DEV && (
+              <div
+                style={{
+                  marginTop: '12px',
+                  padding: '8px',
+                  background: '#f5f5f5',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  color: '#666',
+                }}
+              >
+                <strong>기술 정보:</strong> {errorInfo.technical}
+              </div>
+            )}
+          </div>
+        ),
+        okText: '확인',
+        width: 500,
       });
     }
   };
@@ -310,7 +481,7 @@ const WorkForm = () => {
   // 취소 핸들러 (변경사항 확인)
   const handleCancel = () => {
     if (hasChanges) {
-      Modal.confirm({
+      modal.confirm({
         title: '저장하지 않은 변경사항이 있습니다.',
         icon: <ExclamationCircleOutlined />,
         content: '변경사항을 저장하지 않고 나가시겠습니까?',

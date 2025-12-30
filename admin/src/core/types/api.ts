@@ -142,3 +142,34 @@ export interface SiteSettings {
   footerText: string;
   updatedAt: Date;
 }
+
+/**
+ * 백업 데이터 구조
+ */
+export interface BackupData {
+  version: string;
+  timestamp: string;
+  data: {
+    works: Work[];
+    sentenceCategories: SentenceCategory[];
+    exhibitionCategories: ExhibitionCategory[];
+    settings: SiteSettings;
+  };
+  metadata: {
+    workCount: number;
+    sentenceCategoryCount: number;
+    exhibitionCategoryCount: number;
+    totalSize: number;
+  };
+}
+
+/**
+ * 복원 옵션
+ */
+export interface RestoreOptions {
+  restoreWorks: boolean;
+  restoreSentenceCategories: boolean;
+  restoreExhibitionCategories: boolean;
+  restoreSettings: boolean;
+  conflictStrategy: 'overwrite' | 'skip' | 'merge';
+}

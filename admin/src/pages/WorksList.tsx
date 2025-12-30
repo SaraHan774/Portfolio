@@ -48,6 +48,7 @@ const WorksList = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'latest' | 'oldest' | 'title'>('latest');
+  const [pageSize, setPageSize] = useState(20);
   const [isMobile, setIsMobile] = useState(false);
   const [batchDrawerOpen, setBatchDrawerOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -601,9 +602,15 @@ const WorksList = () => {
           dataSource={filteredAndSortedWorks}
           rowKey="id"
           pagination={{
-            pageSize: 20,
+            pageSize: pageSize,
             showSizeChanger: true,
             showTotal: (total) => `총 ${total}개`,
+            pageSizeOptions: ['10', '20', '50', '100'],
+            onChange: (_page, size) => {
+              if (size !== pageSize) {
+                setPageSize(size);
+              }
+            },
           }}
           scroll={{ x: 1200 }}
         />
@@ -765,9 +772,15 @@ const WorksList = () => {
             );
           }}
           pagination={{
-            pageSize: 10,
-            showSizeChanger: false,
+            pageSize: pageSize,
+            showSizeChanger: true,
             showTotal: (total) => `총 ${total}개`,
+            pageSizeOptions: ['10', '20', '50', '100'],
+            onChange: (_page, size) => {
+              if (size !== pageSize) {
+                setPageSize(size);
+              }
+            },
           }}
         />
       )}
