@@ -42,7 +42,7 @@ jobs:
             Use CLAUDE.md for conventions.
 
           claude_args: >-
-            --max-turns 5
+            --max-turns 12
             --append-system-prompt "You are a senior React+TypeScript reviewer. Always: (a) identify render/hook pitfalls (deps, stale closure, memoization misuse), (b) check a11y (label/aria/keyboard), (c) call out perf risks (rerenders, expensive computations, list virtualization), (d) require error/loading states for async UI, (e) distinguish Blocking vs Non-blocking."
             --agents '{
               "a11y": {"description":"Accessibility reviewer","prompt":"Review for a11y issues (aria/label/role/keyboard). Provide concrete fixes.","tools":["Read","Grep","Glob","Bash"],"model":"sonnet"},
