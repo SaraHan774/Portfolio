@@ -3,21 +3,13 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+
+concurrency:
+  group: claude-review-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
-
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -29,10 +21,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0  # diff/changed files 분석에 유리
 
       - name: Run Claude Code Review
-        id: claude-review
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -40,18 +31,21 @@ jobs:
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
 
-            Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
+            1) Use gh to fetch PR title/body/files and the full diff.
+            2) (Frontend) Run relevant checks if available: lint, typecheck, test, build.
+            3) Leave ONE consolidated review comment (not multiple scattered comments):
+               - Blocking / Non-blocking / Nit
+               - File-by-file notes
+               - Concrete fix suggestions (code snippets OK)
+               - React hooks pitfalls, rerender/perf, a11y must be checked
 
-            Use the repository's CLAUDE.md for guidance on style and conventions. Be constructive and helpful in your feedback.
+            Use CLAUDE.md for conventions.
 
-            Use `gh pr comment` with your Bash tool to leave your review as a comment on the PR.
-
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
-          claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
-
+          claude_args: >-
+            --max-turns 5
+            --append-system-prompt "You are a senior React+TypeScript reviewer. Always: (a) identify render/hook pitfalls (deps, stale closure, memoization misuse), (b) check a11y (label/aria/keyboard), (c) call out perf risks (rerenders, expensive computations, list virtualization), (d) require error/loading states for async UI, (e) distinguish Blocking vs Non-blocking."
+            --agents '{
+              "a11y": {"description":"Accessibility reviewer","prompt":"Review for a11y issues (aria/label/role/keyboard). Provide concrete fixes.","tools":["Read","Grep","Glob","Bash"],"model":"sonnet"},
+              "perf": {"description":"Performance reviewer","prompt":"Review for React rendering/bundle/perf issues. Provide measurable suggestions.","tools":["Read","Grep","Glob","Bash"],"model":"sonnet"}
+            }'
+            --allowed-tools "Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh pr list:*),Bash(gh issue view:*),Bash(gh search:*),Bash(gh api:*),Bash(npm:*),Bash(npx:*),Bash(pnpm:*),Bash(yarn:*)"
