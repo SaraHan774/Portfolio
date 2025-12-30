@@ -11,6 +11,8 @@ concurrency:
 jobs:
   claude-review:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
     permissions:
       contents: read
       pull-requests: read
@@ -21,31 +23,102 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # diff/changed files 분석에 유리
+          fetch-depth: 0
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: 1.2.11
+
+      # --- CI checks (Claude가 아니라 workflow가 실행) ---
+      - name: Install dependencies
+        id: install
+        run: |
+          set -o pipefail
+          bun install 2>&1 | tee install.log
+
+      - name: Lint
+        id: lint
+        run: |
+          set -o pipefail
+          bun run lint 2>&1 | tee lint.log
+
+      - name: Test
+        id: test
+        run: |
+          set -o pipefail
+          bun run test 2>&1 | tee test.log
+
+      - name: Build
+        id: build
+        run: |
+          set -o pipefail
+          bun run build 2>&1 | tee build.log
+
+      # --- 결과를 Claude에 넣기 좋은 형태로 요약 ---
+      - name: Summarize CI logs for Claude
+        id: ci_summary
+        if: always()
+        run: |
+          summarize () {
+            local name="$1"
+            local file="$2"
+            echo "## ${name}"
+            if [ -f "$file" ]; then
+              echo "- last 120 lines:"
+              echo '```'
+              tail -n 120 "$file"
+              echo '```'
+              echo "- top error-like lines (first 40 matches):"
+              echo '```'
+              grep -nE "error|failed|fatal|exception|TypeError|ReferenceError|ERR_|Cannot find|TS\\d+:" "$file" | head -n 40 || true
+              echo '```'
+            else
+              echo "- log file not found: $file"
+            fi
+            echo
+          }
+
+          {
+            echo "summary<<'EOF'"
+            echo "# CI Check Summary"
+            echo
+            summarize "Install" "install.log"
+            summarize "Lint" "lint.log"
+            summarize "Test" "test.log"
+            summarize "Build" "build.log"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      # --- Claude는 리뷰만 수행 (체크 실행 도구는 허용하지 않음) ---
       - name: Run Claude Code Review
         uses: anthropics/claude-code-action@v1
+        if: always()
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
 
-            1) Use gh to fetch PR title/body/files and the full diff.
-            2) (Frontend) Run relevant checks if available: lint, typecheck, test, build.
-            3) Leave ONE consolidated review comment (not multiple scattered comments):
-               - Blocking / Non-blocking / Nit
-               - File-by-file notes
-               - Concrete fix suggestions (code snippets OK)
-               - React hooks pitfalls, rerender/perf, a11y must be checked
+            You are reviewing a React/TypeScript pull request.
+            IMPORTANT: Do NOT run install/lint/test/build. The CI has already run checks; use the summary below.
 
-            Use CLAUDE.md for conventions.
+            --- CI SUMMARY (from workflow) ---
+            ${{ steps.ci_summary.outputs.summary }}
+
+            --- REVIEW INSTRUCTIONS ---
+            1) Use gh to fetch PR title/body/files and the full diff.
+            2) Base your review on: (a) diff, (b) CI summary above, (c) CLAUDE.md conventions.
+            3) Leave ONE consolidated PR comment with:
+               - Blocking / Non-blocking / Nit
+               - File-by-file notes (only for changed files)
+               - Concrete fix suggestions (snippets OK)
+               - React hooks pitfalls, rerender/perf risks, and a11y checks
+
+            Post the review using `gh pr comment`.
 
           claude_args: >-
-            --max-turns 12
-            --append-system-prompt "You are a senior React+TypeScript reviewer. Always: (a) identify render/hook pitfalls (deps, stale closure, memoization misuse), (b) check a11y (label/aria/keyboard), (c) call out perf risks (rerenders, expensive computations, list virtualization), (d) require error/loading states for async UI, (e) distinguish Blocking vs Non-blocking."
-            --agents '{
-              "a11y": {"description":"Accessibility reviewer","prompt":"Review for a11y issues (aria/label/role/keyboard). Provide concrete fixes.","tools":["Read","Grep","Glob","Bash"],"model":"sonnet"},
-              "perf": {"description":"Performance reviewer","prompt":"Review for React rendering/bundle/perf issues. Provide measurable suggestions.","tools":["Read","Grep","Glob","Bash"],"model":"sonnet"}
-            }'
-            --allowed-tools "Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh pr list:*),Bash(gh issue view:*),Bash(gh search:*),Bash(gh api:*),Bash(npm:*),Bash(npx:*),Bash(pnpm:*),Bash(yarn:*)"
+            --max-turns 10
+            --append-system-prompt "You are a senior React+TypeScript reviewer. Prioritize issues supported by CI evidence. Avoid speculative style nits unless they improve correctness, accessibility, or performance."
+            --allowed-tools "Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh pr list:*),Bash(gh issue view:*),Bash(gh search:*),Bash(gh api:*)"
