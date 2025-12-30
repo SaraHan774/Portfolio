@@ -51,11 +51,12 @@ export const countCharacters = (html: string): number => {
 
 /**
  * YouTube URL에서 비디오 ID 추출
+ * Video ID는 정확히 11자의 영문자, 숫자, 하이픈, 언더스코어로 구성됨
  */
 export const extractYouTubeVideoId = (url: string): string | null => {
   const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
-    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})(?:[&?/#]|$)/,
+    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})(?:[&?/#]|$)/,
   ];
 
   for (const pattern of patterns) {

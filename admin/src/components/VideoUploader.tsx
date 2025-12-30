@@ -11,29 +11,7 @@ import {
   YoutubeOutlined,
 } from '@ant-design/icons';
 import type { WorkVideo } from '../core/types';
-
-// YouTube URL 패턴
-const YOUTUBE_URL_PATTERNS = [
-  /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/,
-  /(?:https?:\/\/)?(?:www\.)?youtu\.be\/([a-zA-Z0-9_-]+)/,
-  /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]+)/,
-  /(?:https?:\/\/)?(?:www\.)?youtube\.com\/v\/([a-zA-Z0-9_-]+)/,
-];
-
-// YouTube URL에서 videoId 추출
-function parseYoutubeUrl(url: string): { videoId: string; embedUrl: string } | null {
-  for (const pattern of YOUTUBE_URL_PATTERNS) {
-    const match = url.match(pattern);
-    if (match && match[1]) {
-      const videoId = match[1];
-      return {
-        videoId,
-        embedUrl: `https://www.youtube.com/embed/${videoId}`,
-      };
-    }
-  }
-  return null;
-}
+import { extractYouTubeVideoId, createYouTubeEmbedUrl } from '../core/utils/string';
 
 interface VideoUploaderProps {
   value?: WorkVideo[];
@@ -65,18 +43,14 @@ const VideoUploader = ({ value = [], onChange, maxCount = 10 }: VideoUploaderPro
   // URL 입력 시 미리보기 업데이트
   const handleUrlChange = (url: string) => {
     setYoutubeUrl(url);
-    const parsed = parseYoutubeUrl(url);
-    if (parsed) {
-      setPreviewVideoId(parsed.videoId);
-    } else {
-      setPreviewVideoId(null);
-    }
+    const videoId = extractYouTubeVideoId(url);
+    setPreviewVideoId(videoId);
   };
 
   // 영상 추가
   const handleAddVideo = () => {
-    const parsed = parseYoutubeUrl(youtubeUrl);
-    if (!parsed) {
+    const videoId = extractYouTubeVideoId(youtubeUrl);
+    if (!videoId) {
       message.error('유효한 YouTube URL을 입력해주세요.');
       return;
     }
@@ -89,8 +63,8 @@ const VideoUploader = ({ value = [], onChange, maxCount = 10 }: VideoUploaderPro
     const newVideo: WorkVideo = {
       id: `video-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       youtubeUrl: youtubeUrl,
-      youtubeVideoId: parsed.videoId,
-      embedUrl: parsed.embedUrl,
+      youtubeVideoId: videoId,
+      embedUrl: createYouTubeEmbedUrl(videoId),
       ...(videoTitle ? { title: videoTitle } : {}),
       order: videos.length + 1,
     };
@@ -263,6 +237,10 @@ const VideoUploader = ({ value = [], onChange, maxCount = 10 }: VideoUploaderPro
                     width: '100%',
                     height: '100%',
                     objectFit: 'cover',
+                  }}
+                  onError={(e) => {
+                    // 썸네일 로드 실패 시 기본 이미지로 대체
+                    e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjE4MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzIwIiBoZWlnaHQ9IjE4MCIgZmlsbD0iIzMzMyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Zb3VUdWJlIOyYgeyDgTwvdGV4dD48L3N2Zz4=';
                   }}
                 />
                 <PlayCircleOutlined
