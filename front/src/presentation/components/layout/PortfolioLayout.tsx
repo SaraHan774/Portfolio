@@ -9,6 +9,7 @@ import MobileCategoryMenu from './MobileCategoryMenu';
 import Footer from './Footer';
 import { useCategories, useCategorySelection, useUIState } from '@/state';
 import { useFilteredWorks, useScrollLock } from '@/domain';
+import { logLayout, getViewportInfo, getBreakpoint, detectBreakpointChange } from '@/core/utils/layoutDebugLogger';
 
 /**
  * 레이아웃 상수
@@ -74,6 +75,88 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
   const [shouldFadeIn, setShouldFadeIn] = useState<boolean>(false);
   // Race condition 방지를 위한 fade sequence ID
   const fadeSequenceIdRef = useRef<number>(0);
+  // Breakpoint 변경 추적용
+  const previousWidthRef = useRef<number>(typeof window !== 'undefined' ? window.innerWidth : 0);
+
+  // Mount 로그
+  useEffect(() => {
+    logLayout('PortfolioLayout', 'mount', {
+      ...getViewportInfo(),
+      breakpoint: getBreakpoint(),
+      pathname,
+      selectedKeywordId,
+      selectedExhibitionCategoryId,
+    });
+  }, [pathname, selectedKeywordId, selectedExhibitionCategoryId]);
+
+  // Window resize 이벤트 리스너 (debounced)
+  useEffect(() => {
+    let resizeTimer: NodeJS.Timeout | null = null;
+
+    const handleResize = () => {
+      if (resizeTimer) {
+        clearTimeout(resizeTimer);
+      }
+
+      // 150ms 후에 로깅 (빠른 연속 resize 중복 방지)
+      resizeTimer = setTimeout(() => {
+        const currentWidth = window.innerWidth;
+        const previousWidth = previousWidthRef.current;
+        const breakpointChange = detectBreakpointChange(previousWidth, currentWidth);
+        const currentBreakpoint = getBreakpoint(currentWidth);
+
+        // Breakpoint 변경 시 특별 로깅
+        if (breakpointChange.changed) {
+          logLayout('PortfolioLayout', 'breakpointChange', {
+            ...getViewportInfo(),
+            breakpoint_from: breakpointChange.from,
+            breakpoint_to: breakpointChange.to,
+            previousWidth,
+            currentWidth,
+            widthDelta: currentWidth - previousWidth,
+            pathname,
+            sentenceCategoryHeight,
+            exhibitionCategoryHeight,
+            workListScrollerHeight,
+            contentPaddingTop,
+          });
+        }
+
+        // 일반 resize 로깅
+        logLayout('PortfolioLayout', 'windowResize', {
+          ...getViewportInfo(),
+          breakpoint: currentBreakpoint,
+          pathname,
+          selectedKeywordId,
+          selectedExhibitionCategoryId,
+          sentenceCategoryHeight,
+          exhibitionCategoryHeight,
+          workListScrollerHeight,
+          contentPaddingTop,
+          debounced: true,
+        });
+
+        // 현재 width 저장
+        previousWidthRef.current = currentWidth;
+      }, 150);
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      if (resizeTimer) {
+        clearTimeout(resizeTimer);
+      }
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []); // 빈 배열: resize 리스너는 한 번만 등록하고 항상 최신 값 참조
+
+  // Cleanup: unmount 시 scroll lock 해제
+  useEffect(() => {
+    return () => {
+      unlockScroll();
+    };
+  }, [unlockScroll]);
 
   // pathname 변경 감지 (fade out 중 라우팅 발생 시 새 페이지 fade in 처리)
   useEffect(() => {
@@ -87,21 +170,24 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
     }
   }, [pathname, isFadingOut]);
 
-  // Cleanup: unmount 시 scroll lock 해제
-  useEffect(() => {
-    return () => {
-      unlockScroll();
-    };
-  }, [unlockScroll]);
-
   // 높이 변경 콜백
   const handleSentenceCategoryHeightChange = useCallback((height: number) => {
     setSentenceCategoryHeight(height);
-  }, []);
+    logLayout('PortfolioLayout', 'sentenceCategoryHeightChange', {
+      ...getViewportInfo(),
+      newHeight: height,
+      pathname,
+    });
+  }, [pathname]);
 
   const handleExhibitionCategoryHeightChange = useCallback((height: number) => {
     setExhibitionCategoryHeight(height);
-  }, []);
+    logLayout('PortfolioLayout', 'exhibitionCategoryHeightChange', {
+      ...getViewportInfo(),
+      newHeight: height,
+      pathname,
+    });
+  }, [pathname]);
 
   // 선택된 카테고리의 작업 ID 목록
   const selectedWorkIds = useMemo(() => works.map(work => work.id), [works]);
@@ -120,8 +206,21 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
     }
 
     const updateHeight = () => {
-      const height = element.getBoundingClientRect().height;
+      const rect = element.getBoundingClientRect();
+      const height = rect.height;
       setWorkListScrollerHeight(height);
+
+      logLayout('PortfolioLayout', 'workListScrollerHeightUpdate (left)', {
+        ...getViewportInfo(),
+        position: 'left',
+        selectedKeywordId,
+        workListHeight: height,
+        workListTop: rect.top,
+        workListLeft: rect.left,
+        workListWidth: rect.width,
+        worksCount: works.length,
+        pathname,
+      });
     };
 
     updateHeight();
@@ -132,7 +231,7 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
     return () => {
       resizeObserver.disconnect();
     };
-  }, [selectedKeywordId, works]);
+  }, [selectedKeywordId, works, pathname]);
 
   // WorkListScroller 높이 측정 (우측)
   useEffect(() => {
@@ -142,8 +241,21 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
     }
 
     const updateHeight = () => {
-      const height = element.getBoundingClientRect().height;
+      const rect = element.getBoundingClientRect();
+      const height = rect.height;
       setWorkListScrollerHeight(height);
+
+      logLayout('PortfolioLayout', 'workListScrollerHeightUpdate (right)', {
+        ...getViewportInfo(),
+        position: 'right',
+        selectedExhibitionCategoryId,
+        workListHeight: height,
+        workListTop: rect.top,
+        workListRight: rect.right,
+        workListWidth: rect.width,
+        worksCount: works.length,
+        pathname,
+      });
     };
 
     updateHeight();
@@ -154,33 +266,67 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
     return () => {
       resizeObserver.disconnect();
     };
-  }, [selectedExhibitionCategoryId, works]);
+  }, [selectedExhibitionCategoryId, works, pathname]);
 
   // children에게 전달할 paddingTop 계산
   const contentPaddingTop = useMemo(() => {
     // 데이터가 없으면 패딩 없음
-    if (!hasData) return '0px';
-    
+    if (!hasData) {
+      logLayout('PortfolioLayout', 'contentPaddingTopCalculate', {
+        ...getViewportInfo(),
+        result: '0px',
+        reason: 'no data',
+        hasData,
+      });
+      return '0px';
+    }
+
     // 현재 활성화된 카테고리의 높이 가져오기
-    const categoryHeight = selectedKeywordId 
-      ? sentenceCategoryHeight 
-      : selectedExhibitionCategoryId 
-        ? exhibitionCategoryHeight 
+    const categoryHeight = selectedKeywordId
+      ? sentenceCategoryHeight
+      : selectedExhibitionCategoryId
+        ? exhibitionCategoryHeight
         : 0;
-    
+
     // 카테고리 높이가 측정되지 않았으면 패딩 없음
-    if (categoryHeight === 0) return '0px';
-    
+    if (categoryHeight === 0) {
+      logLayout('PortfolioLayout', 'contentPaddingTopCalculate', {
+        ...getViewportInfo(),
+        result: '0px',
+        reason: 'category height not measured',
+        selectedKeywordId,
+        selectedExhibitionCategoryId,
+        sentenceCategoryHeight,
+        exhibitionCategoryHeight,
+      });
+      return '0px';
+    }
+
     // 전체 패딩 계산: 기본 오프셋 + 카테고리 높이 + 간격 + 작업 목록 높이 + 간격
-    const totalHeight = 
-      LAYOUT_CONSTANTS.BASE_TOP_OFFSET + 
-      categoryHeight + 
-      LAYOUT_CONSTANTS.CATEGORY_TO_WORKLIST_GAP + 
-      workListScrollerHeight + 
+    const totalHeight =
+      LAYOUT_CONSTANTS.BASE_TOP_OFFSET +
+      categoryHeight +
+      LAYOUT_CONSTANTS.CATEGORY_TO_WORKLIST_GAP +
+      workListScrollerHeight +
       LAYOUT_CONSTANTS.CATEGORY_TO_WORKLIST_GAP;
-    
+
+    logLayout('PortfolioLayout', 'contentPaddingTopCalculate', {
+      ...getViewportInfo(),
+      result: `${totalHeight}px`,
+      BASE_TOP_OFFSET: LAYOUT_CONSTANTS.BASE_TOP_OFFSET,
+      categoryHeight,
+      CATEGORY_TO_WORKLIST_GAP: LAYOUT_CONSTANTS.CATEGORY_TO_WORKLIST_GAP,
+      workListScrollerHeight,
+      totalHeight,
+      selectedKeywordId,
+      selectedExhibitionCategoryId,
+      sentenceCategoryHeight,
+      exhibitionCategoryHeight,
+      pathname,
+    });
+
     return `${totalHeight}px`;
-  }, [selectedKeywordId, selectedExhibitionCategoryId, sentenceCategoryHeight, exhibitionCategoryHeight, workListScrollerHeight, hasData]);
+  }, [selectedKeywordId, selectedExhibitionCategoryId, sentenceCategoryHeight, exhibitionCategoryHeight, workListScrollerHeight, hasData, pathname]);
 
   // 카테고리 선택 핸들러 (라우팅 후 페이드 아웃)
   const handleKeywordSelect = useCallback((keywordId: string) => {
@@ -270,22 +416,56 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
 
   // WorkListScroller 렌더링 여부 및 위치 계산
   const workListConfig = useMemo(() => {
-    if (!hasData) return null;
+    if (!hasData) {
+      logLayout('PortfolioLayout', 'workListConfigCalculate', {
+        ...getViewportInfo(),
+        result: null,
+        reason: 'no data',
+      });
+      return null;
+    }
 
     if (selectedKeywordId && sentenceCategoryHeight > 0) {
+      const top = LAYOUT_CONSTANTS.BASE_TOP_OFFSET + sentenceCategoryHeight + LAYOUT_CONSTANTS.CATEGORY_TO_WORKLIST_GAP;
+      logLayout('PortfolioLayout', 'workListConfigCalculate', {
+        ...getViewportInfo(),
+        position: 'left',
+        top,
+        BASE_TOP_OFFSET: LAYOUT_CONSTANTS.BASE_TOP_OFFSET,
+        sentenceCategoryHeight,
+        CATEGORY_TO_WORKLIST_GAP: LAYOUT_CONSTANTS.CATEGORY_TO_WORKLIST_GAP,
+      });
       return {
         position: 'left' as const,
-        top: LAYOUT_CONSTANTS.BASE_TOP_OFFSET + sentenceCategoryHeight + LAYOUT_CONSTANTS.CATEGORY_TO_WORKLIST_GAP,
+        top,
       };
     }
 
     if (selectedExhibitionCategoryId && exhibitionCategoryHeight > 0) {
+      const top = LAYOUT_CONSTANTS.BASE_TOP_OFFSET + exhibitionCategoryHeight + LAYOUT_CONSTANTS.CATEGORY_TO_WORKLIST_GAP;
+      logLayout('PortfolioLayout', 'workListConfigCalculate', {
+        ...getViewportInfo(),
+        position: 'right',
+        top,
+        BASE_TOP_OFFSET: LAYOUT_CONSTANTS.BASE_TOP_OFFSET,
+        exhibitionCategoryHeight,
+        CATEGORY_TO_WORKLIST_GAP: LAYOUT_CONSTANTS.CATEGORY_TO_WORKLIST_GAP,
+      });
       return {
         position: 'right' as const,
-        top: LAYOUT_CONSTANTS.BASE_TOP_OFFSET + exhibitionCategoryHeight + LAYOUT_CONSTANTS.CATEGORY_TO_WORKLIST_GAP,
+        top,
       };
     }
 
+    logLayout('PortfolioLayout', 'workListConfigCalculate', {
+      ...getViewportInfo(),
+      result: null,
+      reason: 'category height not measured',
+      selectedKeywordId,
+      selectedExhibitionCategoryId,
+      sentenceCategoryHeight,
+      exhibitionCategoryHeight,
+    });
     return null;
   }, [selectedKeywordId, selectedExhibitionCategoryId, sentenceCategoryHeight, exhibitionCategoryHeight, hasData]);
 

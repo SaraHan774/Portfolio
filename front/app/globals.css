@@ -255,13 +255,33 @@ img {
   }
 }
 
-/* 초소형 화면 (480px 미만) - 패딩 최소화 */
+/* 초소형 화면 (480px 미만) - 패딩 최소 */
 @media (max-width: 480px) {
   :root {
-    --responsive-padding-left: 0;
-    --responsive-padding-right: 0;
-    --category-margin-left: var(--space-3);     /* 24px - 최소 여백 유지 */
-    --category-margin-right: var(--space-3);    /* 24px - 최소 여백 유지 */
+    --responsive-padding-left: var(--space-2);  /* 16px */
+    --responsive-padding-right: var(--space-2); /* 16px */
+    --category-margin-left: var(--space-3);     /* 24px */
+    --category-margin-right: var(--space-3);    /* 24px */
+  }
+}
+
+/* 소형 모바일 (481px ~ 600px) - 점진적 증가 */
+@media (min-width: 481px) and (max-width: 600px) {
+  :root {
+    --responsive-padding-left: var(--space-3);  /* 24px - 부드러운 전환 */
+    --responsive-padding-right: var(--space-3); /* 24px */
+    --category-margin-left: var(--space-4);     /* 32px */
+    --category-margin-right: var(--space-3);    /* 24px */
+  }
+}
+
+/* 중형 모바일 (601px ~ 767px) - 표준 모바일 패딩 */
+@media (min-width: 601px) and (max-width: 767px) {
+  :root {
+    --responsive-padding-left: var(--space-4);  /* 32px - 표준 */
+    --responsive-padding-right: var(--space-4); /* 32px */
+    --category-margin-left: var(--space-4);     /* 32px */
+    --category-margin-right: var(--space-4);    /* 32px */
   }
 }
 
