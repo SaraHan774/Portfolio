@@ -119,32 +119,46 @@ export default function MediaTimeline({
 
     const resizeObserver = new ResizeObserver(calculateBounds);
     let resizeTimer: NodeJS.Timeout | null = null;
+    let rafId: number | null = null;
 
-    // Page 모드: window resize 이벤트 감지 (debounced)
+    // Page 모드: window resize 이벤트 감지 (RAF + debounced)
     const handleResize = () => {
+      // Cleanup 이전 타이머/프레임
       if (resizeTimer) {
         clearTimeout(resizeTimer);
       }
-      // 200ms 후에 calculateBounds 실행 (category height 측정 완료 대기)
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+
+      // 200ms debounce 후 RAF로 실행 (category height 측정 완료 대기)
       resizeTimer = setTimeout(() => {
-        calculateBounds();
-        logLayout('MediaTimeline', 'resize-recalculate', {
-          ...getViewportInfo(),
-          mode: 'page',
+        rafId = requestAnimationFrame(() => {
+          calculateBounds();
+          logLayout('MediaTimeline', 'resize-recalculate', {
+            ...getViewportInfo(),
+            mode: 'page',
+            optimized: 'RAF+debounce',
+          });
+          rafId = null;
         });
+        resizeTimer = null;
       }, 200);
     };
 
     if (scrollContainerRef?.current) {
       resizeObserver.observe(scrollContainerRef.current);
     } else {
-      window.addEventListener('resize', handleResize);
+      window.addEventListener('resize', handleResize, { passive: true });
     }
 
     return () => {
       clearTimeout(timer);
       if (resizeTimer) {
         clearTimeout(resizeTimer);
+      }
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
       }
       images.forEach((img) => {
         img.removeEventListener('load', calculateBounds);

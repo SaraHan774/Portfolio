@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useCallback, useMemo, ReactNode, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, ReactNode, useRef, useEffect, useLayoutEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import CategorySidebar from './CategorySidebar';
 import WorkListScroller from '../work/WorkListScroller';
-import MobileCategoryMenu from './MobileCategoryMenu';
 import Footer from './Footer';
-import { useCategories, useCategorySelection, useUIState } from '@/state';
-import { useFilteredWorks, useScrollLock } from '@/domain';
+import { useCategories, useCategorySelection } from '@/state';
+import { useFilteredWorks, useScrollLock, useOptimizedResize } from '@/domain';
 import { logLayout, getViewportInfo, getBreakpoint, detectBreakpointChange } from '@/core/utils/layoutDebugLogger';
+import { LayoutStabilityProvider } from '@/presentation/contexts/LayoutStabilityContext';
 
 /**
  * 레이아웃 상수
@@ -24,9 +24,11 @@ const LAYOUT_CONSTANTS = {
   /** 전환 애니메이션 타이밍 */
   TRANSITION_EASE: 'easeOut',
   /** 카테고리 예상 높이 (측정 전 사용, Layout Shift 방지) */
-  ESTIMATED_CATEGORY_HEIGHT: 100,
+  ESTIMATED_CATEGORY_HEIGHT: 120,
   /** WorkListScroller 예상 높이 (측정 전 사용, Layout Shift 방지) */
   ESTIMATED_WORKLIST_HEIGHT: 80,
+  /** 전체 추정 paddingTop (초기 렌더링 시 사용) */
+  ESTIMATED_TOTAL_PADDING: 64 + 120 + 24 + 80 + 24, // BASE + CATEGORY + GAP + WORKLIST + GAP = 312px
 } as const;
 
 interface PortfolioLayoutProps {
@@ -67,6 +69,15 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
   const leftWorkListRef = useRef<HTMLDivElement>(null);
   const rightWorkListRef = useRef<HTMLDivElement>(null);
 
+  // Content padding (추정값으로 초기화하여 Layout Shift 방지)
+  const [contentPaddingTop, setContentPaddingTop] = useState<string>(
+    hasData ? `${LAYOUT_CONSTANTS.ESTIMATED_TOTAL_PADDING}px` : '0px'
+  );
+
+  // Layout 안정화 상태 (Caption 렌더링 타이밍 제어)
+  const [isLayoutStable, setIsLayoutStable] = useState(false);
+  const layoutStableTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // 페이드 아웃 상태 (카테고리 변경 시 부드러운 전환)
   const [isFadingOut, setIsFadingOut] = useState<boolean>(false);
   // 페이드 아웃 시작 시점의 paddingTop 고정값
@@ -89,72 +100,57 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
     });
   }, [pathname, selectedKeywordId, selectedExhibitionCategoryId]);
 
-  // Window resize 이벤트 리스너 (debounced)
-  useEffect(() => {
-    let resizeTimer: NodeJS.Timeout | null = null;
+  // Window resize 이벤트 리스너 (optimized with RAF + debounce)
+  // 콜백은 클로저를 통해 항상 최신 state 값을 참조하므로 의존성 배열 불필요
+  useOptimizedResize(() => {
+    const currentWidth = window.innerWidth;
+    const previousWidth = previousWidthRef.current;
+    const breakpointChange = detectBreakpointChange(previousWidth, currentWidth);
+    const currentBreakpoint = getBreakpoint(currentWidth);
 
-    const handleResize = () => {
-      if (resizeTimer) {
-        clearTimeout(resizeTimer);
-      }
+    // Breakpoint 변경 시 특별 로깅
+    if (breakpointChange.changed) {
+      logLayout('PortfolioLayout', 'breakpointChange', {
+        ...getViewportInfo(),
+        breakpoint_from: breakpointChange.from,
+        breakpoint_to: breakpointChange.to,
+        previousWidth,
+        currentWidth,
+        widthDelta: currentWidth - previousWidth,
+        pathname,
+        sentenceCategoryHeight,
+        exhibitionCategoryHeight,
+        workListScrollerHeight,
+        contentPaddingTop,
+      });
+    }
 
-      // 150ms 후에 로깅 (빠른 연속 resize 중복 방지)
-      resizeTimer = setTimeout(() => {
-        const currentWidth = window.innerWidth;
-        const previousWidth = previousWidthRef.current;
-        const breakpointChange = detectBreakpointChange(previousWidth, currentWidth);
-        const currentBreakpoint = getBreakpoint(currentWidth);
+    // 일반 resize 로깅
+    logLayout('PortfolioLayout', 'windowResize', {
+      ...getViewportInfo(),
+      breakpoint: currentBreakpoint,
+      pathname,
+      selectedKeywordId,
+      selectedExhibitionCategoryId,
+      sentenceCategoryHeight,
+      exhibitionCategoryHeight,
+      workListScrollerHeight,
+      contentPaddingTop,
+      optimized: 'RAF+debounce',
+    });
 
-        // Breakpoint 변경 시 특별 로깅
-        if (breakpointChange.changed) {
-          logLayout('PortfolioLayout', 'breakpointChange', {
-            ...getViewportInfo(),
-            breakpoint_from: breakpointChange.from,
-            breakpoint_to: breakpointChange.to,
-            previousWidth,
-            currentWidth,
-            widthDelta: currentWidth - previousWidth,
-            pathname,
-            sentenceCategoryHeight,
-            exhibitionCategoryHeight,
-            workListScrollerHeight,
-            contentPaddingTop,
-          });
-        }
+    // 현재 width 저장
+    previousWidthRef.current = currentWidth;
+  }, { delay: 150 });
 
-        // 일반 resize 로깅
-        logLayout('PortfolioLayout', 'windowResize', {
-          ...getViewportInfo(),
-          breakpoint: currentBreakpoint,
-          pathname,
-          selectedKeywordId,
-          selectedExhibitionCategoryId,
-          sentenceCategoryHeight,
-          exhibitionCategoryHeight,
-          workListScrollerHeight,
-          contentPaddingTop,
-          debounced: true,
-        });
-
-        // 현재 width 저장
-        previousWidthRef.current = currentWidth;
-      }, 150);
-    };
-
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      if (resizeTimer) {
-        clearTimeout(resizeTimer);
-      }
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []); // 빈 배열: resize 리스너는 한 번만 등록하고 항상 최신 값 참조
-
-  // Cleanup: unmount 시 scroll lock 해제
+  // Cleanup: unmount 시 scroll lock 해제 및 layout stable timer 클리어
   useEffect(() => {
     return () => {
       unlockScroll();
+      if (layoutStableTimerRef.current) {
+        clearTimeout(layoutStableTimerRef.current);
+        layoutStableTimerRef.current = null;
+      }
     };
   }, [unlockScroll]);
 
@@ -169,6 +165,18 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
       setShouldFadeIn(false);
     }
   }, [pathname, isFadingOut]);
+
+  // pathname 또는 카테고리 변경 시 layout stability 리셋
+  useEffect(() => {
+    setIsLayoutStable(false);
+    logLayout('PortfolioLayout', 'layoutStabilityReset', {
+      ...getViewportInfo(),
+      reason: 'pathname or category changed',
+      pathname,
+      selectedKeywordId,
+      selectedExhibitionCategoryId,
+    });
+  }, [pathname, selectedKeywordId, selectedExhibitionCategoryId]);
 
   // 높이 변경 콜백
   const handleSentenceCategoryHeightChange = useCallback((height: number) => {
@@ -268,17 +276,22 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
     };
   }, [selectedExhibitionCategoryId, works, pathname]);
 
-  // children에게 전달할 paddingTop 계산
-  const contentPaddingTop = useMemo(() => {
-    // 데이터가 없으면 패딩 없음
+  // useLayoutEffect로 실제 높이 측정 (paint 전 동기 실행, Layout Shift 방지)
+  useLayoutEffect(() => {
+    // 데이터가 없으면 패딩 0px
     if (!hasData) {
-      logLayout('PortfolioLayout', 'contentPaddingTopCalculate', {
-        ...getViewportInfo(),
-        result: '0px',
-        reason: 'no data',
-        hasData,
-      });
-      return '0px';
+      if (contentPaddingTop !== '0px') {
+        setContentPaddingTop('0px');
+        logLayout('PortfolioLayout', 'contentPaddingTopUpdate', {
+          ...getViewportInfo(),
+          result: '0px',
+          reason: 'no data',
+          hasData,
+        });
+      }
+      // 데이터 없으면 즉시 stable
+      setIsLayoutStable(true);
+      return;
     }
 
     // 현재 활성화된 카테고리의 높이 가져오기
@@ -288,18 +301,22 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
         ? exhibitionCategoryHeight
         : 0;
 
-    // 카테고리 높이가 측정되지 않았으면 패딩 없음
+    // 카테고리 높이가 측정되지 않았으면 추정값 사용
     if (categoryHeight === 0) {
-      logLayout('PortfolioLayout', 'contentPaddingTopCalculate', {
-        ...getViewportInfo(),
-        result: '0px',
-        reason: 'category height not measured',
-        selectedKeywordId,
-        selectedExhibitionCategoryId,
-        sentenceCategoryHeight,
-        exhibitionCategoryHeight,
-      });
-      return '0px';
+      const estimated = `${LAYOUT_CONSTANTS.ESTIMATED_TOTAL_PADDING}px`;
+      if (contentPaddingTop !== estimated) {
+        setContentPaddingTop(estimated);
+        logLayout('PortfolioLayout', 'contentPaddingTopUpdate', {
+          ...getViewportInfo(),
+          result: estimated,
+          reason: 'using estimated value',
+          selectedKeywordId,
+          selectedExhibitionCategoryId,
+        });
+      }
+      // 측정 중이므로 not stable
+      setIsLayoutStable(false);
+      return;
     }
 
     // 전체 패딩 계산: 기본 오프셋 + 카테고리 높이 + 간격 + 작업 목록 높이 + 간격
@@ -310,23 +327,64 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
       workListScrollerHeight +
       LAYOUT_CONSTANTS.CATEGORY_TO_WORKLIST_GAP;
 
-    logLayout('PortfolioLayout', 'contentPaddingTopCalculate', {
-      ...getViewportInfo(),
-      result: `${totalHeight}px`,
-      BASE_TOP_OFFSET: LAYOUT_CONSTANTS.BASE_TOP_OFFSET,
-      categoryHeight,
-      CATEGORY_TO_WORKLIST_GAP: LAYOUT_CONSTANTS.CATEGORY_TO_WORKLIST_GAP,
-      workListScrollerHeight,
-      totalHeight,
-      selectedKeywordId,
-      selectedExhibitionCategoryId,
-      sentenceCategoryHeight,
-      exhibitionCategoryHeight,
-      pathname,
-    });
+    const newPadding = `${totalHeight}px`;
 
-    return `${totalHeight}px`;
-  }, [selectedKeywordId, selectedExhibitionCategoryId, sentenceCategoryHeight, exhibitionCategoryHeight, workListScrollerHeight, hasData, pathname]);
+    // 실제 값과 추정값의 차이가 5px 이상일 때만 업데이트 (미세한 변경 무시)
+    const currentPaddingValue = parseInt(contentPaddingTop);
+    const diff = Math.abs(totalHeight - currentPaddingValue);
+
+    if (diff >= 5) {
+      setContentPaddingTop(newPadding);
+      logLayout('PortfolioLayout', 'contentPaddingTopUpdate', {
+        ...getViewportInfo(),
+        result: newPadding,
+        previousValue: contentPaddingTop,
+        difference: diff,
+        BASE_TOP_OFFSET: LAYOUT_CONSTANTS.BASE_TOP_OFFSET,
+        categoryHeight,
+        CATEGORY_TO_WORKLIST_GAP: LAYOUT_CONSTANTS.CATEGORY_TO_WORKLIST_GAP,
+        workListScrollerHeight,
+        totalHeight,
+        selectedKeywordId,
+        selectedExhibitionCategoryId,
+        sentenceCategoryHeight,
+        exhibitionCategoryHeight,
+        pathname,
+        optimizedUpdate: true,
+      });
+
+      // 패딩 변경 시 layout not stable
+      setIsLayoutStable(false);
+
+      // 기존 타이머 클리어
+      if (layoutStableTimerRef.current) {
+        clearTimeout(layoutStableTimerRef.current);
+      }
+
+      // 150ms 후 layout stable로 전환 (측정이 안정화되었다고 판단)
+      layoutStableTimerRef.current = setTimeout(() => {
+        setIsLayoutStable(true);
+        logLayout('PortfolioLayout', 'layoutStabilized', {
+          ...getViewportInfo(),
+          contentPaddingTop: newPadding,
+          stabilizationDelay: 150,
+          pathname,
+        });
+        layoutStableTimerRef.current = null;
+      }, 150);
+    } else {
+      // 변경이 미미하면 즉시 stable
+      if (!isLayoutStable) {
+        setIsLayoutStable(true);
+        logLayout('PortfolioLayout', 'layoutStableImmediately', {
+          ...getViewportInfo(),
+          reason: 'diff < 5px',
+          diff,
+          contentPaddingTop,
+        });
+      }
+    }
+  }, [selectedKeywordId, selectedExhibitionCategoryId, sentenceCategoryHeight, exhibitionCategoryHeight, workListScrollerHeight, hasData, pathname, contentPaddingTop, isLayoutStable]);
 
   // 카테고리 선택 핸들러 (라우팅 후 페이드 아웃)
   const handleKeywordSelect = useCallback((keywordId: string) => {
@@ -527,16 +585,23 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
         <div
           style={{
             paddingTop: frozenPaddingTop || contentPaddingTop,
-            opacity: (isFadingOut || shouldFadeIn) ? 0 : 1,
+            opacity: (isFadingOut || shouldFadeIn || !isLayoutStable) ? 0 : 1,
             transition: (isFadingOut || shouldFadeIn)
               ? 'opacity 0.4s ease-out'
-              : `padding-top ${LAYOUT_CONSTANTS.ANIMATION_DURATION}s ${LAYOUT_CONSTANTS.TRANSITION_EASE}`,
-            pointerEvents: (isFadingOut || shouldFadeIn) ? 'none' : 'auto',
+              : isLayoutStable
+                ? `opacity 0.2s ease-in, padding-top ${LAYOUT_CONSTANTS.ANIMATION_DURATION}s ${LAYOUT_CONSTANTS.TRANSITION_EASE}`
+                : `padding-top ${LAYOUT_CONSTANTS.ANIMATION_DURATION}s ${LAYOUT_CONSTANTS.TRANSITION_EASE}`,
+            pointerEvents: (isFadingOut || shouldFadeIn || !isLayoutStable) ? 'none' : 'auto',
             position: 'relative',
             zIndex: isFadingOut ? 1000 : 'auto',
           }}
         >
-          {children}
+          <LayoutStabilityProvider
+            isLayoutStable={isLayoutStable}
+            contentPaddingTop={contentPaddingTop}
+          >
+            {children}
+          </LayoutStabilityProvider>
         </div>
       </div>
 

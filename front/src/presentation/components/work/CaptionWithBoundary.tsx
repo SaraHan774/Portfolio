@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { logLayout, getViewportInfo, getElementInfo } from '@/core/utils/layoutDebugLogger';
+import { useLayoutStability } from '@/presentation/contexts/LayoutStabilityContext';
 
 interface CaptionWithBoundaryProps {
   /** 캡션 HTML 문자열 */
@@ -34,12 +35,15 @@ export default function CaptionWithBoundary({
 }: CaptionWithBoundaryProps) {
   const [captionBottom, setCaptionBottom] = useState(DEFAULT_BOTTOM_PX);
   const captionRef = useRef<HTMLDivElement>(null);
+  const { isLayoutStable, contentPaddingTop } = useLayoutStability();
 
   useEffect(() => {
     logLayout('CaptionWithBoundary', 'mount', {
       ...getViewportInfo(),
       captionId,
       DEFAULT_BOTTOM_PX,
+      isLayoutStable,
+      contentPaddingTop,
     });
 
     const updateCaptionPosition = () => {
@@ -80,9 +84,22 @@ export default function CaptionWithBoundary({
         previousBottom: captionBottom,
         newBottom,
         DEFAULT_BOTTOM_PX,
+        isLayoutStable,
+        contentPaddingTop,
         adjustment: newBottom !== DEFAULT_BOTTOM_PX ? 'adjusted' : 'default',
       });
     };
+
+    // Layout이 안정화되지 않았으면 위치 계산 지연
+    if (!isLayoutStable) {
+      logLayout('CaptionWithBoundary', 'skip-update', {
+        ...getViewportInfo(),
+        reason: 'layout not stable',
+        captionId,
+        contentPaddingTop,
+      });
+      return;
+    }
 
     // 초기 위치 설정
     updateCaptionPosition();
@@ -98,7 +115,7 @@ export default function CaptionWithBoundary({
         captionId,
       });
     };
-  }, [mediaContainerRef, captionId, captionBottom]);
+  }, [mediaContainerRef, captionId, captionBottom, isLayoutStable, contentPaddingTop]);
 
   return (
     <div
