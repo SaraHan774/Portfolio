@@ -312,7 +312,7 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
         {workListConfig && (
           <div
             ref={currentWorkListRef}
-            className="absolute"
+            className="absolute work-list-scroller-container"
             style={{
               ...(workListConfig.position === 'left' && { left: 'var(--category-margin-left)' }),
               ...(workListConfig.position === 'right' && {
@@ -320,7 +320,7 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
                 textAlign: 'right',
               }),
               top: `${workListConfig.top}px`,
-              maxWidth: 'calc(70% - var(--content-gap) - var(--category-margin-left))',
+              maxWidth: 'var(--worklist-max-width)',
               zIndex: 100,
             }}
           >

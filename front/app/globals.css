@@ -74,6 +74,9 @@
   /* 중앙 컨텐츠 영역 */
   --content-gap: var(--space-10);        /* 카테고리와 중앙 간격 증가 (64px -> 80px) */
 
+  /* WorkListScroller 너비 (반응형) */
+  --worklist-max-width: calc(70% - var(--content-gap) - var(--category-margin-left));
+
   /* 작품 상세 페이지 레이아웃 (반응형) */
   --media-width: calc(50% - var(--content-gap));               /* 미디어 영역 너비 */
   --caption-left: calc(50% + var(--space-16) + 5%);            /* 캡션 좌측 위치 */
@@ -189,6 +192,8 @@ img {
   :root {
     --responsive-padding-left: var(--space-8);  /* 64px */
     --responsive-padding-right: var(--space-4); /* 32px */
+    --category-margin-left: var(--space-8);     /* 64px - 카테고리/WorkList 좌측 */
+    --category-margin-right: var(--space-4);    /* 32px - 카테고리/WorkList 우측 */
   }
 }
 
@@ -209,6 +214,9 @@ img {
     --caption-max-width: 100%;
     --responsive-padding-left: var(--space-4);  /* 32px */
     --responsive-padding-right: var(--space-4); /* 32px - 좌측과 동일 */
+    --category-margin-left: var(--space-4);     /* 32px - 카테고리/WorkList 좌측 */
+    --category-margin-right: var(--space-4);    /* 32px - 카테고리/WorkList 우측 */
+    --worklist-max-width: calc(100% - var(--category-margin-left) - var(--category-margin-right));  /* 모바일: 전체 너비 */
   }
 
   .work-image-container {
@@ -231,13 +239,29 @@ img {
   .media-timeline-wrapper {
     display: none !important;
   }
+
+  /* 모바일에서 Footer 중앙 정렬 */
+  .portfolio-footer {
+    justify-content: center !important;
+    padding-right: 0 !important;
+    padding-left: 0 !important;
+  }
+
+  /* 모바일에서 WorkListScroller 좌측 정렬로 통일 */
+  .work-list-scroller-container {
+    left: var(--category-margin-left) !important;
+    right: auto !important;
+    text-align: left !important;
+  }
 }
 
-/* 초소형 화면 (480px 미만) - 패딩 완전 제거 */
+/* 초소형 화면 (480px 미만) - 패딩 최소화 */
 @media (max-width: 480px) {
   :root {
     --responsive-padding-left: 0;
     --responsive-padding-right: 0;
+    --category-margin-left: var(--space-3);     /* 24px - 최소 여백 유지 */
+    --category-margin-right: var(--space-3);    /* 24px - 최소 여백 유지 */
   }
 }
 
