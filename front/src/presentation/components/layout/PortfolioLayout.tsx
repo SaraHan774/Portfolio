@@ -46,7 +46,6 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
 
   // Global state
   const { selectedKeywordId, selectedExhibitionCategoryId, selectKeyword, selectExhibitionCategory } = useCategorySelection();
-  const { mobileMenuOpen, setMobileMenuOpen } = useUIState();
   const { sentenceCategories, exhibitionCategories } = useCategories();
 
   // Scroll lock hook
@@ -294,20 +293,7 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
   const currentWorkListRef = selectedKeywordId ? leftWorkListRef : rightWorkListRef;
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* 모바일 카테고리 메뉴 */}
-      <MobileCategoryMenu
-        open={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-        sentenceCategories={sentenceCategories}
-        exhibitionCategories={exhibitionCategories}
-        selectedKeywordId={selectedKeywordId}
-        selectedExhibitionCategoryId={selectedExhibitionCategoryId}
-        onKeywordSelect={handleKeywordSelect}
-        onExhibitionCategorySelect={handleExhibitionCategorySelect}
-        selectedWorkIds={pathname.startsWith('/works/') ? [] : selectedWorkIds}
-      />
-
+    <div className="flex flex-col" style={{ minHeight: 'calc(100vh - 40px)' }}>
       <div className="flex-1 relative" style={{ paddingTop: '0' }}>
         {/* 카테고리 영역 - 모든 페이지에서 공유 */}
         <CategorySidebar
@@ -326,7 +312,7 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
         {workListConfig && (
           <div
             ref={currentWorkListRef}
-            className="hidden lg:block absolute"
+            className="absolute"
             style={{
               ...(workListConfig.position === 'left' && { left: 'var(--category-margin-left)' }),
               ...(workListConfig.position === 'right' && {
@@ -334,7 +320,7 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
                 textAlign: 'right',
               }),
               top: `${workListConfig.top}px`,
-              maxWidth: 'calc(50% - var(--content-gap) - var(--category-margin-left))',
+              maxWidth: 'calc(70% - var(--content-gap) - var(--category-margin-left))',
               zIndex: 100,
             }}
           >

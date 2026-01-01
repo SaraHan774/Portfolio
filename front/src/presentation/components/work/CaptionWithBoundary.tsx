@@ -23,7 +23,7 @@ interface CaptionWithBoundaryProps {
 }
 
 /** 기본 bottom 값 (px) */
-const DEFAULT_BOTTOM_PX = 80;
+const DEFAULT_BOTTOM_PX = 120;
 
 export default function CaptionWithBoundary({
   caption,
@@ -71,16 +71,16 @@ export default function CaptionWithBoundary({
   return (
     <div
       ref={captionRef}
-      className="work-caption"
+      className="work-caption-responsive"
       style={{
         position: 'fixed',
-        left: 'calc(50% + var(--space-16) + 5%)',
+        left: 'var(--caption-left)',
         bottom: `${captionBottom}px`,
-        maxWidth: 'calc(50% - var(--space-12) - 5%)',
+        maxWidth: 'var(--caption-max-width)',
         maxHeight: 'calc(100vh - 200px)',
         paddingRight: 'var(--category-margin-right)',
         zIndex: 40,
-        transition: 'bottom 0.15s ease-out',
+        transition: 'bottom 0.15s ease-out, left 0.15s ease-out',
       }}
     >
       {renderCaption(caption, captionId)}
