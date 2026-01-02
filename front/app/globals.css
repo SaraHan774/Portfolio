@@ -74,6 +74,18 @@
   /* 중앙 컨텐츠 영역 */
   --content-gap: var(--space-10);        /* 카테고리와 중앙 간격 증가 (64px -> 80px) */
 
+  /* WorkListScroller 너비 (반응형) */
+  --worklist-max-width: calc(70% - var(--content-gap) - var(--category-margin-left));
+
+  /* 작품 상세 페이지 레이아웃 (반응형) */
+  --media-width: calc(50% - var(--content-gap));               /* 미디어 영역 너비 */
+  --caption-left: calc(50% + var(--space-16) + 5%);            /* 캡션 좌측 위치 */
+  --caption-max-width: calc(50% - var(--space-12) - 5%);       /* 캡션 최대 너비 */
+
+  /* 반응형 패딩 (큰 화면 기본값) */
+  --responsive-padding-left: var(--space-12);                  /* 96px - 타임라인이 있을 때 */
+  --responsive-padding-right: var(--space-6);                  /* 48px */
+
   /* 점(˙) 표시 */
   --dot-size: 4px;
   --dot-offset-top: -8px;                /* 글자 정중앙 위 */
@@ -115,6 +127,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   padding: 20px;
+  min-height: 100vh;
 }
 
 /* 전역 유틸리티 클래스 */
@@ -173,17 +186,106 @@ img {
 }
 
 /* 작품 상세 페이지 반응형 */
-@media (max-width: 768px) {
+
+/* 중간 화면 (1024px 이하) - 패딩 축소 */
+@media (max-width: 1024px) {
+  :root {
+    --responsive-padding-left: var(--space-8);  /* 64px */
+    --responsive-padding-right: var(--space-4); /* 32px */
+    --category-margin-left: var(--space-8);     /* 64px - 카테고리/WorkList 좌측 */
+    --category-margin-right: var(--space-4);    /* 32px - 카테고리/WorkList 우측 */
+  }
+}
+
+/* 중간 화면 (768px ~ 1199px) - 미디어 영역 확대 */
+@media (min-width: 768px) and (max-width: 1199px) {
+  :root {
+    --media-width: 60%;
+    --caption-left: calc(60% + var(--space-8));
+    --caption-max-width: calc(40% - var(--space-8));
+  }
+}
+
+/* 소형 화면 (768px 미만) - 전체 너비 사용, 좌우 패딩 동일 */
+@media (max-width: 767px) {
+  :root {
+    --media-width: 100%;
+    --caption-left: 0;
+    --caption-max-width: 100%;
+    --responsive-padding-left: var(--space-4);  /* 32px */
+    --responsive-padding-right: var(--space-4); /* 32px - 좌측과 동일 */
+    --category-margin-left: var(--space-4);     /* 32px - 카테고리/WorkList 좌측 */
+    --category-margin-right: var(--space-4);    /* 32px - 카테고리/WorkList 우측 */
+    --worklist-max-width: calc(100% - var(--category-margin-left) - var(--category-margin-right));  /* 모바일: 전체 너비 */
+  }
+
   .work-image-container {
     flex-direction: column !important;
     gap: var(--space-4) !important;
   }
-  
-  .work-caption {
+
+  .work-caption-responsive {
+    position: relative !important;  /* fixed에서 relative로 변경 */
+    left: auto !important;
+    bottom: auto !important;
     width: 100% !important;
-    margin-top: var(--space-2) !important;
+    max-width: 100% !important;
+    padding-right: 0 !important;
+    margin-top: var(--space-6) !important; /* 이미지와의 간격 (48px) */
+    margin-bottom: var(--space-12) !important; /* Footer와의 간격 (96px) */
   }
 
+  /* 모바일에서 MediaTimeline 숨김 */
+  .media-timeline-wrapper {
+    display: none !important;
+  }
+
+  /* 모바일에서 Footer 중앙 정렬 */
+  .portfolio-footer {
+    justify-content: center !important;
+    padding-right: 0 !important;
+    padding-left: 0 !important;
+  }
+
+  /* 모바일에서 WorkListScroller 좌측 정렬로 통일 */
+  .work-list-scroller-container {
+    left: var(--category-margin-left) !important;
+    right: auto !important;
+    text-align: left !important;
+  }
+}
+
+/* 초소형 화면 (480px 미만) - 패딩 최소 */
+@media (max-width: 480px) {
+  :root {
+    --responsive-padding-left: var(--space-2);  /* 16px */
+    --responsive-padding-right: var(--space-2); /* 16px */
+    --category-margin-left: var(--space-3);     /* 24px */
+    --category-margin-right: var(--space-3);    /* 24px */
+  }
+}
+
+/* 소형 모바일 (481px ~ 600px) - 점진적 증가 */
+@media (min-width: 481px) and (max-width: 600px) {
+  :root {
+    --responsive-padding-left: var(--space-3);  /* 24px - 부드러운 전환 */
+    --responsive-padding-right: var(--space-3); /* 24px */
+    --category-margin-left: var(--space-4);     /* 32px */
+    --category-margin-right: var(--space-3);    /* 24px */
+  }
+}
+
+/* 중형 모바일 (601px ~ 767px) - 표준 모바일 패딩 */
+@media (min-width: 601px) and (max-width: 767px) {
+  :root {
+    --responsive-padding-left: var(--space-4);  /* 32px - 표준 */
+    --responsive-padding-right: var(--space-4); /* 32px */
+    --category-margin-left: var(--space-4);     /* 32px */
+    --category-margin-right: var(--space-4);    /* 32px */
+  }
+}
+
+@media (max-width: 767px) {
   /* 모바일에서 모달 전체 화면 */
   .modal-overlay {
     padding: 0 !important;

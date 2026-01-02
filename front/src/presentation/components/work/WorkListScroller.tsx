@@ -42,7 +42,11 @@ export default function WorkListScroller({
   const anyWorkHovered = showThumbnail || isMouseInContainer;
 
   return (
-    <div style={{ position: 'relative', width: '100%' }}>
+    <div
+      style={{ position: 'relative', width: '100%' }}
+      onMouseEnter={() => setIsMouseInContainer(true)}
+      onMouseLeave={() => setIsMouseInContainer(false)}
+    >
       {/* RTL (우측 배치): 왼쪽에 오버플로우 인디케이터 << ... */}
       {direction === 'rtl' && showLeftArrow && (
         <>
@@ -95,22 +99,27 @@ export default function WorkListScroller({
           {anyWorkHovered && (
             <button
               onClick={() => scroll('left')}
+              onMouseEnter={(e) => {
+                setIsMouseInContainer(true);
+                e.currentTarget.style.opacity = '1';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '0.7';
+              }}
               style={{
                 position: 'absolute',
-                left: '-40px',
+                left: '-50px',
                 bottom: '24px',
                 background: 'var(--color-white)',
                 border: 'none',
                 cursor: 'pointer',
-                padding: '4px',
+                padding: '12px',
                 zIndex: 20,
                 fontSize: '14px',
                 color: '#000000',
                 opacity: 0.7,
                 transition: 'opacity 0.2s ease',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
               aria-label="Scroll left"
             >
               {'<<'}
@@ -139,14 +148,6 @@ export default function WorkListScroller({
       {/* Scroll container */}
       <div
         ref={scrollContainerRef}
-        onMouseEnter={() => {
-          // 마우스가 컨테이너에 들어오면 썸네일 표시
-          setIsMouseInContainer(true);
-        }}
-        onMouseLeave={() => {
-          // 마우스가 컨테이너에서 나가면 썸네일 숨김 (showThumbnail이 false인 경우)
-          setIsMouseInContainer(false);
-        }}
         style={{
           display: 'flex',
           flexDirection: direction === 'rtl' ? 'row-reverse' : 'row',
@@ -241,22 +242,27 @@ export default function WorkListScroller({
           {anyWorkHovered && (
             <button
               onClick={() => scroll('right')}
+              onMouseEnter={(e) => {
+                setIsMouseInContainer(true);
+                e.currentTarget.style.opacity = '1';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '0.7';
+              }}
               style={{
                 position: 'absolute',
-                right: '-40px',
+                right: '-50px',
                 bottom: '24px',
                 background: 'var(--color-white)',
                 border: 'none',
                 cursor: 'pointer',
-                padding: '4px',
+                padding: '8px 12px',
                 zIndex: 20,
                 fontSize: '14px',
                 color: '#000000',
                 opacity: 0.7,
                 transition: 'opacity 0.2s ease',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
               aria-label="Scroll right"
             >
               {'>>'}

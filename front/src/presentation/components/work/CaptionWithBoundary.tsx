@@ -6,6 +6,8 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { logLayout, getViewportInfo, getElementInfo } from '@/core/utils/layoutDebugLogger';
+import { useLayoutStability } from '@/presentation/contexts/LayoutStabilityContext';
 
 interface CaptionWithBoundaryProps {
   /** 캡션 HTML 문자열 */
@@ -23,7 +25,7 @@ interface CaptionWithBoundaryProps {
 }
 
 /** 기본 bottom 값 (px) */
-const DEFAULT_BOTTOM_PX = 80;
+const DEFAULT_BOTTOM_PX = 120;
 
 export default function CaptionWithBoundary({
   caption,
@@ -33,27 +35,71 @@ export default function CaptionWithBoundary({
 }: CaptionWithBoundaryProps) {
   const [captionBottom, setCaptionBottom] = useState(DEFAULT_BOTTOM_PX);
   const captionRef = useRef<HTMLDivElement>(null);
+  const { isLayoutStable, contentPaddingTop } = useLayoutStability();
 
   useEffect(() => {
+    logLayout('CaptionWithBoundary', 'mount', {
+      ...getViewportInfo(),
+      captionId,
+      DEFAULT_BOTTOM_PX,
+      isLayoutStable,
+      contentPaddingTop,
+    });
+
     const updateCaptionPosition = () => {
-      if (!mediaContainerRef.current || !captionRef.current) return;
+      if (!mediaContainerRef.current || !captionRef.current) {
+        logLayout('CaptionWithBoundary', 'updatePosition - ref null', {
+          ...getViewportInfo(),
+          hasMediaContainer: !!mediaContainerRef.current,
+          hasCaption: !!captionRef.current,
+        });
+        return;
+      }
 
       const mediaRect = mediaContainerRef.current.getBoundingClientRect();
+      const captionRect = captionRef.current.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
 
       // 미디어 컨테이너의 하단이 뷰포트 내에 있을 때
       // 캡션이 미디어 하단 아래로 내려가지 않도록 조정
       const mediaBottomFromViewportBottom = viewportHeight - mediaRect.bottom;
 
+      let newBottom: number;
       // 캡션의 하단이 미디어 하단보다 아래로 가면 조정
       if (mediaBottomFromViewportBottom > DEFAULT_BOTTOM_PX) {
         // 미디어가 위로 스크롤되어 하단이 뷰포트 위쪽에 있을 때
         // 캡션 bottom을 미디어 하단에 맞춤
-        setCaptionBottom(Math.max(mediaBottomFromViewportBottom, DEFAULT_BOTTOM_PX));
+        newBottom = Math.max(mediaBottomFromViewportBottom, DEFAULT_BOTTOM_PX);
       } else {
-        setCaptionBottom(DEFAULT_BOTTOM_PX);
+        newBottom = DEFAULT_BOTTOM_PX;
       }
+
+      setCaptionBottom(newBottom);
+
+      logLayout('CaptionWithBoundary', 'updatePosition', {
+        ...getViewportInfo(),
+        ...getElementInfo(mediaContainerRef.current, 'mediaContainer'),
+        ...getElementInfo(captionRef.current, 'caption'),
+        mediaBottomFromViewportBottom,
+        previousBottom: captionBottom,
+        newBottom,
+        DEFAULT_BOTTOM_PX,
+        isLayoutStable,
+        contentPaddingTop,
+        adjustment: newBottom !== DEFAULT_BOTTOM_PX ? 'adjusted' : 'default',
+      });
     };
+
+    // Layout이 안정화되지 않았으면 위치 계산 지연
+    if (!isLayoutStable) {
+      logLayout('CaptionWithBoundary', 'skip-update', {
+        ...getViewportInfo(),
+        reason: 'layout not stable',
+        captionId,
+        contentPaddingTop,
+      });
+      return;
+    }
 
     // 초기 위치 설정
     updateCaptionPosition();
@@ -65,22 +111,25 @@ export default function CaptionWithBoundary({
     return () => {
       window.removeEventListener('scroll', updateCaptionPosition);
       window.removeEventListener('resize', updateCaptionPosition);
+      logLayout('CaptionWithBoundary', 'unmount', {
+        captionId,
+      });
     };
-  }, [mediaContainerRef]);
+  }, [mediaContainerRef, captionId, captionBottom, isLayoutStable, contentPaddingTop]);
 
   return (
     <div
       ref={captionRef}
-      className="work-caption"
+      className="work-caption-responsive"
       style={{
         position: 'fixed',
-        left: 'calc(50% + var(--space-16) + 5%)',
+        left: 'var(--caption-left)',
         bottom: `${captionBottom}px`,
-        maxWidth: 'calc(50% - var(--space-12) - 5%)',
+        maxWidth: 'var(--caption-max-width)',
         maxHeight: 'calc(100vh - 200px)',
         paddingRight: 'var(--category-margin-right)',
         zIndex: 40,
-        transition: 'bottom 0.15s ease-out',
+        transition: 'bottom 0.15s ease-out, left 0.15s ease-out',
       }}
     >
       {renderCaption(caption, captionId)}

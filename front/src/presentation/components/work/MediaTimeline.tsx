@@ -9,6 +9,7 @@
  */
 
 import { RefObject, useEffect, useState, useRef } from 'react';
+import { logLayout, getViewportInfo, getElementInfo } from '@/core/utils/layoutDebugLogger';
 
 interface MediaItem {
   data: {
@@ -40,6 +41,14 @@ export default function MediaTimeline({
 
   // 미디어 위치 계산 (이미지 로드 시에만)
   useEffect(() => {
+    const isModal = !!scrollContainerRef;
+
+    logLayout('MediaTimeline', 'mount', {
+      ...getViewportInfo(),
+      mode: isModal ? 'modal' : 'page',
+      mediaItemsCount: mediaItems.length,
+    });
+
     const calculateBounds = () => {
       const container = scrollContainerRef?.current;
 
@@ -53,9 +62,17 @@ export default function MediaTimeline({
         ) as HTMLElement;
 
         if (firstElement && lastElement) {
-          setMediaBounds({
+          const bounds = {
             firstTop: firstElement.offsetTop,
             lastBottom: lastElement.offsetTop + lastElement.offsetHeight,
+          };
+          setMediaBounds(bounds);
+
+          logLayout('MediaTimeline', 'calculateBounds (modal)', {
+            ...getViewportInfo(),
+            ...getElementInfo(firstElement, 'firstMedia'),
+            ...getElementInfo(lastElement, 'lastMedia'),
+            bounds,
           });
         }
       } else {
@@ -71,9 +88,19 @@ export default function MediaTimeline({
           const firstTop = getElementOffset(firstElement);
           const lastTop = getElementOffset(lastElement);
 
-          setMediaBounds({
+          const bounds = {
             firstTop,
             lastBottom: lastTop + lastElement.offsetHeight,
+          };
+          setMediaBounds(bounds);
+
+          logLayout('MediaTimeline', 'calculateBounds (page)', {
+            ...getViewportInfo(),
+            ...getElementInfo(firstElement, 'firstMedia'),
+            ...getElementInfo(lastElement, 'lastMedia'),
+            bounds,
+            firstTopOffset: firstTop,
+            lastTopOffset: lastTop,
           });
         }
       }
@@ -91,16 +118,58 @@ export default function MediaTimeline({
     });
 
     const resizeObserver = new ResizeObserver(calculateBounds);
+    let resizeTimer: NodeJS.Timeout | null = null;
+    let rafId: number | null = null;
+
+    // Page 모드: window resize 이벤트 감지 (RAF + debounced)
+    const handleResize = () => {
+      // Cleanup 이전 타이머/프레임
+      if (resizeTimer) {
+        clearTimeout(resizeTimer);
+      }
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+
+      // 200ms debounce 후 RAF로 실행 (category height 측정 완료 대기)
+      resizeTimer = setTimeout(() => {
+        rafId = requestAnimationFrame(() => {
+          calculateBounds();
+          logLayout('MediaTimeline', 'resize-recalculate', {
+            ...getViewportInfo(),
+            mode: 'page',
+            optimized: 'RAF+debounce',
+          });
+          rafId = null;
+        });
+        resizeTimer = null;
+      }, 200);
+    };
+
     if (scrollContainerRef?.current) {
       resizeObserver.observe(scrollContainerRef.current);
+    } else {
+      window.addEventListener('resize', handleResize, { passive: true });
     }
 
     return () => {
       clearTimeout(timer);
+      if (resizeTimer) {
+        clearTimeout(resizeTimer);
+      }
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
       images.forEach((img) => {
         img.removeEventListener('load', calculateBounds);
       });
       resizeObserver.disconnect();
+      if (!scrollContainerRef?.current) {
+        window.removeEventListener('resize', handleResize);
+      }
+      logLayout('MediaTimeline', 'unmount', {
+        mode: isModal ? 'modal' : 'page',
+      });
     };
   }, [scrollContainerRef, mediaItems]);
 

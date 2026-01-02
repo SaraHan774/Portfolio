@@ -133,7 +133,7 @@ const CategorySidebar = memo(function CategorySidebar({
       {/* 좌측 문장형 카테고리 영역 (세로로 나열) */}
       <div
         ref={sentenceCategoryRef}
-        className="hidden lg:block absolute"
+        className="absolute"
         style={{
           left: 'var(--category-margin-left)', // 48px
           top: 'var(--space-4)', // 헤더 바로 아래 (64px)
@@ -168,7 +168,7 @@ const CategorySidebar = memo(function CategorySidebar({
       {/* 우측 전시명 카테고리 영역 (세로로 나열) */}
       <div
         ref={exhibitionCategoryRef}
-        className="hidden lg:block absolute"
+        className="absolute"
         style={{
           right: 'var(--category-margin-right)', // 48px
           top: 'var(--space-4)', // 헤더 바로 아래 (64px)

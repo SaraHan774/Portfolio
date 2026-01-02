@@ -387,7 +387,6 @@ export default function WorkDetailPage() {
         <main
           style={{
             position: 'relative',
-            minHeight: 'calc(100vh - 60px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -399,7 +398,6 @@ export default function WorkDetailPage() {
         <main
           style={{
             position: 'relative',
-            minHeight: 'calc(100vh - 60px)',
           }}
         >
           {/* 선택된 작품의 미디어 표시 */}
@@ -424,25 +422,27 @@ export default function WorkDetailPage() {
                   {/* 미디어 영역 */}
                   <div
                     style={{
-                      width: 'calc(50% - var(--content-gap))',
-                      paddingLeft: sortedMedia.length > 1 ? 'calc(var(--space-12))' : 'var(--space-8)',
-                      paddingRight: 'var(--space-6)',
-                      paddingBottom: 'var(--space-10)',
+                      width: 'var(--media-width)',
+                      paddingLeft: 'var(--responsive-padding-left)',
+                      paddingRight: 'var(--responsive-padding-right)',
+                      paddingBottom: 'var(--space-5)',
                       position: 'relative',
                     }}
                   >
                     <div ref={imageScrollContainerRef} style={{ position: 'relative' }}>
                       {/* 타임라인 UI */}
                       {sortedMedia.length > 1 && (
-                        <MediaTimeline
-                          mediaItems={sortedMedia}
-                          currentMediaId={currentImageId}
-                          positionStyle={{
-                            position: 'fixed',
-                            left: 'var(--category-margin-left)',
-                            top: 0,
-                          }}
-                        />
+                        <div className="media-timeline-wrapper">
+                          <MediaTimeline
+                            mediaItems={sortedMedia}
+                            currentMediaId={currentImageId}
+                            positionStyle={{
+                              position: 'fixed',
+                              left: 'var(--category-margin-left)',
+                              top: 0,
+                            }}
+                          />
+                        </div>
                       )}
 
                       {sortedMedia.map((item, index) => {
