@@ -291,8 +291,8 @@ export default function WorkModal({
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'rgba(230, 230, 230)',
-            filter: 'blur(3px)',
+            background: 'rgba(240,240,240,0.97)',
+            filter: 'blur(10px)',
             zIndex: 0,
           }}
         />
