@@ -224,9 +224,9 @@ img {
     /* --spacing-scale은 상속됨 */
     --category-margin-left: calc(var(--base-edge-spacing) * var(--spacing-scale));
     --category-margin-right: calc(var(--base-edge-spacing) * var(--spacing-scale));
-    --timeline-to-image-gap: calc(var(--base-edge-spacing) * var(--spacing-scale));
-    --responsive-padding-left: calc(var(--category-margin-left) + var(--timeline-to-image-gap));
-    --responsive-padding-right: var(--space-4); /* 32px */
+    /* 모바일에서는 타임라인이 숨겨지므로 좌우 패딩을 동일하게 */
+    --responsive-padding-left: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    --responsive-padding-right: calc(var(--base-edge-spacing) * var(--spacing-scale));
     --media-width: 100%;
     --caption-left: 0;
     --caption-max-width: 100%;
@@ -244,7 +244,10 @@ img {
     bottom: auto !important;
     width: 100% !important;
     max-width: 100% !important;
-    padding-right: 0 !important;
+    /* 이미지와 동일한 좌우 패딩 적용 */
+    padding-left: var(--responsive-padding-left) !important;
+    padding-right: var(--responsive-padding-right) !important;
+    box-sizing: border-box !important;
     margin-top: var(--space-6) !important; /* 이미지와의 간격 (48px) */
     margin-bottom: var(--space-12) !important; /* Footer와의 간격 (96px) */
   }
@@ -275,9 +278,9 @@ img {
     --base-edge-spacing: 24px;                  /* 초소형 화면 기본 간격 */
     --category-margin-left: calc(var(--base-edge-spacing) * var(--spacing-scale));
     --category-margin-right: calc(var(--base-edge-spacing) * var(--spacing-scale));
-    --timeline-to-image-gap: calc(var(--base-edge-spacing) * var(--spacing-scale));
-    --responsive-padding-left: calc(var(--category-margin-left) + var(--timeline-to-image-gap));
-    --responsive-padding-right: var(--space-2); /* 16px */
+    /* 모바일에서는 타임라인이 숨겨지므로 좌우 패딩을 동일하게 */
+    --responsive-padding-left: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    --responsive-padding-right: calc(var(--base-edge-spacing) * var(--spacing-scale));
   }
 }
 
@@ -287,9 +290,9 @@ img {
     --base-edge-spacing: 32px;                  /* 소형 모바일 기본 간격 */
     --category-margin-left: calc(var(--base-edge-spacing) * var(--spacing-scale));
     --category-margin-right: calc(var(--base-edge-spacing) * var(--spacing-scale));
-    --timeline-to-image-gap: calc(var(--base-edge-spacing) * 0.75);  /* 간격은 조금 더 좁게 */
-    --responsive-padding-left: calc(var(--category-margin-left) + var(--timeline-to-image-gap));
-    --responsive-padding-right: var(--space-3); /* 24px */
+    /* 모바일에서는 타임라인이 숨겨지므로 좌우 패딩을 동일하게 */
+    --responsive-padding-left: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    --responsive-padding-right: calc(var(--base-edge-spacing) * var(--spacing-scale));
   }
 }
 
@@ -299,9 +302,9 @@ img {
     --base-edge-spacing: 32px;                  /* 중형 모바일 기본 간격 */
     --category-margin-left: calc(var(--base-edge-spacing) * var(--spacing-scale));
     --category-margin-right: calc(var(--base-edge-spacing) * var(--spacing-scale));
-    --timeline-to-image-gap: calc(var(--base-edge-spacing) * var(--spacing-scale));
-    --responsive-padding-left: calc(var(--category-margin-left) + var(--timeline-to-image-gap));
-    --responsive-padding-right: var(--space-4); /* 32px */
+    /* 모바일에서는 타임라인이 숨겨지므로 좌우 패딩을 동일하게 */
+    --responsive-padding-left: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    --responsive-padding-right: calc(var(--base-edge-spacing) * var(--spacing-scale));
   }
 }
 
