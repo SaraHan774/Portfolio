@@ -47,8 +47,8 @@ export default function WorkListScroller({
       onMouseEnter={() => setIsMouseInContainer(true)}
       onMouseLeave={() => setIsMouseInContainer(false)}
     >
-      {/* RTL (우측 배치): 왼쪽에 오버플로우 인디케이터 << ... */}
-      {direction === 'rtl' && showLeftArrow && (
+      {/* 왼쪽 오버플로우 인디케이터 << ... */}
+      {showLeftArrow && (
         <>
           {/* Non-clickable ... - 항상 타이틀 레벨에 표시 */}
           <div
@@ -128,8 +128,8 @@ export default function WorkListScroller({
         </>
       )}
 
-      {/* Left fading edge - RTL only */}
-      {direction === 'rtl' && showLeftArrow && (
+      {/* Left fading edge */}
+      {showLeftArrow && (
         <div
           style={{
             position: 'absolute',
@@ -157,8 +157,8 @@ export default function WorkListScroller({
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           paddingBottom: '4px',
-          paddingLeft: direction === 'rtl' && showLeftArrow ? '8px' : '0',
-          paddingRight: direction === 'ltr' && showRightArrow ? '8px' : '0',
+          paddingLeft: showLeftArrow ? '8px' : '0',
+          paddingRight: showRightArrow ? '8px' : '0',
         }}
       >
         {works.map((w) => (
@@ -173,8 +173,8 @@ export default function WorkListScroller({
         ))}
       </div>
 
-      {/* Right fading edge - LTR only */}
-      {direction === 'ltr' && showRightArrow && (
+      {/* Right fading edge */}
+      {showRightArrow && (
         <div
           style={{
             position: 'absolute',
@@ -190,8 +190,8 @@ export default function WorkListScroller({
         />
       )}
 
-      {/* LTR (좌측 배치): 오른쪽에 오버플로우 인디케이터 ... >> */}
-      {direction === 'ltr' && showRightArrow && (
+      {/* 오른쪽 오버플로우 인디케이터 ... >> */}
+      {showRightArrow && (
         <>
           {/* Non-clickable ... - 항상 타이틀 레벨에 표시 */}
           <div
