@@ -8,7 +8,14 @@ export { Spinner, LoadingContainer } from './common';
 export { FadeInImage } from './media';
 
 // Animation
-export { AnimatedCharacterText, DotIndicator } from './animation';
+export {
+  AnimatedCharacterText,
+  DotIndicator,
+  getAnimatedTextPreset,
+  createCustomPreset,
+  presets,
+} from './animation';
+export type { AnimatedCharacterTextProps, DotIndicatorProps, PresetName, CharacterStyleConfig } from './animation';
 
 // Layout
 // Will be populated with additional layout primitives
