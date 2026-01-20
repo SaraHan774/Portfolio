@@ -14,6 +14,7 @@ interface WorkListScrollerProps {
 }
 
 /**
+ * @Deprecated
  * Horizontal scrollable work list with scroll indicators
  *
  * Features:
@@ -97,33 +98,49 @@ export default function WorkListScroller({
 
           {/* Clickable << - 썸네일이 보일 때는 썸네일 레벨에 */}
           {anyWorkHovered && (
-            <button
-              onClick={() => scroll('left')}
-              onMouseEnter={(e) => {
-                setIsMouseInContainer(true);
-                e.currentTarget.style.opacity = '1';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '0.7';
-              }}
-              style={{
-                position: 'absolute',
-                left: '-50px',
-                bottom: '24px',
-                background: 'var(--color-white)',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '12px',
-                zIndex: 20,
-                fontSize: '14px',
-                color: '#000000',
-                opacity: 0.7,
-                transition: 'opacity 0.2s ease',
-              }}
-              aria-label="Scroll left"
-            >
-              {'<<'}
-            </button>
+            <>
+              {/* Invisible hover bridge */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '-50px',
+                  top: 0,
+                  bottom: 0,
+                  width: '50px',
+                  zIndex: 19,
+                  pointerEvents: 'auto',
+                }}
+                onMouseEnter={() => setIsMouseInContainer(true)}
+              />
+
+              <button
+                onClick={() => scroll('left')}
+                onMouseEnter={(e) => {
+                  setIsMouseInContainer(true);
+                  e.currentTarget.style.opacity = '1';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '0.7';
+                }}
+                style={{
+                  position: 'absolute',
+                  left: '-50px',
+                  bottom: '24px',
+                  background: 'var(--color-white)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '12px',
+                  zIndex: 20,
+                  fontSize: '14px',
+                  color: '#000000',
+                  opacity: 0.7,
+                  transition: 'opacity 0.2s ease',
+                }}
+                aria-label="Scroll left"
+              >
+                {'<<'}
+              </button>
+            </>
           )}
         </>
       )}
@@ -240,33 +257,49 @@ export default function WorkListScroller({
 
           {/* Clickable >> - 썸네일이 보일 때는 썸네일 레벨에 */}
           {anyWorkHovered && (
-            <button
-              onClick={() => scroll('right')}
-              onMouseEnter={(e) => {
-                setIsMouseInContainer(true);
-                e.currentTarget.style.opacity = '1';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '0.7';
-              }}
-              style={{
-                position: 'absolute',
-                right: '-50px',
-                bottom: '24px',
-                background: 'var(--color-white)',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '8px 12px',
-                zIndex: 20,
-                fontSize: '14px',
-                color: '#000000',
-                opacity: 0.7,
-                transition: 'opacity 0.2s ease',
-              }}
-              aria-label="Scroll right"
-            >
-              {'>>'}
-            </button>
+            <>
+              {/* Invisible hover bridge */}
+              <div
+                style={{
+                  position: 'absolute',
+                  right: '-50px',
+                  top: 0,
+                  bottom: 0,
+                  width: '50px',
+                  zIndex: 19,
+                  pointerEvents: 'auto',
+                }}
+                onMouseEnter={() => setIsMouseInContainer(true)}
+              />
+
+              <button
+                onClick={() => scroll('right')}
+                onMouseEnter={(e) => {
+                  setIsMouseInContainer(true);
+                  e.currentTarget.style.opacity = '1';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '0.7';
+                }}
+                style={{
+                  position: 'absolute',
+                  right: '-50px',
+                  bottom: '24px',
+                  background: 'var(--color-white)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '8px 12px',
+                  zIndex: 20,
+                  fontSize: '14px',
+                  color: '#000000',
+                  opacity: 0.7,
+                  transition: 'opacity 0.2s ease',
+                }}
+                aria-label="Scroll right"
+              >
+                {'>>'}
+              </button>
+            </>
           )}
         </>
       )}

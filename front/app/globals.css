@@ -264,11 +264,11 @@ img {
     padding-left: 0 !important;
   }
 
-  /* 모바일에서 WorkListScroller 좌측 정렬로 통일 */
+  /* 모바일에서 WorkListScroller 전체 너비 사용 */
   .work-list-scroller-container {
-    left: var(--category-margin-left) !important;
-    right: auto !important;
-    text-align: left !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
   }
 }
 

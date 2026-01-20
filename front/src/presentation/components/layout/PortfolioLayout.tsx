@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo, ReactNode, useRef, useEffect, useLayout
 import { useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import CategorySidebar from './CategorySidebar';
-import WorkListScroller from '../work/WorkListScroller';
+import WorkListScrollerFlex from '../work/WorkListScrollerFlex';
 import Footer from './Footer';
 import { useCategories, useCategorySelection } from '@/state';
 import { useFilteredWorks, useScrollLock, useOptimizedResize } from '@/domain';
@@ -546,19 +546,16 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
           onExhibitionCategoryHeightChange={handleExhibitionCategoryHeightChange}
         />
 
-        {/* 작업 목록 영역 - 좌측 또는 우측 */}
+        {/* 작업 목록 영역 - 전체 너비 */}
         {workListConfig && (
           <div
             ref={currentWorkListRef}
             className="absolute work-list-scroller-container"
             style={{
-              ...(workListConfig.position === 'left' && { left: 'var(--category-margin-left)' }),
-              ...(workListConfig.position === 'right' && {
-                right: 'var(--category-margin-right)',
-                textAlign: 'right',
-              }),
+              left: 0,
+              right: 0,
               top: `${workListConfig.top}px`,
-              maxWidth: 'var(--worklist-max-width)',
+              width: '100%',
               zIndex: 100,
             }}
           >
@@ -570,7 +567,7 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
                 ease: LAYOUT_CONSTANTS.TRANSITION_EASE
               }}
             >
-              <WorkListScroller
+              <WorkListScrollerFlex
                 works={works}
                 selectedWorkId={selectedWorkId}
                 onWorkSelect={handleWorkSelect}
