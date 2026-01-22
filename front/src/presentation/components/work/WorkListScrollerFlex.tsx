@@ -1,6 +1,6 @@
 'use client';
 
-import {useState, useRef} from 'react';
+import {useState, useRef, useEffect} from 'react';
 import {useWorkListScroll} from '@/domain';
 import type {Work} from '@/types';
 import WorkTitleButton from './WorkTitleButton';
@@ -53,6 +53,15 @@ export default function WorkListScroller({
         setIsMouseInContainer(true);
     };
 
+    // Cleanup timeout on unmount to prevent memory leaks
+    useEffect(() => {
+        return () => {
+            if (hoverTimeoutRef.current) {
+                clearTimeout(hoverTimeoutRef.current);
+            }
+        };
+    }, []);
+
     return (
         <div
             style={{
@@ -67,7 +76,6 @@ export default function WorkListScroller({
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
                 style={{
-                    backgroundColor: 'aliceblue',
                     display: 'flex',
                     alignItems: anyWorkHovered ? 'flex-end' : 'flex-start',
                     gap: '8px',
@@ -98,6 +106,12 @@ export default function WorkListScroller({
                 <button
                     onClick={() => scroll('left')}
                     disabled={!showLeftArrow}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.opacity = '1';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.opacity = '0.7';
+                    }}
                     style={{
                         background: 'var(--color-white)',
                         border: 'none',
@@ -226,6 +240,12 @@ export default function WorkListScroller({
                 <button
                     onClick={() => scroll('right')}
                     disabled={!showRightArrow}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.opacity = '1';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.opacity = '0.7';
+                    }}
                     style={{
                         background: 'var(--color-white)',
                         border: 'none',

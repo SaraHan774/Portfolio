@@ -14,7 +14,7 @@ interface WorkListScrollerProps {
 }
 
 /**
- * @Deprecated
+ * @deprecated
  * Horizontal scrollable work list with scroll indicators
  *
  * Features:
