@@ -12,7 +12,7 @@ export { MobileCategorySlider, MobileSwipeableCategories } from './mobile';
 export type { MobileCategorySliderProps, MobileSwipeableCategoriesProps } from './mobile';
 
 // Media components
-export { YouTubeEmbed } from './media';
+export { YouTubeEmbed, ZoomableImage, ImageZoomOverlay } from './media';
 
 // Work components
 export { default as FloatingWorkWindow } from './work/FloatingWorkWindow';
