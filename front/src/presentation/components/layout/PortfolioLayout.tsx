@@ -4,10 +4,11 @@ import { useState, useCallback, useMemo, ReactNode, useRef, useEffect, useLayout
 import { useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import CategorySidebar from './CategorySidebar';
+import { MobileSwipeableCategories } from '../mobile';
 import WorkListScrollerFlex from '../work/WorkListScrollerFlex';
 import Footer from './Footer';
 import { useCategories, useCategorySelection } from '@/state';
-import { useFilteredWorks, useScrollLock, useOptimizedResize } from '@/domain';
+import { useFilteredWorks, useScrollLock, useOptimizedResize, useMobileDetection } from '@/domain';
 import { logLayout, getViewportInfo, getBreakpoint, detectBreakpointChange } from '@/core/utils/layoutDebugLogger';
 import { LayoutStabilityProvider } from '@/presentation/contexts/LayoutStabilityContext';
 
@@ -50,6 +51,9 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
   // Global state
   const { selectedKeywordId, selectedExhibitionCategoryId, selectKeyword, selectExhibitionCategory } = useCategorySelection();
   const { sentenceCategories, exhibitionCategories } = useCategories();
+
+  // Mobile detection
+  const isMobile = useMobileDetection();
 
   // Scroll lock hook
   const { lockScroll, unlockScroll } = useScrollLock();
@@ -534,17 +538,29 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
     <div className="flex flex-col" style={{ minHeight: 'calc(100vh - 40px)' }}>
       <div className="flex-1 relative" style={{ paddingTop: '0' }}>
         {/* 카테고리 영역 - 모든 페이지에서 공유 */}
-        <CategorySidebar
-          sentenceCategories={sentenceCategories}
-          exhibitionCategories={exhibitionCategories}
-          selectedKeywordId={selectedKeywordId}
-          selectedExhibitionCategoryId={selectedExhibitionCategoryId}
-          onKeywordSelect={handleKeywordSelect}
-          onExhibitionCategorySelect={handleExhibitionCategorySelect}
-          selectedWorkIds={pathname.startsWith('/works/') ? [] : selectedWorkIds}
-          onSentenceCategoryHeightChange={handleSentenceCategoryHeightChange}
-          onExhibitionCategoryHeightChange={handleExhibitionCategoryHeightChange}
-        />
+        {isMobile ? (
+          <MobileSwipeableCategories
+            sentenceCategories={sentenceCategories}
+            exhibitionCategories={exhibitionCategories}
+            selectedKeywordId={selectedKeywordId}
+            selectedExhibitionCategoryId={selectedExhibitionCategoryId}
+            onKeywordSelect={handleKeywordSelect}
+            onExhibitionCategorySelect={handleExhibitionCategorySelect}
+            selectedWorkIds={pathname.startsWith('/works/') ? [] : selectedWorkIds}
+          />
+        ) : (
+          <CategorySidebar
+            sentenceCategories={sentenceCategories}
+            exhibitionCategories={exhibitionCategories}
+            selectedKeywordId={selectedKeywordId}
+            selectedExhibitionCategoryId={selectedExhibitionCategoryId}
+            onKeywordSelect={handleKeywordSelect}
+            onExhibitionCategorySelect={handleExhibitionCategorySelect}
+            selectedWorkIds={pathname.startsWith('/works/') ? [] : selectedWorkIds}
+            onSentenceCategoryHeightChange={handleSentenceCategoryHeightChange}
+            onExhibitionCategoryHeightChange={handleExhibitionCategoryHeightChange}
+          />
+        )}
 
         {/* 작업 목록 영역 - 전체 너비 */}
         {workListConfig && (

@@ -7,6 +7,10 @@ export { default as Footer } from './layout/Footer';
 export { default as MobileCategoryMenu } from './layout/MobileCategoryMenu';
 export { default as PortfolioLayout } from './layout/PortfolioLayout';
 
+// Mobile components
+export { MobileCategorySlider, MobileSwipeableCategories } from './mobile';
+export type { MobileCategorySliderProps, MobileSwipeableCategoriesProps } from './mobile';
+
 // Media components
 export { YouTubeEmbed } from './media';
 

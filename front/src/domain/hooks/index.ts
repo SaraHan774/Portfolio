@@ -19,3 +19,7 @@ export * from './useClickAnimationTracking';
 export * from './useCaptionHoverEvents';
 export * from './useScrollLock';
 export * from './useOptimizedResize';
+
+// Mobile hooks
+export * from './useMobileDetection';
+export * from './useSwipeGesture';
