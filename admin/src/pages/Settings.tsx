@@ -19,11 +19,17 @@ import {
   GlobalOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '../state';
+import type { SiteSettings } from '../core/types';
 import {
   getSiteSettings,
   updateSiteSettings,
+  uploadHomeIcon,
+  uploadHomeIconHover,
+  deleteHomeIcon,
+  deleteHomeIconHover,
 } from '../data/repository';
 import BackupManager from '../components/BackupManager';
+import HomeIconManager from '../components/HomeIconManager';
 import './Settings.css';
 
 const { Title } = Typography;
@@ -35,6 +41,9 @@ const Settings = () => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [siteSettings, setSiteSettings] = useState<Pick<SiteSettings, 'footerText' | 'homeIconUrl' | 'homeIconHoverUrl'>>({
+    footerText: '',
+  });
 
   // 사이트 설정 로드
   useEffect(() => {
@@ -44,6 +53,11 @@ const Settings = () => {
         const settings = await getSiteSettings();
         siteForm.setFieldsValue({
           footerText: settings.footerText,
+        });
+        setSiteSettings({
+          footerText: settings.footerText,
+          homeIconUrl: settings.homeIconUrl,
+          homeIconHoverUrl: settings.homeIconHoverUrl,
         });
       } catch (error) {
         console.error('설정 로드 실패:', error);
@@ -87,6 +101,27 @@ const Settings = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  // 홈 아이콘 업로드 핸들러
+  const handleUploadHomeIcon = async (file: File) => {
+    const url = await uploadHomeIcon(file);
+    setSiteSettings((prev) => ({ ...prev, homeIconUrl: url }));
+  };
+
+  const handleUploadHomeIconHover = async (file: File) => {
+    const url = await uploadHomeIconHover(file);
+    setSiteSettings((prev) => ({ ...prev, homeIconHoverUrl: url }));
+  };
+
+  const handleDeleteHomeIcon = async () => {
+    await deleteHomeIcon();
+    setSiteSettings((prev) => ({ ...prev, homeIconUrl: undefined }));
+  };
+
+  const handleDeleteHomeIconHover = async () => {
+    await deleteHomeIconHover();
+    setSiteSettings((prev) => ({ ...prev, homeIconHoverUrl: undefined }));
   };
 
 
@@ -169,6 +204,16 @@ const Settings = () => {
           </Form.Item>
         </Form>
       </Card>
+
+      {/* 홈 아이콘 설정 섹션 */}
+      <HomeIconManager
+        homeIconUrl={siteSettings.homeIconUrl}
+        homeIconHoverUrl={siteSettings.homeIconHoverUrl}
+        onUploadHomeIcon={handleUploadHomeIcon}
+        onUploadHomeIconHover={handleUploadHomeIconHover}
+        onDeleteHomeIcon={handleDeleteHomeIcon}
+        onDeleteHomeIconHover={handleDeleteHomeIconHover}
+      />
 
       {/* 데이터 관리 섹션 */}
       <BackupManager />

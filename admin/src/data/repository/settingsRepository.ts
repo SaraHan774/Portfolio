@@ -45,3 +45,37 @@ export const deleteFavicon = async (): Promise<void> => {
   await storageApi.deleteFavicon();
   await settingsApi.removeFaviconUrl();
 };
+
+/**
+ * 홈 아이콘 업로드 및 URL 업데이트 (기본 상태)
+ */
+export const uploadHomeIcon = async (file: File): Promise<string> => {
+  const homeIconUrl = await storageApi.uploadHomeIcon(file);
+  await settingsApi.updateHomeIconUrl(homeIconUrl);
+  return homeIconUrl;
+};
+
+/**
+ * 홈 아이콘 업로드 및 URL 업데이트 (호버 상태)
+ */
+export const uploadHomeIconHover = async (file: File): Promise<string> => {
+  const homeIconHoverUrl = await storageApi.uploadHomeIconHover(file);
+  await settingsApi.updateHomeIconHoverUrl(homeIconHoverUrl);
+  return homeIconHoverUrl;
+};
+
+/**
+ * 홈 아이콘 삭제 (기본 상태)
+ */
+export const deleteHomeIcon = async (): Promise<void> => {
+  await storageApi.deleteHomeIcon();
+  await settingsApi.removeHomeIconUrl();
+};
+
+/**
+ * 홈 아이콘 삭제 (호버 상태)
+ */
+export const deleteHomeIconHover = async (): Promise<void> => {
+  await storageApi.deleteHomeIconHover();
+  await settingsApi.removeHomeIconHoverUrl();
+};

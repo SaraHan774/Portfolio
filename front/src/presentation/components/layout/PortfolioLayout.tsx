@@ -6,8 +6,9 @@ import { motion } from 'framer-motion';
 import CategorySidebar from './CategorySidebar';
 import WorkListScrollerFlex from '../work/WorkListScrollerFlex';
 import Footer from './Footer';
+import HomeIcon from './HomeIcon';
 import { useCategories, useCategorySelection } from '@/state';
-import { useFilteredWorks, useScrollLock, useOptimizedResize } from '@/domain';
+import { useFilteredWorks, useScrollLock, useOptimizedResize, useSiteSettings } from '@/domain';
 import { logLayout, getViewportInfo, getBreakpoint, detectBreakpointChange } from '@/core/utils/layoutDebugLogger';
 import { LayoutStabilityProvider } from '@/presentation/contexts/LayoutStabilityContext';
 
@@ -50,6 +51,7 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
   // Global state
   const { selectedKeywordId, selectedExhibitionCategoryId, selectKeyword, selectExhibitionCategory } = useCategorySelection();
   const { sentenceCategories, exhibitionCategories } = useCategories();
+  const { data: siteSettings } = useSiteSettings();
 
   // Scroll lock hook
   const { lockScroll, unlockScroll } = useScrollLock();
@@ -532,6 +534,14 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
 
   return (
     <div className="flex flex-col" style={{ minHeight: 'calc(100vh - 40px)' }}>
+      {/* 홈 아이콘 - 웹/태블릿에서만 표시 */}
+      {siteSettings?.homeIconUrl && siteSettings?.homeIconHoverUrl && (
+        <HomeIcon
+          defaultIconUrl={siteSettings.homeIconUrl}
+          hoverIconUrl={siteSettings.homeIconHoverUrl}
+        />
+      )}
+
       <div className="flex-1 relative" style={{ paddingTop: '0' }}>
         {/* 카테고리 영역 - 모든 페이지에서 공유 */}
         <CategorySidebar

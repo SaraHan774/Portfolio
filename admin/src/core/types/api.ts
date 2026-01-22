@@ -139,6 +139,8 @@ export interface SiteSettings {
   browserTitle: string;
   browserDescription: string;
   faviconUrl?: string;
+  homeIconUrl?: string;
+  homeIconHoverUrl?: string;
   footerText: string;
   updatedAt: Date;
 }
