@@ -3,17 +3,18 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { useImageZoom } from '@/domain';
+import { useImageZoom, useOptimizedResize } from '@/domain';
 import {
   IMAGE_ZOOM_OVERLAY_ANIMATION,
   ZOOMED_IMAGE_ANIMATION,
 } from '@/core/constants/animation.constants';
+import { Z_INDEX } from '@/core/constants/ui.constants';
 
 const HORIZONTAL_PADDING = 40;
-const Z_INDEX = 2000;
 
 /**
- * Hook to track viewport dimensions
+ * Hook to track viewport dimensions with optimized resize handling
+ * Uses throttling to prevent excessive re-renders during window resize
  */
 function useViewportSize() {
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -25,11 +26,13 @@ function useViewportSize() {
     });
   }, []);
 
+  // Initialize size on mount
   useEffect(() => {
     updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
   }, [updateSize]);
+
+  // Use optimized resize hook with debouncing
+  useOptimizedResize(updateSize, { delay: 100 });
 
   return size;
 }
@@ -46,6 +49,14 @@ function useViewportSize() {
 export default function ImageZoomOverlay() {
   const { zoomedImage, closeZoom } = useImageZoom();
   const { width: viewportWidth, height: viewportHeight } = useViewportSize();
+  const [imageLoading, setImageLoading] = useState(true);
+
+  // Reset loading state when zoomed image changes
+  useEffect(() => {
+    if (zoomedImage) {
+      setImageLoading(true);
+    }
+  }, [zoomedImage]);
 
   // Calculate image dimensions to fill full height while maintaining aspect ratio
   const imageDimensions = useMemo(() => {
@@ -84,7 +95,7 @@ export default function ImageZoomOverlay() {
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: Z_INDEX,
+        zIndex: Z_INDEX.IMAGE_ZOOM_OVERLAY,
         backgroundColor: 'rgba(0, 0, 0, 0.9)',
         display: 'flex',
         alignItems: 'center',
@@ -109,7 +120,7 @@ export default function ImageZoomOverlay() {
           alignItems: 'center',
           justifyContent: 'center',
           transition: 'background-color 0.2s ease',
-          zIndex: Z_INDEX + 1,
+          zIndex: Z_INDEX.IMAGE_ZOOM_OVERLAY + 1,
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
@@ -145,14 +156,40 @@ export default function ImageZoomOverlay() {
         }}
         onClick={closeZoom}
       >
+        {/* Loading spinner */}
+        {imageLoading && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                border: '3px solid rgba(255, 255, 255, 0.2)',
+                borderTop: '3px solid rgba(255, 255, 255, 0.8)',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite',
+              }}
+            />
+          </div>
+        )}
         <Image
           src={zoomedImage.src}
           alt={zoomedImage.alt}
           fill
           style={{
             objectFit: 'contain',
+            opacity: imageLoading ? 0 : 1,
+            transition: 'opacity 0.2s ease',
           }}
           sizes={`${Math.round(imageDimensions.width)}px`}
+          onLoad={() => setImageLoading(false)}
           priority
         />
       </motion.div>

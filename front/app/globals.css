@@ -427,6 +427,16 @@ img {
   }
 }
 
+/* 로딩 스피너 애니메이션 */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 /* 스크롤 가능한 카테고리 리스트 스타일 */
 .scrollable-category-list {
   /* 스크롤바 완전히 숨김 */
