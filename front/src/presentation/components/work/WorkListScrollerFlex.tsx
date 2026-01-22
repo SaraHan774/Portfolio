@@ -11,6 +11,8 @@ interface WorkListScrollerProps {
     onWorkSelect: (workId: string) => void;
     showThumbnail: boolean;
     direction?: 'ltr' | 'rtl';
+    hideOverflowIndicators?: boolean; // 모바일에서 overflow indicator 숨김
+    fullWidth?: boolean; // 모바일에서 화면 전체 너비 사용
 }
 
 /**
@@ -28,6 +30,8 @@ export default function WorkListScroller({
                                              onWorkSelect,
                                              showThumbnail,
                                              direction = 'ltr',
+                                             hideOverflowIndicators = false,
+                                             fullWidth = false,
                                          }: WorkListScrollerProps) {
     const {scrollContainerRef, showLeftArrow, showRightArrow, scroll} = useWorkListScroll({
         direction,
@@ -68,8 +72,8 @@ export default function WorkListScroller({
                 width: '100%',
                 display: 'flex',
                 justifyContent: direction === 'ltr' ? 'flex-start' : 'flex-end',
-                paddingLeft: direction === 'ltr' ? 'var(--category-margin-left)' : '0',
-                paddingRight: direction === 'rtl' ? 'var(--category-margin-right)' : '0',
+                paddingLeft: fullWidth ? '0' : (direction === 'ltr' ? 'var(--category-margin-left)' : '0'),
+                paddingRight: fullWidth ? '0' : (direction === 'rtl' ? 'var(--category-margin-right)' : '0'),
             }}
         >
             <div
@@ -79,7 +83,7 @@ export default function WorkListScroller({
                     display: 'flex',
                     alignItems: anyWorkHovered ? 'flex-end' : 'flex-start',
                     gap: '8px',
-                    maxWidth: '70vw',
+                    maxWidth: fullWidth ? '100vw' : '70vw',
                     width: 'fit-content',
                 }}
             >
@@ -93,7 +97,7 @@ export default function WorkListScroller({
                     setIsMouseInContainer(false);
                 }}
                 style={{
-                    display: 'flex',
+                    display: hideOverflowIndicators ? 'none' : 'flex',
                     alignItems: 'center',
                     gap: '4px',
                     flexShrink: 0,
@@ -148,20 +152,22 @@ export default function WorkListScroller({
                 }}
             >
                 {/* Left fade */}
-                <div
-                    style={{
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
-                        bottom: 0,
-                        width: '20px',
-                        background: 'linear-gradient(to right, var(--color-white) 0%, transparent 100%)',
-                        pointerEvents: 'none',
-                        zIndex: 10,
-                        opacity: showLeftArrow ? 1 : 0,
-                        transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                    }}
-                />
+                {!hideOverflowIndicators && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: '20px',
+                            background: 'linear-gradient(to right, var(--color-white) 0%, transparent 100%)',
+                            pointerEvents: 'none',
+                            zIndex: 10,
+                            opacity: showLeftArrow ? 1 : 0,
+                            transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                        }}
+                    />
+                )}
 
                 {/* Scrollable work list */}
                 <div
@@ -190,20 +196,22 @@ export default function WorkListScroller({
                 </div>
 
                 {/* Right fade */}
-                <div
-                    style={{
-                        position: 'absolute',
-                        right: 0,
-                        top: 0,
-                        bottom: 0,
-                        width: '40px',
-                        background: 'linear-gradient(to left, var(--color-white) 0%, transparent 100%)',
-                        pointerEvents: 'none',
-                        zIndex: 10,
-                        opacity: showRightArrow ? 1 : 0,
-                        transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                    }}
-                />
+                {!hideOverflowIndicators && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: '40px',
+                            background: 'linear-gradient(to left, var(--color-white) 0%, transparent 100%)',
+                            pointerEvents: 'none',
+                            zIndex: 10,
+                            opacity: showRightArrow ? 1 : 0,
+                            transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                        }}
+                    />
+                )}
             </div>
 
             {/* Right indicators */}
@@ -216,7 +224,7 @@ export default function WorkListScroller({
                     setIsMouseInContainer(false);
                 }}
                 style={{
-                    display: 'flex',
+                    display: hideOverflowIndicators ? 'none' : 'flex',
                     alignItems: 'center',
                     gap: '4px',
                     flexShrink: 0,

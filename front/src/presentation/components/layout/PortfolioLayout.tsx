@@ -589,6 +589,8 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
                 onWorkSelect={handleWorkSelect}
                 showThumbnail={selectedWorkId === null}
                 direction={workListConfig.position === 'left' ? 'ltr' : 'rtl'}
+                hideOverflowIndicators={isMobile}
+                fullWidth={isMobile}
               />
             </motion.div>
           </div>

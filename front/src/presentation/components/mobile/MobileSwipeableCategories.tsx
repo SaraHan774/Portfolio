@@ -86,6 +86,7 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
         top: 'var(--space-4)', // 32px (matching CategorySidebar)
         left: 'var(--category-margin-left)',
         right: 'var(--category-margin-right)',
+        paddingBottom: 'var(--space-5)',
         zIndex: 100,
       }}
       role="tablist"
