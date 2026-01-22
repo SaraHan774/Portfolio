@@ -2,7 +2,7 @@
 // These components have no business logic and can be used across any application
 
 // Common
-export { Spinner, LoadingContainer } from './common';
+export { Spinner, LoadingContainer, ZoomIcon } from './common';
 
 // Media
 export { FadeInImage } from './media';
