@@ -8,7 +8,7 @@ export { default as MobileCategoryMenu } from './layout/MobileCategoryMenu';
 export { default as PortfolioLayout } from './layout/PortfolioLayout';
 
 // Media components
-export { YouTubeEmbed } from './media';
+export { YouTubeEmbed, ZoomableImage, ImageZoomOverlay } from './media';
 
 // Work components
 export { default as FloatingWorkWindow } from './work/FloatingWorkWindow';

@@ -6,6 +6,7 @@
  */
 
 import { FadeInImage } from '@/presentation/ui';
+import { ZoomableImage } from '@/presentation/components/media';
 import type { WorkImage } from '@/types';
 
 interface ModalImageProps {
@@ -27,17 +28,26 @@ export default function ModalImage({ image, alt, isLast }: ModalImageProps) {
         width: '100%',
       }}
     >
-      <FadeInImage
-        src={image.url}
-        alt={alt}
-        width={image.width}
-        height={image.height}
-        style={{
-          width: '100%',
-          height: 'auto',
-          borderRadius: '4px',
+      <ZoomableImage
+        imageData={{
+          src: image.url,
+          alt,
+          width: image.width,
+          height: image.height,
         }}
-      />
+      >
+        <FadeInImage
+          src={image.url}
+          alt={alt}
+          width={image.width}
+          height={image.height}
+          style={{
+            width: '100%',
+            height: 'auto',
+            borderRadius: '4px',
+          }}
+        />
+      </ZoomableImage>
     </div>
   );
 }

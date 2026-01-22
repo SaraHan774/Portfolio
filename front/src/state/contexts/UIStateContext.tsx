@@ -8,6 +8,16 @@ export interface HoverPosition {
 }
 
 /**
+ * Zoomed image data
+ */
+export interface ZoomedImageData {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+}
+
+/**
  * UI state
  */
 export interface UIState {
@@ -20,6 +30,9 @@ export interface UIState {
 
   // Mobile menu state
   mobileMenuOpen: boolean;
+
+  // Zoom state
+  zoomedImage: ZoomedImageData | null;
 }
 
 /**
@@ -37,6 +50,10 @@ export interface UIStateActions {
   // Mobile menu actions
   setMobileMenuOpen: (open: boolean) => void;
   toggleMobileMenu: () => void;
+
+  // Zoom actions
+  openZoom: (imageData: ZoomedImageData) => void;
+  closeZoom: () => void;
 }
 
 /**
@@ -46,6 +63,7 @@ export interface UIStateSelectors {
   isHovering: boolean;
   isModalOpen: boolean;
   isMobileMenuOpen: boolean;
+  isZoomOpen: boolean;
 }
 
 /**
@@ -65,6 +83,9 @@ export function UIStateProvider({ children }: { children: ReactNode }) {
 
   // Mobile menu state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Zoom state
+  const [zoomedImage, setZoomedImage] = useState<ZoomedImageData | null>(null);
 
   // Hover actions
   const setHoveredWork = useCallback((workId: string | null, position?: HoverPosition) => {
@@ -92,14 +113,24 @@ export function UIStateProvider({ children }: { children: ReactNode }) {
     setMobileMenuOpen((prev) => !prev);
   }, []);
 
+  // Zoom actions
+  const openZoom = useCallback((imageData: ZoomedImageData) => {
+    setZoomedImage(imageData);
+  }, []);
+
+  const closeZoom = useCallback(() => {
+    setZoomedImage(null);
+  }, []);
+
   // Selectors (derived state)
   const selectors = useMemo<UIStateSelectors>(
     () => ({
       isHovering: hoveredWorkId !== null,
       isModalOpen: modalWorkId !== null,
       isMobileMenuOpen: mobileMenuOpen,
+      isZoomOpen: zoomedImage !== null,
     }),
-    [hoveredWorkId, modalWorkId, mobileMenuOpen]
+    [hoveredWorkId, modalWorkId, mobileMenuOpen, zoomedImage]
   );
 
   const value = useMemo<UIStateContextType>(
@@ -109,6 +140,7 @@ export function UIStateProvider({ children }: { children: ReactNode }) {
       hoverPosition,
       modalWorkId,
       mobileMenuOpen,
+      zoomedImage,
       // Actions
       setHoveredWork,
       clearHover,
@@ -116,6 +148,8 @@ export function UIStateProvider({ children }: { children: ReactNode }) {
       closeModal,
       setMobileMenuOpen,
       toggleMobileMenu,
+      openZoom,
+      closeZoom,
       // Selectors
       ...selectors,
     }),
@@ -124,11 +158,14 @@ export function UIStateProvider({ children }: { children: ReactNode }) {
       hoverPosition,
       modalWorkId,
       mobileMenuOpen,
+      zoomedImage,
       setHoveredWork,
       clearHover,
       openModal,
       closeModal,
       toggleMobileMenu,
+      openZoom,
+      closeZoom,
       selectors,
     ]
   );
@@ -173,4 +210,12 @@ export function useMobileMenuOpen() {
 
 export function useIsMobileMenuOpen() {
   return useUIState().isMobileMenuOpen;
+}
+
+export function useZoomedImage() {
+  return useUIState().zoomedImage;
+}
+
+export function useIsZoomOpen() {
+  return useUIState().isZoomOpen;
 }
