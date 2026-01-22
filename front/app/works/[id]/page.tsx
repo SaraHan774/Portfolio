@@ -26,6 +26,7 @@ import {
   MediaTimeline,
   AnimatedCharacterText,
   ZoomableImage,
+  presets,
 } from '@/presentation';
 import { getMediaItems, hasMedia } from '@/core/utils';
 import { useCategorySelection } from '@/state';
@@ -76,16 +77,7 @@ function CaptionLink({
         isActive={isHovered}
         isSelected={false}
         hasBeenClickedBefore={true}
-        characterStyle={(isActive) =>
-          isActive
-            ? {
-                color: 'transparent',
-                WebkitTextStroke: '0.7px var(--color-category-hover-stroke)',
-              }
-            : {
-                color: 'var(--color-text-primary)',
-              }
-        }
+        {...presets.captionLink()}
       />
     </a>
   );
