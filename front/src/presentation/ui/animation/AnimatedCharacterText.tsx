@@ -25,9 +25,9 @@ export interface AnimatedCharacterTextProps {
   containerStyle?: React.CSSProperties;
   /**
    * Optional styles for each character span
-   * Can be a static object or a function that receives isActive state
+   * Can be a static object or a function that receives isActive and isSelected state
    */
-  characterStyle?: React.CSSProperties | ((isActive: boolean) => React.CSSProperties);
+  characterStyle?: React.CSSProperties | ((isActive: boolean, isSelected: boolean) => React.CSSProperties);
   /**
    * Optional custom variants for the container
    * Defaults to KEYWORD_ANIMATION_VARIANTS.container
@@ -107,7 +107,7 @@ const AnimatedCharacterText = memo(function AnimatedCharacterText({
     if (typeof characterStyle === 'function') {
       return {
         ...baseStyle,
-        ...characterStyle(isActive),
+        ...characterStyle(isActive, isSelected),
       };
     }
 
@@ -121,7 +121,7 @@ const AnimatedCharacterText = memo(function AnimatedCharacterText({
 
     // Default: just base style
     return baseStyle;
-  }, [characterStyle, isActive]);
+  }, [characterStyle, isActive, isSelected]);
 
   return (
     <motion.span

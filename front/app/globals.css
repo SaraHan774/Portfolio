@@ -65,8 +65,16 @@
   --container-padding: var(--space-6);
 
   /* 좌/우 카테고리 영역 (고정 박스 없음) */
-  --category-margin-left: var(--space-6);    /* 48px - 좌측 시작점 */
-  --category-margin-right: var(--space-6);   /* 48px - 우측 끝점 */
+  /* 기준 값 및 비율 */
+  --base-edge-spacing: 48px;                 /* 기본 화면 가장자리 간격 */
+  --spacing-scale: 0.82;                    /* 타임라인 - 화면 좌측 - 이미지까지의 간격 및 카테고리~화면 간격 조정 비율 */
+
+  /* 계산된 값들 */
+  --category-margin-left: calc(var(--base-edge-spacing) * var(--spacing-scale));
+  --category-margin-right: calc(var(--base-edge-spacing) * var(--spacing-scale));
+  --timeline-to-image-gap: calc(var(--base-edge-spacing) * var(--spacing-scale));
+  --responsive-padding-left: calc(var(--category-margin-left) + var(--timeline-to-image-gap));
+
   --category-spacing: 20px;                  /* 10px - 문장 간 간격 (20px의 50%) */
   --category-font-size: 12px;                /* 카테고리 글꼴 사이즈 (15px의 80%) */
   --category-line-height: 1.8;
@@ -79,11 +87,11 @@
 
   /* 작품 상세 페이지 레이아웃 (반응형) */
   --media-width: calc(50% - var(--content-gap));               /* 미디어 영역 너비 */
-  --caption-left: calc(50% + var(--space-16) + 5%);            /* 캡션 좌측 위치 */
-  --caption-max-width: calc(50% - var(--space-12) - 5%);       /* 캡션 최대 너비 */
+  --caption-left: calc(50% + var(--space-16));                 /* 캡션 좌측 위치 - 중앙선 기준 대칭 */
+  --caption-max-width: calc(50% - var(--space-12));            /* 캡션 최대 너비 */
 
   /* 반응형 패딩 (큰 화면 기본값) */
-  --responsive-padding-left: var(--space-12);                  /* 96px - 타임라인이 있을 때 */
+  /* --responsive-padding-left는 위에서 계산됨 */
   --responsive-padding-right: var(--space-6);                  /* 48px */
 
   /* 점(˙) 표시 */
@@ -190,10 +198,13 @@ img {
 /* 중간 화면 (1024px 이하) - 패딩 축소 */
 @media (max-width: 1024px) {
   :root {
-    --responsive-padding-left: var(--space-8);  /* 64px */
+    --base-edge-spacing: 64px;                  /* 중간 화면 기본 간격 */
+    /* --spacing-scale은 상속됨 */
+    --category-margin-left: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    --category-margin-right: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    --timeline-to-image-gap: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    --responsive-padding-left: calc(var(--category-margin-left) + var(--timeline-to-image-gap));
     --responsive-padding-right: var(--space-4); /* 32px */
-    --category-margin-left: var(--space-8);     /* 64px - 카테고리/WorkList 좌측 */
-    --category-margin-right: var(--space-4);    /* 32px - 카테고리/WorkList 우측 */
   }
 }
 
@@ -209,14 +220,17 @@ img {
 /* 소형 화면 (768px 미만) - 전체 너비 사용, 좌우 패딩 동일 */
 @media (max-width: 767px) {
   :root {
+    --base-edge-spacing: 32px;                  /* 소형 화면 기본 간격 */
+    /* --spacing-scale은 상속됨 */
+    --category-margin-left: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    --category-margin-right: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    /* 모바일에서는 타임라인이 숨겨지므로 좌우 패딩을 동일하게 */
+    --responsive-padding-left: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    --responsive-padding-right: calc(var(--base-edge-spacing) * var(--spacing-scale));
     --media-width: 100%;
     --caption-left: 0;
     --caption-max-width: 100%;
-    --responsive-padding-left: var(--space-4);  /* 32px */
-    --responsive-padding-right: var(--space-4); /* 32px - 좌측과 동일 */
-    --category-margin-left: var(--space-4);     /* 32px - 카테고리/WorkList 좌측 */
-    --category-margin-right: var(--space-4);    /* 32px - 카테고리/WorkList 우측 */
-    --worklist-max-width: calc(100% - var(--category-margin-left) - var(--category-margin-right));  /* 모바일: 전체 너비 */
+    --worklist-max-width: calc(100% - var(--category-margin-left) - var(--category-margin-right));
   }
 
   .work-image-container {
@@ -230,7 +244,10 @@ img {
     bottom: auto !important;
     width: 100% !important;
     max-width: 100% !important;
-    padding-right: 0 !important;
+    /* 이미지와 동일한 좌우 패딩 적용 */
+    padding-left: var(--responsive-padding-left) !important;
+    padding-right: var(--responsive-padding-right) !important;
+    box-sizing: border-box !important;
     margin-top: var(--space-6) !important; /* 이미지와의 간격 (48px) */
     margin-bottom: var(--space-12) !important; /* Footer와의 간격 (96px) */
   }
@@ -247,41 +264,47 @@ img {
     padding-left: 0 !important;
   }
 
-  /* 모바일에서 WorkListScroller 좌측 정렬로 통일 */
+  /* 모바일에서 WorkListScroller 전체 너비 사용 */
   .work-list-scroller-container {
-    left: var(--category-margin-left) !important;
-    right: auto !important;
-    text-align: left !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
   }
 }
 
 /* 초소형 화면 (480px 미만) - 패딩 최소 */
 @media (max-width: 480px) {
   :root {
-    --responsive-padding-left: var(--space-2);  /* 16px */
-    --responsive-padding-right: var(--space-2); /* 16px */
-    --category-margin-left: var(--space-3);     /* 24px */
-    --category-margin-right: var(--space-3);    /* 24px */
+    --base-edge-spacing: 24px;                  /* 초소형 화면 기본 간격 */
+    --category-margin-left: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    --category-margin-right: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    /* 모바일에서는 타임라인이 숨겨지므로 좌우 패딩을 동일하게 */
+    --responsive-padding-left: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    --responsive-padding-right: calc(var(--base-edge-spacing) * var(--spacing-scale));
   }
 }
 
 /* 소형 모바일 (481px ~ 600px) - 점진적 증가 */
 @media (min-width: 481px) and (max-width: 600px) {
   :root {
-    --responsive-padding-left: var(--space-3);  /* 24px - 부드러운 전환 */
-    --responsive-padding-right: var(--space-3); /* 24px */
-    --category-margin-left: var(--space-4);     /* 32px */
-    --category-margin-right: var(--space-3);    /* 24px */
+    --base-edge-spacing: 32px;                  /* 소형 모바일 기본 간격 */
+    --category-margin-left: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    --category-margin-right: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    /* 모바일에서는 타임라인이 숨겨지므로 좌우 패딩을 동일하게 */
+    --responsive-padding-left: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    --responsive-padding-right: calc(var(--base-edge-spacing) * var(--spacing-scale));
   }
 }
 
 /* 중형 모바일 (601px ~ 767px) - 표준 모바일 패딩 */
 @media (min-width: 601px) and (max-width: 767px) {
   :root {
-    --responsive-padding-left: var(--space-4);  /* 32px - 표준 */
-    --responsive-padding-right: var(--space-4); /* 32px */
-    --category-margin-left: var(--space-4);     /* 32px */
-    --category-margin-right: var(--space-4);    /* 32px */
+    --base-edge-spacing: 32px;                  /* 중형 모바일 기본 간격 */
+    --category-margin-left: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    --category-margin-right: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    /* 모바일에서는 타임라인이 숨겨지므로 좌우 패딩을 동일하게 */
+    --responsive-padding-left: calc(var(--base-edge-spacing) * var(--spacing-scale));
+    --responsive-padding-right: calc(var(--base-edge-spacing) * var(--spacing-scale));
   }
 }
 

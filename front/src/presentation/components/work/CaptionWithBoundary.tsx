@@ -25,7 +25,7 @@ interface CaptionWithBoundaryProps {
 }
 
 /** 기본 bottom 값 (px) */
-const DEFAULT_BOTTOM_PX = 120;
+const DEFAULT_BOTTOM_PX = 75;
 
 export default function CaptionWithBoundary({
   caption,

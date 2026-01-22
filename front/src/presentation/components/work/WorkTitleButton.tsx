@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useThumbnailUrl, useClickAnimationTracking } from '@/domain';
-import { AnimatedCharacterText, DotIndicator } from '@/presentation/ui';
+import { AnimatedCharacterText, DotIndicator, presets } from '@/presentation/ui';
 import ThumbnailSkeleton from './ThumbnailSkeleton';
 import type { Work } from '@/types';
 
@@ -105,23 +105,12 @@ export default function WorkTitleButton({
     paddingTop: '12px', // Make room for dot positioned at -8px
   };
 
-  // Title styling based on state (matches category keyword behavior)
+  // Title wrapper styling (no color - controlled in characterStyle)
   const titleStyle: React.CSSProperties = {
     display: 'inline-block',
     fontSize: 'var(--font-size-sm)',
     textAlign: 'left',
     whiteSpace: 'nowrap',
-    transition: 'color 0.2s ease-in-out',
-    // Selected or hovered: transparent with stroke (like category keywords)
-    // Unselected: gray color
-    ...(isSelected || isHovered
-      ? {
-          color: 'transparent',
-          WebkitTextStroke: '0.7px var(--color-category-hover-stroke)',
-        }
-      : {
-          color: 'var(--color-text-secondary)', // Gray for unselected
-        }),
   };
 
   return (
@@ -162,15 +151,14 @@ export default function WorkTitleButton({
           />
         )}
 
-        {/* 작업 제목 + 년도 with character-by-character animation */}
+        {/* 작업 제목 + 년도 (using 'work' preset) */}
         <span style={titleStyle}>
           <AnimatedCharacterText
             text={displayText}
             isActive={isHovered || isSelected}
             isSelected={isSelected}
             hasBeenClickedBefore={wasSelectedBefore}
-            containerStyle={{ display: 'inline-block' }}
-            characterStyle={{ display: 'inline-block' }}
+            {...presets.work()}
           />
         </span>
       </div>
