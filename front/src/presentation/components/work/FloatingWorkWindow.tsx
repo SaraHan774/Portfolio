@@ -51,7 +51,7 @@ export default function FloatingWorkWindow({ work, position, onClick }: Floating
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'rgba(230, 230, 230)',
+          background: 'rgba(220,220,220,0.97)', // FIXME : 모달 내부에서는 220, 외부에서는 240
           filter: 'blur(10px)',
         }}
       />

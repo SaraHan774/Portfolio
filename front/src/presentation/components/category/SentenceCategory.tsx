@@ -2,7 +2,7 @@
 
 import { memo } from 'react';
 import { useKeywordState, useKeywordStyle, useClickAnimationTracking } from '@/domain';
-import { AnimatedCharacterText, DotIndicator } from '@/presentation/ui';
+import { AnimatedCharacterText, DotIndicator, createCustomPreset } from '@/presentation/ui';
 import type { SentenceCategory as SentenceCategoryType, KeywordCategory } from '@/types';
 
 interface SentenceCategoryProps {
@@ -153,6 +153,14 @@ function AnimatedKeyword({
   });
 
   const keywordStyle = useKeywordStyle(state);
+  const isActive = isHovered || isSelected;
+
+  // Determine inactive color based on state
+  const getInactiveColor = (): string => {
+    if (state === 'clickable' || state === 'active') return 'var(--color-category-clickable)';
+    if (state === 'disabled') return 'var(--color-category-disabled)';
+    return 'var(--color-category-basic)';
+  };
 
   return (
     <span
@@ -163,19 +171,17 @@ function AnimatedKeyword({
         }
       }}
       onMouseLeave={() => onHover(null)}
-      style={keywordStyle}
+      style={{
+        ...keywordStyle,
+        color: 'inherit', // Don't apply color from keywordStyle (controlled in characterStyle)
+      }}
     >
       <AnimatedCharacterText
         text={text}
-        isActive={isHovered || isSelected}
+        isActive={isActive}
         isSelected={isSelected}
         hasBeenClickedBefore={hasBeenClickedBefore}
-        containerStyle={{ display: 'inline-block' }}
-        characterStyle={{
-          display: 'inline-block',
-          // Always show correct fontWeight, regardless of animation state
-          fontWeight: isSelected ? 700 : 400,
-        }}
+        {...createCustomPreset({ inactiveColor: getInactiveColor() })}
       />
 
       {/* Dot indicator for selected keyword */}

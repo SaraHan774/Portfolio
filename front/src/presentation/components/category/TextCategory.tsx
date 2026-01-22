@@ -2,7 +2,7 @@
 
 import { memo } from 'react';
 import { useKeywordState, useClickAnimationTracking } from '@/domain';
-import { AnimatedCharacterText, DotIndicator } from '@/presentation/ui';
+import { AnimatedCharacterText, DotIndicator, presets } from '@/presentation/ui';
 import type { ExhibitionCategory } from '@/types';
 
 interface TextCategoryProps {
@@ -56,15 +56,7 @@ const TextCategory = memo(function TextCategory({
         isActive={isActive}
         isSelected={isSelected}
         hasBeenClickedBefore={hasBeenClickedBefore}
-        containerStyle={{ display: 'block' }}
-        characterStyle={(isActive) => ({
-          display: 'inline-block',
-          color: isActive ? 'transparent' : 'var(--color-category-clickable)',
-          fontSize: 'var(--font-size-sm)',
-          WebkitTextStroke: isActive ? '0.7px var(--color-category-hover-stroke)' : '0px transparent',
-          transition: 'color 0.1s ease-out, -webkit-text-stroke 0.1s ease-out',
-          fontWeight: isSelected ? 700 : 400,
-        })}
+        {...presets.category()}
       />
     );
   };
