@@ -86,7 +86,7 @@ export default function WorkListScroller({
             {/* Left indicators */}
             <div
                 onMouseEnter={() => {
-                    if (anyWorkHovered) return
+                    if (anyWorkHovered) return;
                     if (hoverTimeoutRef.current) {
                         clearTimeout(hoverTimeoutRef.current);
                     }
@@ -209,7 +209,7 @@ export default function WorkListScroller({
             {/* Right indicators */}
             <div
                 onMouseEnter={() => {
-                    if (anyWorkHovered) return
+                    if (anyWorkHovered) return;
                     if (hoverTimeoutRef.current) {
                         clearTimeout(hoverTimeoutRef.current);
                     }
