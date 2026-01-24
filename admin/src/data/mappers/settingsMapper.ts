@@ -12,6 +12,7 @@ export const DEFAULT_SITE_SETTINGS: Omit<SiteSettings, 'id' | 'updatedAt'> = {
   faviconUrl: undefined,
   homeIconUrl: undefined,
   homeIconHoverUrl: undefined,
+  homeIconSize: 48,
 };
 
 /**
@@ -28,6 +29,7 @@ export const mapFirestoreToSiteSettings = (
   faviconUrl: data.faviconUrl as string | undefined,
   homeIconUrl: data.homeIconUrl as string | undefined,
   homeIconHoverUrl: data.homeIconHoverUrl as string | undefined,
+  homeIconSize: (data.homeIconSize as number) ?? DEFAULT_SITE_SETTINGS.homeIconSize,
   updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
 });
 
@@ -56,6 +58,9 @@ export const mapSiteSettingsToFirestore = (
   }
   if (settings.homeIconHoverUrl !== undefined) {
     data.homeIconHoverUrl = settings.homeIconHoverUrl;
+  }
+  if (settings.homeIconSize !== undefined) {
+    data.homeIconSize = settings.homeIconSize;
   }
 
   return data;

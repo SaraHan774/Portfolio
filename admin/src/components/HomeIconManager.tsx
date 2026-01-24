@@ -11,6 +11,8 @@ import {
   App,
   Row,
   Col,
+  Slider,
+  InputNumber,
 } from 'antd';
 import {
   UploadOutlined,
@@ -25,23 +27,28 @@ const { Text, Title } = Typography;
 interface HomeIconManagerProps {
   homeIconUrl?: string;
   homeIconHoverUrl?: string;
+  homeIconSize?: number;
   onUploadHomeIcon: (file: File) => Promise<void>;
   onUploadHomeIconHover: (file: File) => Promise<void>;
   onDeleteHomeIcon: () => Promise<void>;
   onDeleteHomeIconHover: () => Promise<void>;
+  onUpdateIconSize: (size: number) => Promise<void>;
 }
 
 const HomeIconManager = ({
   homeIconUrl,
   homeIconHoverUrl,
+  homeIconSize = 48,
   onUploadHomeIcon,
   onUploadHomeIconHover,
   onDeleteHomeIcon,
   onDeleteHomeIconHover,
+  onUpdateIconSize,
 }: HomeIconManagerProps) => {
   const { modal, message } = App.useApp();
   const [uploadingIcon, setUploadingIcon] = useState(false);
   const [uploadingHover, setUploadingHover] = useState(false);
+  const [iconSize, setIconSize] = useState(homeIconSize);
 
   // 이미지 크기 검증
   const validateImageSize = async (file: File): Promise<boolean> => {
@@ -178,6 +185,31 @@ const HomeIconManager = ({
     }
   };
 
+  // 아이콘 크기 변경
+  const handleSizeChange = async (value: number | null) => {
+    if (value === null) return;
+
+    const clampedValue = Math.min(Math.max(value, 1), 300);
+    setIconSize(clampedValue);
+
+    try {
+      await onUpdateIconSize(clampedValue);
+      message.success(`아이콘 크기가 ${clampedValue}px로 변경되었습니다.`);
+    } catch (error) {
+      console.error('아이콘 크기 변경 실패:', error);
+      const errorInfo = getErrorDisplayInfo(error);
+      modal.error({
+        title: errorInfo.title,
+        content: (
+          <div>
+            <p>{errorInfo.message}</p>
+            {errorInfo.action && <p style={{ marginTop: 8, color: '#666' }}>{errorInfo.action}</p>}
+          </div>
+        ),
+      });
+    }
+  };
+
   return (
     <Card title={<><HomeOutlined /> 홈 아이콘 설정</>}>
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -189,6 +221,7 @@ const HomeIconManager = ({
               <li>프론트 페이지의 홈 아이콘으로 사용될 이미지를 설정합니다.</li>
               <li>이미지 크기는 300x300 픽셀 이하여야 합니다.</li>
               <li>기본 아이콘과 호버 상태 아이콘을 각각 설정할 수 있습니다.</li>
+              <li>표시 크기는 1~300px 범위에서 조정할 수 있습니다.</li>
               <li>지원 형식: JPG, JPEG, PNG, WebP, GIF</li>
             </ul>
           }
@@ -196,6 +229,42 @@ const HomeIconManager = ({
           icon={<InfoCircleOutlined />}
           style={{ marginBottom: 24 }}
         />
+
+        {/* 아이콘 크기 설정 */}
+        <div style={{ marginBottom: 24 }}>
+          <Title level={5}>아이콘 표시 크기</Title>
+          <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+            프론트 페이지에서 표시될 아이콘의 크기를 설정합니다. (현재: {iconSize}px)
+          </Text>
+          <Row gutter={16} align="middle">
+            <Col flex="auto">
+              <Slider
+                min={1}
+                max={300}
+                value={iconSize}
+                onChange={setIconSize}
+                onAfterChange={handleSizeChange}
+                marks={{
+                  1: '1px',
+                  48: '48px',
+                  100: '100px',
+                  200: '200px',
+                  300: '300px',
+                }}
+              />
+            </Col>
+            <Col>
+              <InputNumber
+                min={1}
+                max={300}
+                value={iconSize}
+                onChange={handleSizeChange}
+                addonAfter="px"
+                style={{ width: 100 }}
+              />
+            </Col>
+          </Row>
+        </div>
 
         <Row gutter={24}>
           {/* 기본 홈 아이콘 */}

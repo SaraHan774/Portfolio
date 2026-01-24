@@ -7,6 +7,7 @@ import Image from 'next/image';
 interface HomeIconProps {
   defaultIconUrl: string;
   hoverIconUrl: string;
+  size?: number; // 아이콘 크기 (px, 기본값 48)
 }
 
 /**
@@ -15,7 +16,7 @@ interface HomeIconProps {
  * - 호버 시 다른 이미지 표시
  * - 클릭 시 홈으로 이동
  */
-const HomeIcon = memo(function HomeIcon({ defaultIconUrl, hoverIconUrl }: HomeIconProps) {
+const HomeIcon = memo(function HomeIcon({ defaultIconUrl, hoverIconUrl, size = 48 }: HomeIconProps) {
   const router = useRouter();
   const [isHovered, setIsHovered] = useState(false);
 
@@ -30,8 +31,9 @@ const HomeIcon = memo(function HomeIcon({ defaultIconUrl, hoverIconUrl }: HomeIc
       onMouseLeave={() => setIsHovered(false)}
       className="hidden md:block fixed top-8 left-1/2 transform -translate-x-1/2 z-[200] cursor-pointer transition-opacity duration-200 hover:opacity-90"
       aria-label="홈으로 이동"
+      style={{ width: `${size}px`, height: `${size}px` }}
     >
-      <div className="relative w-12 h-12">
+      <div className="relative w-full h-full">
         <Image
           src={isHovered ? hoverIconUrl : defaultIconUrl}
           alt="홈 아이콘"

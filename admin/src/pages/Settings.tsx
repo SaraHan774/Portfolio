@@ -28,6 +28,7 @@ import {
   uploadHomeIconHover,
   deleteHomeIcon,
   deleteHomeIconHover,
+  updateHomeIconSize,
   settingsCacheKeys,
 } from '../data/repository';
 import BackupManager from '../components/BackupManager';
@@ -44,8 +45,9 @@ const Settings = () => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [siteSettings, setSiteSettings] = useState<Pick<SiteSettings, 'footerText' | 'homeIconUrl' | 'homeIconHoverUrl'>>({
+  const [siteSettings, setSiteSettings] = useState<Pick<SiteSettings, 'footerText' | 'homeIconUrl' | 'homeIconHoverUrl' | 'homeIconSize'>>({
     footerText: '',
+    homeIconSize: 48,
   });
 
   // 사이트 설정 로드
@@ -61,6 +63,7 @@ const Settings = () => {
           footerText: settings.footerText,
           homeIconUrl: settings.homeIconUrl,
           homeIconHoverUrl: settings.homeIconHoverUrl,
+          homeIconSize: settings.homeIconSize ?? 48,
         });
       } catch (error) {
         console.error('설정 로드 실패:', error);
@@ -144,6 +147,16 @@ const Settings = () => {
     queryClient.setQueryData<SiteSettings | undefined>(
       settingsCacheKeys.site(),
       (old) => (old ? { ...old, homeIconHoverUrl: undefined } : old)
+    );
+  };
+
+  const handleUpdateIconSize = async (size: number) => {
+    await updateHomeIconSize(size);
+    setSiteSettings((prev) => ({ ...prev, homeIconSize: size }));
+    // 캐시된 설정에 새 아이콘 크기 반영
+    queryClient.setQueryData<SiteSettings | undefined>(
+      settingsCacheKeys.site(),
+      (old) => (old ? { ...old, homeIconSize: size } : old)
     );
   };
 
@@ -232,10 +245,12 @@ const Settings = () => {
       <HomeIconManager
         homeIconUrl={siteSettings.homeIconUrl}
         homeIconHoverUrl={siteSettings.homeIconHoverUrl}
+        homeIconSize={siteSettings.homeIconSize}
         onUploadHomeIcon={handleUploadHomeIcon}
         onUploadHomeIconHover={handleUploadHomeIconHover}
         onDeleteHomeIcon={handleDeleteHomeIcon}
         onDeleteHomeIconHover={handleDeleteHomeIconHover}
+        onUpdateIconSize={handleUpdateIconSize}
       />
 
       {/* 데이터 관리 섹션 */}

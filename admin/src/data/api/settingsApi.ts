@@ -138,3 +138,18 @@ export const removeHomeIconHoverUrl = async (): Promise<void> => {
     updatedAt: serverTimestamp(),
   });
 };
+
+/**
+ * 홈 아이콘 크기 업데이트
+ */
+export const updateHomeIconSize = async (size: number): Promise<void> => {
+  const docRef = doc(db, collections.settings, SETTINGS_DOC_ID);
+  await setDoc(
+    docRef,
+    {
+      homeIconSize: size,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+};

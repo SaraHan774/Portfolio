@@ -18,6 +18,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   faviconUrl: undefined,
   homeIconUrl: undefined,
   homeIconHoverUrl: undefined,
+  homeIconSize: 48,
   updatedAt: new Date(),
 };
 
@@ -36,6 +37,7 @@ export const mapFirestoreToSiteSettings = (
   faviconUrl: data.faviconUrl as string | undefined,
   homeIconUrl: data.homeIconUrl as string | undefined,
   homeIconHoverUrl: data.homeIconHoverUrl as string | undefined,
+  homeIconSize: (data.homeIconSize as number) ?? DEFAULT_SITE_SETTINGS.homeIconSize,
   updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
 });
 

@@ -539,6 +539,7 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
         <HomeIcon
           defaultIconUrl={siteSettings.homeIconUrl}
           hoverIconUrl={siteSettings.homeIconHoverUrl}
+          size={siteSettings.homeIconSize}
         />
       )}
 

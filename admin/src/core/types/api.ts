@@ -141,6 +141,7 @@ export interface SiteSettings {
   faviconUrl?: string;
   homeIconUrl?: string;
   homeIconHoverUrl?: string;
+  homeIconSize?: number; // 홈 아이콘 표시 크기 (px, 1~300, 기본값 48)
   footerText: string;
   updatedAt: Date;
 }

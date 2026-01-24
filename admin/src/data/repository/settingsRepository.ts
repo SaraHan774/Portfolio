@@ -79,3 +79,10 @@ export const deleteHomeIconHover = async (): Promise<void> => {
   await storageApi.deleteHomeIconHover();
   await settingsApi.removeHomeIconHoverUrl();
 };
+
+/**
+ * 홈 아이콘 크기 업데이트
+ */
+export const updateHomeIconSize = async (size: number): Promise<void> => {
+  await settingsApi.updateHomeIconSize(size);
+};
