@@ -24,6 +24,9 @@ export const MobileCategorySlider: React.FC<MobileCategorySliderProps> = ({
   const progressOffset = progress * 50; // -50% to 50%
   const dotPosition = Math.max(0, Math.min(100, basePosition + progressOffset));
 
+  // Debug mode (development only)
+  const isDebugMode = process.env.NODE_ENV === 'development';
+
   return (
     <div
       style={{
@@ -32,24 +35,28 @@ export const MobileCategorySlider: React.FC<MobileCategorySliderProps> = ({
         alignItems: 'center',
         width: '100%',
         paddingBottom: 'var(--space-3)', // 24px spacing below slider
-        backgroundColor: 'rgba(255, 192, 203, 0.2)', // 핑크색 반투명
-        border: '1px dashed pink',
+        ...(isDebugMode && {
+          backgroundColor: 'rgba(255, 192, 203, 0.2)', // 핑크색 반투명 (디버그)
+          border: '1px dashed pink',
+        }),
         position: 'relative',
       }}
     >
       {/* 디버그 라벨 */}
-      <div style={{
-        position: 'absolute',
-        top: 2,
-        left: 4,
-        fontSize: '9px',
-        color: 'deeppink',
-        fontWeight: 'bold',
-        pointerEvents: 'none',
-        zIndex: 1000,
-      }}>
-        MobileCategorySlider (pos: {dotPosition.toFixed(0)}%)
-      </div>
+      {isDebugMode && (
+        <div style={{
+          position: 'absolute',
+          top: 2,
+          left: 4,
+          fontSize: '9px',
+          color: 'deeppink',
+          fontWeight: 'bold',
+          pointerEvents: 'none',
+          zIndex: 1000,
+        }}>
+          MobileCategorySlider (pos: {dotPosition.toFixed(0)}%)
+        </div>
+      )}
       <div
         onClick={onToggle}
         style={{
