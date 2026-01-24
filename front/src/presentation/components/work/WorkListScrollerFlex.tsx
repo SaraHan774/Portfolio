@@ -43,6 +43,16 @@ export default function WorkListScroller({
 
     const anyWorkHovered = showThumbnail || isMouseInContainer;
 
+    // Client-side mount state (for hydration-safe debug labels)
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setMounted(true);
+    }, []);
+
+    // Debug mode (development only)
+    const isDebugMode = process.env.NODE_ENV === 'development';
+
     // Delayed mouse leave to prevent flickering
     const handleMouseLeave = () => {
         hoverTimeoutRef.current = setTimeout(() => {
@@ -74,8 +84,28 @@ export default function WorkListScroller({
                 justifyContent: direction === 'ltr' ? 'flex-start' : 'flex-end',
                 paddingLeft: fullWidth ? '0' : (direction === 'ltr' ? 'var(--category-margin-left)' : '0'),
                 paddingRight: fullWidth ? '0' : (direction === 'rtl' ? 'var(--category-margin-right)' : '0'),
+                ...(isDebugMode && {
+                    backgroundColor: 'rgba(0, 0, 255, 0.1)', // 파란색 반투명
+                    border: '1px dashed blue',
+                }),
+                position: 'relative',
             }}
         >
+            {/* 디버그 라벨 */}
+            {mounted && isDebugMode && (
+                <div style={{
+                    position: 'absolute',
+                    top: 2,
+                    left: 4,
+                    fontSize: '9px',
+                    color: 'blue',
+                    fontWeight: 'bold',
+                    pointerEvents: 'none',
+                    zIndex: 1000,
+                }}>
+                    WorkListScrollerFlex
+                </div>
+            )}
             <div
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}

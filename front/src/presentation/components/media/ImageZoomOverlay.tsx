@@ -28,6 +28,7 @@ function useViewportSize() {
 
   // Initialize size on mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     updateSize();
   }, [updateSize]);
 
@@ -54,6 +55,7 @@ export default function ImageZoomOverlay() {
   // Reset loading state when zoomed image changes
   useEffect(() => {
     if (zoomedImage) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setImageLoading(true);
     }
   }, [zoomedImage]);

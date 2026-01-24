@@ -6,7 +6,6 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { logLayout, getViewportInfo, getElementInfo } from '@/core/utils/layoutDebugLogger';
 import { useLayoutStability } from '@/presentation/contexts/LayoutStabilityContext';
 
 interface CaptionWithBoundaryProps {
@@ -38,21 +37,8 @@ export default function CaptionWithBoundary({
   const { isLayoutStable, contentPaddingTop } = useLayoutStability();
 
   useEffect(() => {
-    logLayout('CaptionWithBoundary', 'mount', {
-      ...getViewportInfo(),
-      captionId,
-      DEFAULT_BOTTOM_PX,
-      isLayoutStable,
-      contentPaddingTop,
-    });
-
     const updateCaptionPosition = () => {
       if (!mediaContainerRef.current || !captionRef.current) {
-        logLayout('CaptionWithBoundary', 'updatePosition - ref null', {
-          ...getViewportInfo(),
-          hasMediaContainer: !!mediaContainerRef.current,
-          hasCaption: !!captionRef.current,
-        });
         return;
       }
 
@@ -75,29 +61,10 @@ export default function CaptionWithBoundary({
       }
 
       setCaptionBottom(newBottom);
-
-      logLayout('CaptionWithBoundary', 'updatePosition', {
-        ...getViewportInfo(),
-        ...getElementInfo(mediaContainerRef.current, 'mediaContainer'),
-        ...getElementInfo(captionRef.current, 'caption'),
-        mediaBottomFromViewportBottom,
-        previousBottom: captionBottom,
-        newBottom,
-        DEFAULT_BOTTOM_PX,
-        isLayoutStable,
-        contentPaddingTop,
-        adjustment: newBottom !== DEFAULT_BOTTOM_PX ? 'adjusted' : 'default',
-      });
     };
 
     // Layout이 안정화되지 않았으면 위치 계산 지연
     if (!isLayoutStable) {
-      logLayout('CaptionWithBoundary', 'skip-update', {
-        ...getViewportInfo(),
-        reason: 'layout not stable',
-        captionId,
-        contentPaddingTop,
-      });
       return;
     }
 
@@ -111,9 +78,6 @@ export default function CaptionWithBoundary({
     return () => {
       window.removeEventListener('scroll', updateCaptionPosition);
       window.removeEventListener('resize', updateCaptionPosition);
-      logLayout('CaptionWithBoundary', 'unmount', {
-        captionId,
-      });
     };
   }, [mediaContainerRef, captionId, captionBottom, isLayoutStable, contentPaddingTop]);
 

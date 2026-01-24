@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSwipeGesture } from '@/domain/hooks/useSwipeGesture';
 import { MobileCategorySlider } from './MobileCategorySlider';
 import SentenceCategory from '../category/SentenceCategory';
 import TextCategory from '../category/TextCategory';
-import ScrollableCategoryList from '../category/ScrollableCategoryList';
 import type { SentenceCategory as SentenceCategoryType, ExhibitionCategory } from '@/types';
 
 export interface MobileSwipeableCategoriesProps {
@@ -42,6 +41,16 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
   const [hoveredKeywordId, setHoveredKeywordId] = useState<string | null>(null);
   const [hoveredExhibitionCategoryId, setHoveredExhibitionCategoryId] = useState<string | null>(null);
 
+  // Client-side mount state (for hydration-safe debug labels)
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+
+  // Debug mode (development only)
+  const isDebugMode = process.env.NODE_ENV === 'development';
+
   // Filter and sort categories (matching CategorySidebar pattern)
   const sortedSentenceCategories = useMemo(
     () => sentenceCategories.filter((cat) => cat.isActive).sort((a, b) => a.displayOrder - b.displayOrder),
@@ -72,6 +81,7 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
     velocityThreshold: 0.3,
   });
 
+
   // Calculate transform based on active view and swipe progress
   // activeViewIndex: 0 = 0%, 1 = -50%
   // swipeProgress: -1 to 1 becomes -25% to 25% offset
@@ -82,16 +92,43 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
   return (
     <div
       style={{
-        position: 'absolute',
-        top: 'var(--space-4)', // 32px (matching CategorySidebar)
-        left: 'var(--category-margin-left)',
-        right: 'var(--category-margin-right)',
-        paddingBottom: 'var(--space-5)',
+        position: 'sticky',
+        top: 0,
+        left: 0,
+        right: 0,
         zIndex: 100,
+        ...(isDebugMode && {
+          backgroundColor: 'rgba(255, 0, 0, 0.1)', // 빨간색 반투명 (디버그)
+          border: '1px dashed red',
+        }),
+        paddingTop: 'var(--space-4)', // 32px (matching CategorySidebar)
+        paddingLeft: 'var(--category-margin-left)',
+        paddingRight: 'var(--category-margin-right)',
+        width: '100%',
+        maxWidth: '100vw',
+        boxSizing: 'border-box',
+        // 모바일에서 sticky 강제
+        WebkitPosition: 'sticky',
+        willChange: 'transform',
       }}
       role="tablist"
       aria-label="Category views"
     >
+      {/* 디버그 라벨 */}
+      {mounted && isDebugMode && (
+        <div style={{
+          position: 'absolute',
+          top: 2,
+          right: 4,
+          fontSize: '9px',
+          color: 'red',
+          fontWeight: 'bold',
+          pointerEvents: 'none',
+          zIndex: 1000,
+        }}>
+          MobileSwipeableCategories (sticky test)
+        </div>
+      )}
       {/* Horizontal slider indicator */}
       <MobileCategorySlider
         activeIndex={activeViewIndex}
@@ -104,6 +141,8 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
         style={{
           overflow: 'hidden',
           touchAction: 'pan-y', // Allow vertical scrolling
+          width: '100%',
+          maxWidth: '100%',
         }}
       >
         {/* Sliding views container */}
@@ -135,7 +174,7 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
                 No categories available
               </div>
             ) : (
-              <ScrollableCategoryList viewportHeightRatio={0.25}>
+              <div>
                 {sortedSentenceCategories.map((category, index) => {
                   const isLast = index === sortedSentenceCategories.length - 1;
                   return (
@@ -156,7 +195,7 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
                     </div>
                   );
                 })}
-              </ScrollableCategoryList>
+              </div>
             )}
           </div>
 
@@ -182,7 +221,7 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
                 No categories available
               </div>
             ) : (
-              <ScrollableCategoryList viewportHeightRatio={0.25}>
+              <div>
                 {sortedExhibitionCategories.map((category, index) => {
                   const isLast = index === sortedExhibitionCategories.length - 1;
                   return (
@@ -203,7 +242,7 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
                     </div>
                   );
                 })}
-              </ScrollableCategoryList>
+              </div>
             )}
           </div>
         </div>

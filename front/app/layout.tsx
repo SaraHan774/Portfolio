@@ -19,6 +19,15 @@ const nanumMyeongjo = Nanum_Myeongjo({
   variable: "--font-nanum-myeongjo",
 });
 
+// Viewport 설정 (모바일 최적화)
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+};
+
 // 기본 메타데이터 (하드코딩)
 export const metadata: Metadata = {
   title: "Portfolio",

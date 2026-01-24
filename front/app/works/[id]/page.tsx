@@ -177,6 +177,15 @@ export default function WorkDetailPage() {
   const [currentImageId, setCurrentImageId] = useState<string | null>(null);
   const [modalWorkId, setModalWorkId] = useState<string | null>(null);
 
+  // Client-side mount state (for hydration-safe debug labels)
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Debug mode (development only)
+  const isDebugMode = process.env.NODE_ENV === 'development';
+
   // Fetch work data
   const { data: work, isLoading } = useWork(workId);
 
@@ -391,8 +400,31 @@ export default function WorkDetailPage() {
         <main
           style={{
             position: 'relative',
+            ...(isDebugMode && {
+              backgroundColor: 'rgba(128, 0, 128, 0.05)', // 보라색 반투명
+              border: '1px dashed purple',
+            }),
+            minHeight: '100vh',
           }}
         >
+          {/* 디버그 라벨 */}
+          {mounted && isDebugMode && (
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              left: 4,
+              fontSize: '9px',
+              color: 'purple',
+              fontWeight: 'bold',
+              pointerEvents: 'none',
+              zIndex: 1003,
+              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+              padding: '2px 4px',
+              width: 'fit-content',
+            }}>
+              WorkDetailPage - main (workId: {workId})
+            </div>
+          )}
           {/* 선택된 작품의 미디어 표시 */}
           <AnimatePresence mode="sync">
             {work && hasMedia(work) && (
