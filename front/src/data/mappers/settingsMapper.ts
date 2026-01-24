@@ -16,6 +16,9 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   browserDescription: '여백의 미를 살린 미니멀한 디지털 갤러리',
   footerText: '나혜빈, hyebinnaa@gmail.com, 82)10-8745-1728',
   faviconUrl: undefined,
+  homeIconUrl: undefined,
+  homeIconHoverUrl: undefined,
+  homeIconSize: 48,
   updatedAt: new Date(),
 };
 
@@ -32,6 +35,9 @@ export const mapFirestoreToSiteSettings = (
     (data.browserDescription as string) || DEFAULT_SITE_SETTINGS.browserDescription,
   footerText: (data.footerText as string) || DEFAULT_SITE_SETTINGS.footerText,
   faviconUrl: data.faviconUrl as string | undefined,
+  homeIconUrl: data.homeIconUrl as string | undefined,
+  homeIconHoverUrl: data.homeIconHoverUrl as string | undefined,
+  homeIconSize: (data.homeIconSize as number) ?? DEFAULT_SITE_SETTINGS.homeIconSize,
   updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
 });
 

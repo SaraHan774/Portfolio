@@ -86,3 +86,70 @@ export const removeFaviconUrl = async (): Promise<void> => {
     updatedAt: serverTimestamp(),
   });
 };
+
+/**
+ * 홈 아이콘 URL 업데이트 (기본 상태)
+ */
+export const updateHomeIconUrl = async (homeIconUrl: string): Promise<void> => {
+  const docRef = doc(db, collections.settings, SETTINGS_DOC_ID);
+  await setDoc(
+    docRef,
+    {
+      homeIconUrl,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+};
+
+/**
+ * 홈 아이콘 URL 업데이트 (호버 상태)
+ */
+export const updateHomeIconHoverUrl = async (homeIconHoverUrl: string): Promise<void> => {
+  const docRef = doc(db, collections.settings, SETTINGS_DOC_ID);
+  await setDoc(
+    docRef,
+    {
+      homeIconHoverUrl,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+};
+
+/**
+ * 홈 아이콘 URL 삭제 (기본 상태)
+ */
+export const removeHomeIconUrl = async (): Promise<void> => {
+  const docRef = doc(db, collections.settings, SETTINGS_DOC_ID);
+  await updateDoc(docRef, {
+    homeIconUrl: deleteField(),
+    updatedAt: serverTimestamp(),
+  });
+};
+
+/**
+ * 홈 아이콘 URL 삭제 (호버 상태)
+ */
+export const removeHomeIconHoverUrl = async (): Promise<void> => {
+  const docRef = doc(db, collections.settings, SETTINGS_DOC_ID);
+  await updateDoc(docRef, {
+    homeIconHoverUrl: deleteField(),
+    updatedAt: serverTimestamp(),
+  });
+};
+
+/**
+ * 홈 아이콘 크기 업데이트
+ */
+export const updateHomeIconSize = async (size: number): Promise<void> => {
+  const docRef = doc(db, collections.settings, SETTINGS_DOC_ID);
+  await setDoc(
+    docRef,
+    {
+      homeIconSize: size,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+};

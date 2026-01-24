@@ -57,6 +57,9 @@ export const TYPOGRAPHY = {
 
 // Z-index layers
 export const Z_INDEX = {
+  HOME_ICON: 200,
+  WORK_LIST: 100,
+  FADING_CONTENT: 1000,
   FLOATING_WINDOW: 1000,
   IMAGE_ZOOM_OVERLAY: 2000,
 } as const;

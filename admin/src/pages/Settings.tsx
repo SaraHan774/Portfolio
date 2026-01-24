@@ -18,12 +18,21 @@ import {
   SettingOutlined,
   GlobalOutlined,
 } from '@ant-design/icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../state';
+import type { SiteSettings } from '../core/types';
 import {
   getSiteSettings,
   updateSiteSettings,
+  uploadHomeIcon,
+  uploadHomeIconHover,
+  deleteHomeIcon,
+  deleteHomeIconHover,
+  updateHomeIconSize,
+  settingsCacheKeys,
 } from '../data/repository';
 import BackupManager from '../components/BackupManager';
+import HomeIconManager from '../components/HomeIconManager';
 import './Settings.css';
 
 const { Title } = Typography;
@@ -32,9 +41,14 @@ const Settings = () => {
   const [profileForm] = Form.useForm();
   const [siteForm] = Form.useForm();
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [siteSettings, setSiteSettings] = useState<Pick<SiteSettings, 'footerText' | 'homeIconUrl' | 'homeIconHoverUrl' | 'homeIconSize'>>({
+    footerText: '',
+    homeIconSize: 48,
+  });
 
   // 사이트 설정 로드
   useEffect(() => {
@@ -44,6 +58,12 @@ const Settings = () => {
         const settings = await getSiteSettings();
         siteForm.setFieldsValue({
           footerText: settings.footerText,
+        });
+        setSiteSettings({
+          footerText: settings.footerText,
+          homeIconUrl: settings.homeIconUrl,
+          homeIconHoverUrl: settings.homeIconHoverUrl,
+          homeIconSize: settings.homeIconSize ?? 48,
         });
       } catch (error) {
         console.error('설정 로드 실패:', error);
@@ -87,6 +107,57 @@ const Settings = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  // 홈 아이콘 업로드 핸들러
+  const handleUploadHomeIcon = async (file: File) => {
+    const url = await uploadHomeIcon(file);
+    setSiteSettings((prev) => ({ ...prev, homeIconUrl: url }));
+    // 캐시된 설정에 새 홈 아이콘 URL 반영
+    queryClient.setQueryData<SiteSettings | undefined>(
+      settingsCacheKeys.site(),
+      (old) => (old ? { ...old, homeIconUrl: url } : old)
+    );
+  };
+
+  const handleUploadHomeIconHover = async (file: File) => {
+    const url = await uploadHomeIconHover(file);
+    setSiteSettings((prev) => ({ ...prev, homeIconHoverUrl: url }));
+    // 캐시된 설정에 새 호버 홈 아이콘 URL 반영
+    queryClient.setQueryData<SiteSettings | undefined>(
+      settingsCacheKeys.site(),
+      (old) => (old ? { ...old, homeIconHoverUrl: url } : old)
+    );
+  };
+
+  const handleDeleteHomeIcon = async () => {
+    await deleteHomeIcon();
+    setSiteSettings((prev) => ({ ...prev, homeIconUrl: undefined }));
+    // 캐시된 설정에서 홈 아이콘 URL 제거
+    queryClient.setQueryData<SiteSettings | undefined>(
+      settingsCacheKeys.site(),
+      (old) => (old ? { ...old, homeIconUrl: undefined } : old)
+    );
+  };
+
+  const handleDeleteHomeIconHover = async () => {
+    await deleteHomeIconHover();
+    setSiteSettings((prev) => ({ ...prev, homeIconHoverUrl: undefined }));
+    // 캐시된 설정에서 호버 홈 아이콘 URL 제거
+    queryClient.setQueryData<SiteSettings | undefined>(
+      settingsCacheKeys.site(),
+      (old) => (old ? { ...old, homeIconHoverUrl: undefined } : old)
+    );
+  };
+
+  const handleUpdateIconSize = async (size: number) => {
+    await updateHomeIconSize(size);
+    setSiteSettings((prev) => ({ ...prev, homeIconSize: size }));
+    // 캐시된 설정에 새 아이콘 크기 반영
+    queryClient.setQueryData<SiteSettings | undefined>(
+      settingsCacheKeys.site(),
+      (old) => (old ? { ...old, homeIconSize: size } : old)
+    );
   };
 
 
@@ -169,6 +240,18 @@ const Settings = () => {
           </Form.Item>
         </Form>
       </Card>
+
+      {/* 홈 아이콘 설정 섹션 */}
+      <HomeIconManager
+        homeIconUrl={siteSettings.homeIconUrl}
+        homeIconHoverUrl={siteSettings.homeIconHoverUrl}
+        homeIconSize={siteSettings.homeIconSize}
+        onUploadHomeIcon={handleUploadHomeIcon}
+        onUploadHomeIconHover={handleUploadHomeIconHover}
+        onDeleteHomeIcon={handleDeleteHomeIcon}
+        onDeleteHomeIconHover={handleDeleteHomeIconHover}
+        onUpdateIconSize={handleUpdateIconSize}
+      />
 
       {/* 데이터 관리 섹션 */}
       <BackupManager />
