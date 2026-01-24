@@ -247,3 +247,101 @@ export const deleteFavicon = async (): Promise<void> => {
     // 파비콘이 없으면 무시
   }
 };
+
+/**
+ * 홈 아이콘 업로드 (기본 상태)
+ */
+export const uploadHomeIcon = async (file: File): Promise<string> => {
+  // 파일 확장자 검증
+  validateFileExtension(file.name);
+
+  // 기존 홈 아이콘 삭제 시도
+  try {
+    await deleteHomeIcon();
+  } catch {
+    // 기존 홈 아이콘이 없으면 무시
+  }
+
+  try {
+    // 파일 확장자 추출
+    const extension = file.name.split('.').pop()?.toLowerCase() || 'png';
+    const homeIconRef = ref(storage, `${storagePaths.homeIcon}/home-icon.${extension}`);
+
+    await uploadBytes(homeIconRef, file);
+    const url = await getDownloadURL(homeIconRef);
+
+    logger.info('홈 아이콘 업로드 성공', { action: 'uploadHomeIcon' });
+    return url;
+  } catch (error) {
+    logger.error('홈 아이콘 업로드 실패', error, { action: 'uploadHomeIcon' });
+    throw new UploadError('홈 아이콘 업로드에 실패했습니다.');
+  }
+};
+
+/**
+ * 홈 아이콘 업로드 (호버 상태)
+ */
+export const uploadHomeIconHover = async (file: File): Promise<string> => {
+  // 파일 확장자 검증
+  validateFileExtension(file.name);
+
+  // 기존 호버 홈 아이콘 삭제 시도
+  try {
+    await deleteHomeIconHover();
+  } catch {
+    // 기존 홈 아이콘이 없으면 무시
+  }
+
+  try {
+    // 파일 확장자 추출
+    const extension = file.name.split('.').pop()?.toLowerCase() || 'png';
+    const homeIconHoverRef = ref(storage, `${storagePaths.homeIcon}/home-icon-hover.${extension}`);
+
+    await uploadBytes(homeIconHoverRef, file);
+    const url = await getDownloadURL(homeIconHoverRef);
+
+    logger.info('홈 아이콘 호버 업로드 성공', { action: 'uploadHomeIconHover' });
+    return url;
+  } catch (error) {
+    logger.error('홈 아이콘 호버 업로드 실패', error, { action: 'uploadHomeIconHover' });
+    throw new UploadError('홈 아이콘 호버 업로드에 실패했습니다.');
+  }
+};
+
+/**
+ * 홈 아이콘 삭제 (기본 상태)
+ */
+export const deleteHomeIcon = async (): Promise<void> => {
+  // 모든 가능한 확장자에 대해 삭제 시도
+  const extensions = ['png', 'jpg', 'jpeg', 'webp', 'gif'];
+
+  for (const ext of extensions) {
+    try {
+      const homeIconRef = ref(storage, `${storagePaths.homeIcon}/home-icon.${ext}`);
+      await deleteObject(homeIconRef);
+      logger.info(`홈 아이콘 삭제 성공 (${ext})`, { action: 'deleteHomeIcon' });
+      return; // 하나라도 성공하면 종료
+    } catch {
+      // 파일이 없으면 다음 확장자 시도
+    }
+  }
+};
+
+/**
+ * 홈 아이콘 삭제 (호버 상태)
+ */
+export const deleteHomeIconHover = async (): Promise<void> => {
+  // 모든 가능한 확장자에 대해 삭제 시도
+  const extensions = ['png', 'jpg', 'jpeg', 'webp', 'gif'];
+
+  for (const ext of extensions) {
+    try {
+      const homeIconHoverRef = ref(storage, `${storagePaths.homeIcon}/home-icon-hover.${ext}`);
+      await deleteObject(homeIconHoverRef);
+      logger.info(`홈 아이콘 호버 삭제 성공 (${ext})`, { action: 'deleteHomeIconHover' });
+      return; // 하나라도 성공하면 종료
+    } catch {
+      // 파일이 없으면 다음 확장자 시도
+    }
+  }
+};
