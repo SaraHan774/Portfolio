@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import { Nanum_Myeongjo } from "next/font/google";
 import "./globals.css";
-import { ErrorBoundary, PortfolioLayout } from '@/presentation';
+import { ErrorBoundary, PortfolioLayoutSimple } from '@/presentation';
 import ImageZoomProvider from '@/presentation/components/layout/ImageZoomProvider';
 import { AnalyticsProvider } from '@/presentation/components/analytics/AnalyticsProvider';
 import {
   CategoriesProvider,
   CategorySelectionProvider,
-  WorkSelectionProvider,
   UIStateProvider,
   QueryProvider,
 } from '@/state';
-import React from "react";
+import React, { Suspense } from "react";
+import { LoadingContainer } from '@/presentation/ui';
 
 const nanumMyeongjo = Nanum_Myeongjo({
   weight: ['400', '700'],
@@ -19,6 +19,15 @@ const nanumMyeongjo = Nanum_Myeongjo({
   display: "swap",
   variable: "--font-nanum-myeongjo",
 });
+
+// Viewport 설정 (모바일 최적화)
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+};
 
 // 기본 메타데이터 (하드코딩)
 export const metadata: Metadata = {
@@ -45,15 +54,15 @@ export default function RootLayout({
             <AnalyticsProvider>
               <CategoriesProvider>
                 <CategorySelectionProvider>
-                  <WorkSelectionProvider>
-                    <UIStateProvider>
-                      <ImageZoomProvider>
-                        <PortfolioLayout>
+                  <UIStateProvider>
+                    <ImageZoomProvider>
+                      <Suspense fallback={<LoadingContainer size={24} />}>
+                        <PortfolioLayoutSimple>
                           {children}
-                        </PortfolioLayout>
-                      </ImageZoomProvider>
-                    </UIStateProvider>
-                  </WorkSelectionProvider>
+                        </PortfolioLayoutSimple>
+                      </Suspense>
+                    </ImageZoomProvider>
+                  </UIStateProvider>
                 </CategorySelectionProvider>
               </CategoriesProvider>
             </AnalyticsProvider>

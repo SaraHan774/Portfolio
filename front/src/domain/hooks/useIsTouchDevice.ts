@@ -9,13 +9,16 @@ import { useState, useEffect } from 'react';
  * @returns true if the device is a touch device, false otherwise
  */
 export function useIsTouchDevice(): boolean {
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(hover: none)').matches;
+    }
+    return false;
+  });
 
   useEffect(() => {
     // Check if the device doesn't support hover (touch devices)
     const mediaQuery = window.matchMedia('(hover: none)');
-
-    setIsTouchDevice(mediaQuery.matches);
 
     // Listen for changes (e.g., when switching between desktop/mobile modes)
     const handleChange = (e: MediaQueryListEvent) => {

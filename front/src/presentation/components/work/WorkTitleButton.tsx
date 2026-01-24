@@ -51,6 +51,7 @@ export default function WorkTitleButton({
 
   // Reset loading state when thumbnail URL changes
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (thumbnailUrl) {
       setImageLoaded(false);
       setShowSkeleton(false);
@@ -67,6 +68,7 @@ export default function WorkTitleButton({
         }
       };
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [thumbnailUrl]);
 
   // Show thumbnail logic:

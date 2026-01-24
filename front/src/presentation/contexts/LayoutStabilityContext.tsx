@@ -3,7 +3,7 @@
 /**
  * Layout Stability Context
  *
- * PortfolioLayout의 contentPaddingTop 안정화 상태를 하위 컴포넌트에 전달
+ * PortfolioLayoutSimple의 contentPaddingTop 안정화 상태를 하위 컴포넌트에 전달
  * Caption과 같이 layout에 의존하는 컴포넌트가 안정화된 후에 위치를 계산할 수 있도록 함
  */
 

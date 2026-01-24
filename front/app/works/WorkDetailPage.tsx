@@ -3,9 +3,6 @@
 /**
  * 작품 상세 페이지
  *
- * PortfolioLayout에서 CategorySidebar와 WorkListScroller를 공유
- * 이 페이지는 작품 이미지와 캡션만 렌더링
- *
  * 주요 기능:
  * - 작품 미디어(이미지/비디오) 표시
  * - 스크롤에 따른 현재 보이는 이미지 추적
@@ -13,7 +10,7 @@
  * - 작품 상세 모달 표시
  */
 
-import { useParams, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -161,10 +158,12 @@ function renderCaption(
   );
 }
 
-export default function WorkDetailPage() {
-  const params = useParams();
+interface WorkDetailPageProps {
+  workId: string;
+}
+
+export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
   const searchParams = useSearchParams();
-  const workId = params.id as string;
 
   // URL에서 전달받은 카테고리 정보
   const urlKeywordId = searchParams.get('keywordId');
@@ -176,6 +175,15 @@ export default function WorkDetailPage() {
   // 상태 관리
   const [currentImageId, setCurrentImageId] = useState<string | null>(null);
   const [modalWorkId, setModalWorkId] = useState<string | null>(null);
+
+  // Client-side mount state (for hydration-safe debug labels)
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Debug mode (development only)
+  const isDebugMode = process.env.NODE_ENV === 'development';
 
   // Fetch work data
   const { data: work, isLoading } = useWork(workId);
@@ -216,8 +224,6 @@ export default function WorkDetailPage() {
    *
    * 1. URL 파라미터로 카테고리가 전달되면 해당 카테고리를 global state에 설정
    * 2. URL 파라미터가 없으면 작품의 첫 번째 카테고리를 사용
-   *
-   * 이 로직은 직접 URL로 접근 시 PortfolioLayout이 올바르게 초기화되도록 보장합니다.
    */
   useEffect(() => {
     if (!work) return;
@@ -390,9 +396,46 @@ export default function WorkDetailPage() {
       ) : (
         <main
           style={{
-            position: 'relative',
+            position: 'relative', // timeline을 위한 기준점
+            ...(isDebugMode && {
+              backgroundColor: 'rgba(128, 0, 128, 0.05)', // 보라색 반투명
+              border: '1px dashed purple',
+            }),
+            minHeight: '100vh',
           }}
         >
+          {/* 디버그 라벨 */}
+          {mounted && isDebugMode && (
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              left: 4,
+              fontSize: '9px',
+              color: 'purple',
+              fontWeight: 'bold',
+              pointerEvents: 'none',
+              zIndex: 1003,
+              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+              padding: '2px 4px',
+              width: 'fit-content',
+            }}>
+              WorkDetailPage - main (workId: {workId})
+            </div>
+          )}
+
+          {/* 타임라인 UI - viewport 기준 fixed */}
+          {sortedMedia.length > 1 && (
+            <div className="media-timeline-wrapper">
+              <MediaTimeline
+                mediaItems={sortedMedia}
+                currentMediaId={currentImageId}
+                positionStyle={{
+                  left: 'var(--category-margin-left)',
+                }}
+              />
+            </div>
+          )}
+
           {/* 선택된 작품의 미디어 표시 */}
           <AnimatePresence mode="sync">
             {work && hasMedia(work) && (
@@ -404,7 +447,7 @@ export default function WorkDetailPage() {
                 transition={{ duration: 0.15, ease: 'easeOut' }}
               >
                 {/* 컨텐츠 영역: 미디어 + 캡션 */}
-                {/* 좌측에 이미지 표시 (PortfolioLayout이 paddingTop 제공) */}
+                {/* 좌측에 이미지 표시 */}
                 <div
                   style={{
                     display: 'flex',
@@ -423,21 +466,6 @@ export default function WorkDetailPage() {
                     }}
                   >
                     <div ref={imageScrollContainerRef} style={{ position: 'relative' }}>
-                      {/* 타임라인 UI */}
-                      {sortedMedia.length > 1 && (
-                        <div className="media-timeline-wrapper">
-                          <MediaTimeline
-                            mediaItems={sortedMedia}
-                            currentMediaId={currentImageId}
-                            positionStyle={{
-                              position: 'fixed',
-                              left: 'var(--category-margin-left)',
-                              top: 0,
-                            }}
-                          />
-                        </div>
-                      )}
-
                       {sortedMedia.map((item, index) => {
                         const isLast = index === sortedMedia.length - 1;
                         const isFirst = index === 0;

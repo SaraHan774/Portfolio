@@ -22,3 +22,7 @@ export * from './useScrollLock';
 export * from './useOptimizedResize';
 export * from './useIsTouchDevice';
 export * from './useImageZoom';
+
+// Mobile hooks
+export * from './useMobileDetection';
+export * from './useSwipeGesture';
