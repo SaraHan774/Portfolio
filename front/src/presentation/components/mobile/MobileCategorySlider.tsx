@@ -3,6 +3,7 @@ import React from 'react';
 export interface MobileCategorySliderProps {
   activeIndex: 0 | 1;
   progress?: number; // For smooth animation during swipe (-1 to 1)
+  onToggle?: () => void; // Click handler to toggle between views
 }
 
 /**
@@ -14,6 +15,7 @@ export interface MobileCategorySliderProps {
 export const MobileCategorySlider: React.FC<MobileCategorySliderProps> = ({
   activeIndex,
   progress = 0,
+  onToggle,
 }) => {
   // Calculate dot position
   // Base position from activeIndex (0% or 100%)
@@ -49,12 +51,14 @@ export const MobileCategorySlider: React.FC<MobileCategorySliderProps> = ({
         MobileCategorySlider (pos: {dotPosition.toFixed(0)}%)
       </div>
       <div
+        onClick={onToggle}
         style={{
           position: 'relative',
           width: '30%', // 화면의 약 30% 차지
           height: '20px',
           display: 'flex',
           alignItems: 'center',
+          cursor: onToggle ? 'pointer' : 'default',
         }}
       >
         {/* Solid line track (horizontal) */}

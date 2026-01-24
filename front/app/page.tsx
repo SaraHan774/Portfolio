@@ -1,43 +1,33 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { LoadingContainer } from '@/presentation/ui';
 import { useCategories } from '@/state';
+import WorkDetailPage from './works/WorkDetailPage';
 
 /**
- * 홈페이지
- * PortfolioLayout은 app/layout.tsx에서 공유됨
+ * 홈페이지 (Single Page Application)
+ *
+ * URL 구조:
+ * - 카테고리만: /?keywordId=xxx 또는 /?exhibitionId=xxx
+ * - 작품 상세: /?keywordId=xxx&workId=123
+ *
+ * workId가 있으면 WorkDetailPage를 조건부 렌더링
  */
 export default function HomePage() {
   const { isLoading } = useCategories();
+  const searchParams = useSearchParams();
+  const workId = searchParams.get('workId');
 
   if (isLoading) {
     return <LoadingContainer size={24} />;
   }
 
-  return (
-    // 중앙 컨텐츠 영역 - 홈페이지에서는 비어있음
-    <main style={{
-      backgroundColor: 'rgba(255, 255, 0, 0.05)', // 노란색 반투명
-      border: '1px dashed yellow',
-      minHeight: '50vh',
-      position: 'relative',
-    }}>
-      {/* 디버그 라벨 */}
-      <div style={{
-        position: 'sticky',
-        top: 0,
-        left: 4,
-        fontSize: '9px',
-        color: '#B8860B',
-        fontWeight: 'bold',
-        pointerEvents: 'none',
-        zIndex: 1003,
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-        padding: '2px 4px',
-        width: 'fit-content',
-      }}>
-        HomePage - main (empty)
-      </div>
-    </main>
-  );
+  // workId가 있으면 작품 상세 페이지 표시
+  if (workId) {
+    return <WorkDetailPage workId={workId} />;
+  }
+
+  // workId가 없으면 빈 홈페이지
+  return null;
 }
