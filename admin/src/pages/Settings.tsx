@@ -18,6 +18,7 @@ import {
   SettingOutlined,
   GlobalOutlined,
 } from '@ant-design/icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../state';
 import type { SiteSettings } from '../core/types';
 import {
@@ -27,6 +28,7 @@ import {
   uploadHomeIconHover,
   deleteHomeIcon,
   deleteHomeIconHover,
+  settingsCacheKeys,
 } from '../data/repository';
 import BackupManager from '../components/BackupManager';
 import HomeIconManager from '../components/HomeIconManager';
@@ -38,6 +40,7 @@ const Settings = () => {
   const [profileForm] = Form.useForm();
   const [siteForm] = Form.useForm();
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -107,21 +110,41 @@ const Settings = () => {
   const handleUploadHomeIcon = async (file: File) => {
     const url = await uploadHomeIcon(file);
     setSiteSettings((prev) => ({ ...prev, homeIconUrl: url }));
+    // 캐시된 설정에 새 홈 아이콘 URL 반영
+    queryClient.setQueryData<SiteSettings | undefined>(
+      settingsCacheKeys.site(),
+      (old) => (old ? { ...old, homeIconUrl: url } : old)
+    );
   };
 
   const handleUploadHomeIconHover = async (file: File) => {
     const url = await uploadHomeIconHover(file);
     setSiteSettings((prev) => ({ ...prev, homeIconHoverUrl: url }));
+    // 캐시된 설정에 새 호버 홈 아이콘 URL 반영
+    queryClient.setQueryData<SiteSettings | undefined>(
+      settingsCacheKeys.site(),
+      (old) => (old ? { ...old, homeIconHoverUrl: url } : old)
+    );
   };
 
   const handleDeleteHomeIcon = async () => {
     await deleteHomeIcon();
     setSiteSettings((prev) => ({ ...prev, homeIconUrl: undefined }));
+    // 캐시된 설정에서 홈 아이콘 URL 제거
+    queryClient.setQueryData<SiteSettings | undefined>(
+      settingsCacheKeys.site(),
+      (old) => (old ? { ...old, homeIconUrl: undefined } : old)
+    );
   };
 
   const handleDeleteHomeIconHover = async () => {
     await deleteHomeIconHover();
     setSiteSettings((prev) => ({ ...prev, homeIconHoverUrl: undefined }));
+    // 캐시된 설정에서 호버 홈 아이콘 URL 제거
+    queryClient.setQueryData<SiteSettings | undefined>(
+      settingsCacheKeys.site(),
+      (old) => (old ? { ...old, homeIconHoverUrl: undefined } : old)
+    );
   };
 
 

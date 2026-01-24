@@ -47,7 +47,10 @@ const HomeIconManager = ({
   const validateImageSize = async (file: File): Promise<boolean> => {
     return new Promise((resolve) => {
       const img = new window.Image();
+      const objectUrl = URL.createObjectURL(file);
+
       img.onload = () => {
+        URL.revokeObjectURL(objectUrl); // Clean up
         const width = img.width;
         const height = img.height;
 
@@ -62,13 +65,14 @@ const HomeIconManager = ({
         }
       };
       img.onerror = () => {
+        URL.revokeObjectURL(objectUrl); // Clean up
         modal.error({
           title: '이미지 로드 실패',
           content: '이미지 파일을 읽을 수 없습니다.',
         });
         resolve(false);
       };
-      img.src = URL.createObjectURL(file);
+      img.src = objectUrl;
     });
   };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
@@ -15,7 +15,7 @@ interface HomeIconProps {
  * - 호버 시 다른 이미지 표시
  * - 클릭 시 홈으로 이동
  */
-export default function HomeIcon({ defaultIconUrl, hoverIconUrl }: HomeIconProps) {
+const HomeIcon = memo(function HomeIcon({ defaultIconUrl, hoverIconUrl }: HomeIconProps) {
   const router = useRouter();
   const [isHovered, setIsHovered] = useState(false);
 
@@ -42,4 +42,6 @@ export default function HomeIcon({ defaultIconUrl, hoverIconUrl }: HomeIconProps
       </div>
     </button>
   );
-}
+});
+
+export default HomeIcon;
