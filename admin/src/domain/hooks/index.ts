@@ -70,3 +70,10 @@ export {
   useReadBackupFile,
   useRestoreBackup,
 } from './useBackup';
+
+// Analytics Hooks
+export {
+  useDailyVisitors,
+  usePageStats,
+  useRealtimeUsers,
+} from './useAnalytics';

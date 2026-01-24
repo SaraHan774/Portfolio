@@ -4,3 +4,4 @@ export * from './client';
 export * from './worksApi';
 export * from './categoriesApi';
 export * from './settingsApi';
+export * from './analytics';
