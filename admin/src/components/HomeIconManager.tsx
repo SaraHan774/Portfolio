@@ -1,5 +1,5 @@
 // 홈 아이콘 설정 컴포넌트
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   Button,
@@ -49,6 +49,12 @@ const HomeIconManager = ({
   const [uploadingIcon, setUploadingIcon] = useState(false);
   const [uploadingHover, setUploadingHover] = useState(false);
   const [iconSize, setIconSize] = useState(homeIconSize);
+  const [isPreviewHovered, setIsPreviewHovered] = useState(false);
+
+  // homeIconSize prop 변경 시 동기화
+  useEffect(() => {
+    setIconSize(homeIconSize);
+  }, [homeIconSize]);
 
   // 이미지 크기 검증
   const validateImageSize = async (file: File): Promise<boolean> => {
@@ -265,6 +271,56 @@ const HomeIconManager = ({
             </Col>
           </Row>
         </div>
+
+        {/* 프리뷰 */}
+        {homeIconUrl && (
+          <div style={{ marginBottom: 24 }}>
+            <Title level={5}>미리보기</Title>
+            <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+              {homeIconHoverUrl
+                ? '프론트 페이지에서 표시될 모습입니다. 마우스를 올려보세요.'
+                : '프론트 페이지에서 표시될 모습입니다.'}
+            </Text>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                padding: '40px',
+                background: '#f5f5f5',
+                borderRadius: '8px',
+                border: '1px solid #d9d9d9',
+                minHeight: '200px',
+              }}
+            >
+              <div
+                onMouseEnter={() => setIsPreviewHovered(true)}
+                onMouseLeave={() => setIsPreviewHovered(false)}
+                style={{
+                  cursor: homeIconHoverUrl ? 'pointer' : 'default',
+                  transition: 'opacity 0.2s',
+                  opacity: isPreviewHovered ? 0.9 : 1,
+                }}
+              >
+                <Image
+                  src={isPreviewHovered && homeIconHoverUrl ? homeIconHoverUrl : homeIconUrl}
+                  alt="홈 아이콘 프리뷰"
+                  width={iconSize}
+                  height={iconSize}
+                  style={{
+                    objectFit: 'contain',
+                  }}
+                  preview={false}
+                />
+              </div>
+            </div>
+            {homeIconHoverUrl && (
+              <Text type="secondary" style={{ display: 'block', marginTop: 8, textAlign: 'center', fontSize: '12px' }}>
+                💡 마우스를 올리면 호버 아이콘이 표시됩니다
+              </Text>
+            )}
+          </div>
+        )}
 
         <Row gutter={24}>
           {/* 기본 홈 아이콘 */}
