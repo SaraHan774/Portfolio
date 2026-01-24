@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import { Nanum_Myeongjo } from "next/font/google";
 import "./globals.css";
-import { ErrorBoundary, PortfolioLayout } from '@/presentation';
+import { ErrorBoundary, PortfolioLayoutSimple } from '@/presentation';
 import ImageZoomProvider from '@/presentation/components/layout/ImageZoomProvider';
 import {
   CategoriesProvider,
   CategorySelectionProvider,
-  WorkSelectionProvider,
   UIStateProvider,
   QueryProvider
 } from '@/state';
@@ -52,15 +51,13 @@ export default function RootLayout({
           <QueryProvider>
             <CategoriesProvider>
               <CategorySelectionProvider>
-                <WorkSelectionProvider>
-                  <UIStateProvider>
-                    <ImageZoomProvider>
-                      <PortfolioLayout>
-                        {children}
-                      </PortfolioLayout>
-                    </ImageZoomProvider>
-                  </UIStateProvider>
-                </WorkSelectionProvider>
+                <UIStateProvider>
+                  <ImageZoomProvider>
+                    <PortfolioLayoutSimple>
+                      {children}
+                    </PortfolioLayoutSimple>
+                  </ImageZoomProvider>
+                </UIStateProvider>
               </CategorySelectionProvider>
             </CategoriesProvider>
           </QueryProvider>

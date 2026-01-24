@@ -81,12 +81,18 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
     velocityThreshold: 0.3,
   });
 
+  // Toggle handler for slider click
+  const handleSliderToggle = () => {
+    const newIndex = activeViewIndex === 0 ? 1 : 0;
+    handleViewChange(newIndex as 0 | 1);
+  };
+
 
   // Calculate transform based on active view and swipe progress
-  // activeViewIndex: 0 = 0%, 1 = -50%
-  // swipeProgress: -1 to 1 becomes -25% to 25% offset
-  const baseTransform = -activeViewIndex * 50;
-  const progressOffset = swipeProgress * 25;
+  // activeViewIndex: 0 = 0%, 1 = -100% (each view is 100vw)
+  // swipeProgress: -1 to 1 becomes -50% to 50% offset
+  const baseTransform = -activeViewIndex * 100;
+  const progressOffset = swipeProgress * 50;
   const totalTransform = baseTransform + progressOffset;
 
   return (
@@ -94,22 +100,17 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
       style={{
         position: 'sticky',
         top: 0,
-        left: 0,
-        right: 0,
         zIndex: 100,
         ...(isDebugMode && {
           backgroundColor: 'rgba(255, 0, 0, 0.1)', // 빨간색 반투명 (디버그)
           border: '1px dashed red',
         }),
         paddingTop: 'var(--space-4)', // 32px (matching CategorySidebar)
-        paddingLeft: 'var(--category-margin-left)',
-        paddingRight: 'var(--category-margin-right)',
         width: '100%',
         maxWidth: '100vw',
         boxSizing: 'border-box',
-        // 모바일에서 sticky 강제
-        WebkitPosition: 'sticky',
-        willChange: 'transform',
+        overflow: 'hidden', // Hide overflowing content
+        backgroundColor: 'var(--color-white)', // 배경색 추가 (스크롤 시 콘텐츠 가림)
       }}
       role="tablist"
       aria-label="Category views"
@@ -133,13 +134,16 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
       <MobileCategorySlider
         activeIndex={activeViewIndex}
         progress={swipeProgress}
+        onToggle={handleSliderToggle}
       />
 
       {/* Swipeable container */}
       <div
         {...handlers}
         style={{
-          overflow: 'hidden',
+          position: 'relative', // Establish containing block
+          overflow: 'hidden', // Hide content outside bounds
+          overflowX: 'clip', // Force clip horizontal overflow
           touchAction: 'pan-y', // Allow vertical scrolling
           width: '100%',
           maxWidth: '100%',
@@ -149,7 +153,7 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
         <div
           style={{
             display: 'flex',
-            width: '200%', // Two views side by side
+            width: '200vw', // Two full-width views side by side
             transform: `translateX(${totalTransform}%)`,
             transition: isSwiping
               ? 'none' // No transition during swipe
@@ -158,11 +162,20 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
         >
           {/* View 0: Sentence Categories */}
           <div
-            style={{ width: '50%', flexShrink: 0 }}
+            style={{
+              width: '100vw',
+              flexShrink: 0,
+            }}
             role="tabpanel"
             id="sentence-panel"
             aria-hidden={activeViewIndex !== 0}
           >
+            <div
+              style={{
+                paddingLeft: 'var(--category-margin-left)',
+                paddingRight: 'var(--category-margin-right)',
+              }}
+            >
             {sortedSentenceCategories.length === 0 ? (
               <div
                 style={{
@@ -197,19 +210,26 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
                 })}
               </div>
             )}
+            </div>
           </div>
 
           {/* View 1: Exhibition Categories */}
           <div
             style={{
-              width: '50%',
+              width: '100vw',
               flexShrink: 0,
-              textAlign: 'right',
             }}
             role="tabpanel"
             id="exhibition-panel"
             aria-hidden={activeViewIndex !== 1}
           >
+            <div
+              style={{
+                paddingLeft: 'var(--category-margin-left)',
+                paddingRight: 'var(--category-margin-right)',
+                textAlign: 'right',
+              }}
+            >
             {sortedExhibitionCategories.length === 0 ? (
               <div
                 style={{
@@ -244,6 +264,7 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
                 })}
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>
