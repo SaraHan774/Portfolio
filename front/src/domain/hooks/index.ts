@@ -19,3 +19,5 @@ export * from './useClickAnimationTracking';
 export * from './useCaptionHoverEvents';
 export * from './useScrollLock';
 export * from './useOptimizedResize';
+export * from './useIsTouchDevice';
+export * from './useImageZoom';

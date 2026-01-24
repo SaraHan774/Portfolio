@@ -25,6 +25,7 @@ import {
   CaptionWithBoundary,
   MediaTimeline,
   AnimatedCharacterText,
+  ZoomableImage,
   presets,
 } from '@/presentation';
 import { getMediaItems, hasMedia } from '@/core/utils';
@@ -471,17 +472,26 @@ export default function WorkDetailPage() {
                               scrollMarginTop: '280px',
                             }}
                           >
-                            <FadeInImage
-                              src={item.data.url}
-                              alt={work.title}
-                              width={item.data.width}
-                              height={item.data.height}
-                              priority={isFirst}
-                              style={{
-                                width: '100%',
-                                height: 'auto',
+                            <ZoomableImage
+                              imageData={{
+                                src: item.data.url,
+                                alt: work.title,
+                                width: item.data.width,
+                                height: item.data.height,
                               }}
-                            />
+                            >
+                              <FadeInImage
+                                src={item.data.url}
+                                alt={work.title}
+                                width={item.data.width}
+                                height={item.data.height}
+                                priority={isFirst}
+                                style={{
+                                  width: '100%',
+                                  height: 'auto',
+                                }}
+                              />
+                            </ZoomableImage>
                           </div>
                         );
                       })}
