@@ -10,7 +10,8 @@ import {
   UIStateProvider,
   QueryProvider,
 } from '@/state';
-import React from "react";
+import React, { Suspense } from "react";
+import { LoadingContainer } from '@/presentation/ui';
 
 const nanumMyeongjo = Nanum_Myeongjo({
   weight: ['400', '700'],
@@ -55,9 +56,11 @@ export default function RootLayout({
                 <CategorySelectionProvider>
                   <UIStateProvider>
                     <ImageZoomProvider>
-                      <PortfolioLayoutSimple>
-                        {children}
-                      </PortfolioLayoutSimple>
+                      <Suspense fallback={<LoadingContainer size={24} />}>
+                        <PortfolioLayoutSimple>
+                          {children}
+                        </PortfolioLayoutSimple>
+                      </Suspense>
                     </ImageZoomProvider>
                   </UIStateProvider>
                 </CategorySelectionProvider>

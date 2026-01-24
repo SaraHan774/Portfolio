@@ -1,9 +1,13 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { LoadingContainer } from '@/presentation/ui';
 import { useCategories } from '@/state';
 import WorkDetailPage from './works/WorkDetailPage';
+
+// Disable static generation for this page (uses useSearchParams)
+export const dynamic = 'force-dynamic';
 
 /**
  * 홈페이지 (Single Page Application)
@@ -14,7 +18,7 @@ import WorkDetailPage from './works/WorkDetailPage';
  *
  * workId가 있으면 WorkDetailPage를 조건부 렌더링
  */
-export default function HomePage() {
+function HomePageContent() {
   const { isLoading } = useCategories();
   const searchParams = useSearchParams();
   const workId = searchParams.get('workId');
@@ -30,4 +34,12 @@ export default function HomePage() {
 
   // workId가 없으면 빈 홈페이지
   return null;
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<LoadingContainer size={24} />}>
+      <HomePageContent />
+    </Suspense>
+  );
 }
