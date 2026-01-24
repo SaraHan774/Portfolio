@@ -11,7 +11,6 @@ import {
   App,
   Row,
   Col,
-  Slider,
   InputNumber,
 } from 'antd';
 import {
@@ -19,6 +18,7 @@ import {
   DeleteOutlined,
   HomeOutlined,
   InfoCircleOutlined,
+  SaveOutlined,
 } from '@ant-design/icons';
 import { getErrorDisplayInfo } from '../core/utils/errorMessages';
 
@@ -50,6 +50,7 @@ const HomeIconManager = ({
   const [uploadingHover, setUploadingHover] = useState(false);
   const [iconSize, setIconSize] = useState(homeIconSize);
   const [isPreviewHovered, setIsPreviewHovered] = useState(false);
+  const [isSavingSize, setIsSavingSize] = useState(false);
 
   // homeIconSize prop 변경 시 동기화
   useEffect(() => {
@@ -191,18 +192,21 @@ const HomeIconManager = ({
     }
   };
 
-  // 아이콘 크기 변경
-  const handleSizeChange = async (value: number | null) => {
+  // 아이콘 크기 입력 변경 (로컬 state만 업데이트)
+  const handleSizeInputChange = (value: number | null) => {
     if (value === null) return;
-
     const clampedValue = Math.min(Math.max(value, 1), 300);
     setIconSize(clampedValue);
+  };
 
+  // 아이콘 크기 저장 (API 호출)
+  const handleSaveSizeChange = async () => {
     try {
-      await onUpdateIconSize(clampedValue);
-      message.success(`아이콘 크기가 ${clampedValue}px로 변경되었습니다.`);
+      setIsSavingSize(true);
+      await onUpdateIconSize(iconSize);
+      message.success(`아이콘 크기가 ${iconSize}px로 저장되었습니다.`);
     } catch (error) {
-      console.error('아이콘 크기 변경 실패:', error);
+      console.error('아이콘 크기 저장 실패:', error);
       const errorInfo = getErrorDisplayInfo(error);
       modal.error({
         title: errorInfo.title,
@@ -213,6 +217,8 @@ const HomeIconManager = ({
           </div>
         ),
       });
+    } finally {
+      setIsSavingSize(false);
     }
   };
 
@@ -240,36 +246,33 @@ const HomeIconManager = ({
         <div style={{ marginBottom: 24 }}>
           <Title level={5}>아이콘 표시 크기</Title>
           <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
-            프론트 페이지에서 표시될 아이콘의 크기를 설정합니다. (현재: {iconSize}px)
+            프론트 페이지에서 표시될 아이콘의 크기를 설정합니다. (1~300px)
           </Text>
-          <Row gutter={16} align="middle">
-            <Col flex="auto">
-              <Slider
-                min={1}
-                max={300}
-                value={iconSize}
-                onChange={setIconSize}
-                onAfterChange={handleSizeChange}
-                marks={{
-                  1: '1px',
-                  48: '48px',
-                  100: '100px',
-                  200: '200px',
-                  300: '300px',
-                }}
-              />
-            </Col>
-            <Col>
-              <InputNumber
-                min={1}
-                max={300}
-                value={iconSize}
-                onChange={handleSizeChange}
-                addonAfter="px"
-                style={{ width: 100 }}
-              />
-            </Col>
-          </Row>
+          <Space>
+            <InputNumber
+              min={1}
+              max={300}
+              value={iconSize}
+              onChange={handleSizeInputChange}
+              addonAfter="px"
+              style={{ width: 120 }}
+              placeholder="크기 입력"
+            />
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              onClick={handleSaveSizeChange}
+              loading={isSavingSize}
+              disabled={iconSize === homeIconSize}
+            >
+              저장
+            </Button>
+            {iconSize !== homeIconSize && (
+              <Text type="warning" style={{ fontSize: '12px' }}>
+                * 변경사항이 저장되지 않았습니다
+              </Text>
+            )}
+          </Space>
         </div>
 
         {/* 프리뷰 */}
