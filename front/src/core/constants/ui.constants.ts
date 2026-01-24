@@ -54,3 +54,11 @@ export const TYPOGRAPHY = {
   WORK_TITLE_FONT_SIZE: '12px',
   CATEGORY_FONT_SIZE: '14px',
 } as const;
+
+// Z-index layers
+export const Z_INDEX = {
+  HOME_ICON: 200,
+  WORK_LIST: 100,
+  FADING_CONTENT: 1000,
+  FLOATING_WINDOW: 50,
+} as const;

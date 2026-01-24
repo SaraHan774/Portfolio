@@ -113,3 +113,11 @@ export const hasRequiredKeys = <T extends object>(
 ): boolean => {
   return requiredKeys.every((key) => isRequired(obj[key]));
 };
+
+/**
+ * 홈 아이콘 크기 유효성 검사
+ * 1~300px 범위 내의 정수인지 확인
+ */
+export const isValidHomeIconSize = (size: number): boolean => {
+  return isInteger(size) && isInRange(size, 1, 300);
+};

@@ -21,6 +21,7 @@ import {
   SaveOutlined,
 } from '@ant-design/icons';
 import { getErrorDisplayInfo } from '../core/utils/errorMessages';
+import { isValidHomeIconSize } from '../core/utils/validation';
 
 const { Text, Title } = Typography;
 
@@ -201,6 +202,15 @@ const HomeIconManager = ({
 
   // 아이콘 크기 저장 (API 호출)
   const handleSaveSizeChange = async () => {
+    // 유효성 검사
+    if (!isValidHomeIconSize(iconSize)) {
+      modal.error({
+        title: '유효하지 않은 크기',
+        content: '아이콘 크기는 1~300px 사이의 정수여야 합니다.',
+      });
+      return;
+    }
+
     try {
       setIsSavingSize(true);
       await onUpdateIconSize(iconSize);
