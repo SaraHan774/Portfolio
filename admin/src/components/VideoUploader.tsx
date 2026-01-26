@@ -51,7 +51,7 @@ const VideoUploader = ({ value = [], onChange, maxCount = 10 }: VideoUploaderPro
   const handleAddVideo = () => {
     const videoId = extractYouTubeVideoId(youtubeUrl);
     if (!videoId) {
-      message.error('유효한 YouTube HTTPS URL을 입력해주세요. (예: https://www.youtube.com/watch?v=xxx)');
+      message.error('유효한 YouTube HTTPS URL을 입력해주세요. (일반/Shorts 영상 모두 지원)');
       return;
     }
 
@@ -322,7 +322,7 @@ const VideoUploader = ({ value = [], onChange, maxCount = 10 }: VideoUploaderPro
           <Form.Item
             label="YouTube URL"
             required
-            help="예: https://www.youtube.com/watch?v=xxx 또는 https://youtu.be/xxx"
+            help="예: https://www.youtube.com/watch?v=xxx, https://youtu.be/xxx, https://youtube.com/shorts/xxx"
           >
             <Input
               placeholder="YouTube URL을 입력하세요"

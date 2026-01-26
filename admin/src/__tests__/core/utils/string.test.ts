@@ -104,12 +104,20 @@ describe('string utils', () => {
       expect(extractYouTubeVideoId('https://www.youtube.com/v/dQw4w9WgXcQ')).toBe('dQw4w9WgXcQ');
     });
 
+    it('should extract ID from Shorts URL', () => {
+      expect(extractYouTubeVideoId('https://youtube.com/shorts/YFF4FGmw_6E')).toBe('YFF4FGmw_6E');
+    });
+
+    it('should extract ID from Shorts URL with query parameters', () => {
+      expect(extractYouTubeVideoId('https://youtube.com/shorts/YFF4FGmw_6E?feature=share')).toBe('YFF4FGmw_6E');
+    });
+
     it('should extract ID from URL with query parameters', () => {
       expect(extractYouTubeVideoId('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10s')).toBe('dQw4w9WgXcQ');
     });
 
-    it('should extract ID from URL without protocol', () => {
-      expect(extractYouTubeVideoId('youtube.com/watch?v=dQw4w9WgXcQ')).toBe('dQw4w9WgXcQ');
+    it('should return null for URL without HTTPS protocol', () => {
+      expect(extractYouTubeVideoId('youtube.com/watch?v=dQw4w9WgXcQ')).toBeNull();
     });
 
     it('should extract ID from URL without www', () => {
