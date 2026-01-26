@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSwipeGesture } from '@/domain/hooks/useSwipeGesture';
 import { MobileCategorySlider } from './MobileCategorySlider';
+import ScrollableCategoryList from '../category/ScrollableCategoryList';
 import SentenceCategory from '../category/SentenceCategory';
 import TextCategory from '../category/TextCategory';
 import type { SentenceCategory as SentenceCategoryType, ExhibitionCategory } from '@/types';
@@ -187,7 +188,7 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
                 No categories available
               </div>
             ) : (
-              <div>
+              <ScrollableCategoryList viewportHeightRatio={0.2}>
                 {sortedSentenceCategories.map((category, index) => {
                   const isLast = index === sortedSentenceCategories.length - 1;
                   return (
@@ -208,7 +209,7 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
                     </div>
                   );
                 })}
-              </div>
+              </ScrollableCategoryList>
             )}
             </div>
           </div>
@@ -241,7 +242,7 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
                 No categories available
               </div>
             ) : (
-              <div>
+              <ScrollableCategoryList viewportHeightRatio={0.2}>
                 {sortedExhibitionCategories.map((category, index) => {
                   const isLast = index === sortedExhibitionCategories.length - 1;
                   return (
@@ -262,7 +263,7 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
                     </div>
                   );
                 })}
-              </div>
+              </ScrollableCategoryList>
             )}
             </div>
           </div>
