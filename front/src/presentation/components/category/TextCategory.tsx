@@ -1,6 +1,7 @@
 'use client';
 
 import { memo } from 'react';
+import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 import { useKeywordState, useClickAnimationTracking } from '@/domain';
 import { AnimatedCharacterText, DotIndicator, presets } from '@/presentation/ui';
 import type { ExhibitionCategory } from '@/types';
@@ -25,7 +26,7 @@ const TextCategory = memo(function TextCategory({
   const isHovered = hoveredCategoryId === category.id;
 
   // Debug mode (development only)
-  const isDebugMode = process.env.NODE_ENV === 'development';
+  const isDebugMode = IS_DEBUG_LAYOUT_ENABLED;
 
   // 상태 계산 (useKeywordState는 generic이므로 ExhibitionCategory도 지원)
   const state = useKeywordState({
@@ -97,55 +98,34 @@ const TextCategory = memo(function TextCategory({
         display: 'inline-block',
         whiteSpace: 'normal',
         cursor: isClickable ? 'pointer' : 'default',
-        ...(isDebugMode && {
+        ...(isDebugMode ? {
           backgroundColor: 'rgba(147, 112, 219, 0.1)', // 보라색 반투명
           border: '1px dashed mediumpurple',
           padding: '2px',
-        }),
+        } : {}),
       }}
     >
-      {isDebugMode && (
-        <div
-          style={{
-            position: 'absolute',
-            top: -14,
-            right: 0,
-            fontSize: '8px',
-            color: 'mediumpurple',
-            fontWeight: 'bold',
-            pointerEvents: 'none',
-            zIndex: 1000,
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            padding: '1px 3px',
-            borderRadius: '2px',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          TextCategory ({category.id}, state: {state})
-        </div>
-      )}
-      {/* 점 공간 - 항상 동일한 높이 차지 (들썩임 방지) */}
-      <span
-        style={{
-          display: 'block',
-          textAlign: 'center',
-          fontSize: '14px',
-          lineHeight: 1,
-          height: '14px',
-          marginBottom: '-4px',
-        }}
-      >
+
+      {/* 제목 영역 - 점이 제목 중앙에 위치하도록 컨테이너로 감싸기 */}
+      <span style={{ position: 'relative', display: 'inline-block' }}>
+        {/* 점 - 제목의 가로 중앙에 위치 */}
         <DotIndicator
           isVisible={isSelected}
           justAppeared={justClicked}
-          delay={0.4}
+          delay={0.1} // Works use faster feedback (0.1s vs 0.4s for categories)
           position="custom"
           style={{
+            position: 'absolute',
+            top: '-12px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontSize: '18px',
             color: 'var(--dot-color)',
           }}
         />
+        {renderTitleText(displayTitle)}
       </span>
-      {renderTitleText(displayTitle)}
+
       {renderDescriptionText(displayDescription)}
     </span>
   );

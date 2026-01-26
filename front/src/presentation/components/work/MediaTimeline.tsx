@@ -9,6 +9,7 @@
  */
 
 import { RefObject, useEffect, useState, useRef } from 'react';
+import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 import { logLayout, getViewportInfo, getElementInfo } from '@/core/utils/layoutDebugLogger';
 
 interface MediaItem {
@@ -42,11 +43,13 @@ export default function MediaTimeline({
   const thumbRef = useRef<HTMLDivElement>(null);
 
   // Debug mode (development only)
-  const isDebugMode = process.env.NODE_ENV === 'development';
+  const isDebugMode = IS_DEBUG_LAYOUT_ENABLED;
 
   // 미디어 위치 계산 (이미지 로드 시에만)
   useEffect(() => {
     const isModal = !!scrollContainerRef;
+    // Promise cleanup을 위한 abort 플래그
+    let isActive = true;
 
     logLayout('MediaTimeline', 'mount', {
       ...getViewportInfo(),
@@ -55,6 +58,9 @@ export default function MediaTimeline({
     });
 
     const calculateBounds = () => {
+      // 컴포넌트가 언마운트되었으면 계산하지 않음
+      if (!isActive) return;
+
       const container = scrollContainerRef?.current;
 
       if (container) {
@@ -111,12 +117,10 @@ export default function MediaTimeline({
       }
     };
 
-    const timer = setTimeout(calculateBounds, 100);
-
     const container = scrollContainerRef?.current || document;
     const images = Array.from(container.querySelectorAll('img'));
 
-    // 모든 이미지 로드 완료 대기 후 한 번만 재계산
+    // 모든 이미지 로드 완료 대기 후 한 번만 재계산 (초기 타이머 제거)
     Promise.all(
       images.map(img =>
         img.complete
@@ -127,12 +131,15 @@ export default function MediaTimeline({
             })
       )
     ).then(() => {
-      calculateBounds();
-      logLayout('MediaTimeline', 'all-images-loaded', {
-        ...getViewportInfo(),
-        mode: isModal ? 'modal' : 'page',
-        imageCount: images.length,
-      });
+      // 컴포넌트가 아직 마운트되어 있을 때만 계산
+      if (isActive) {
+        calculateBounds();
+        logLayout('MediaTimeline', 'all-images-loaded', {
+          ...getViewportInfo(),
+          mode: isModal ? 'modal' : 'page',
+          imageCount: images.length,
+        });
+      }
     });
 
     let resizeTimer: NodeJS.Timeout | null = null;
@@ -140,6 +147,9 @@ export default function MediaTimeline({
 
     // Page 모드: window resize 이벤트 감지 (RAF + debounced)
     const handleResize = () => {
+      // 컴포넌트가 언마운트되었으면 처리하지 않음
+      if (!isActive) return;
+
       // Cleanup 이전 타이머/프레임
       if (resizeTimer) {
         clearTimeout(resizeTimer);
@@ -150,13 +160,17 @@ export default function MediaTimeline({
 
       // 200ms debounce 후 RAF로 실행 (category height 측정 완료 대기)
       resizeTimer = setTimeout(() => {
+        if (!isActive) return;
+
         rafId = requestAnimationFrame(() => {
-          calculateBounds();
-          logLayout('MediaTimeline', 'resize-recalculate', {
-            ...getViewportInfo(),
-            mode: 'page',
-            optimized: 'RAF+debounce',
-          });
+          if (isActive) {
+            calculateBounds();
+            logLayout('MediaTimeline', 'resize-recalculate', {
+              ...getViewportInfo(),
+              mode: 'page',
+              optimized: 'RAF+debounce',
+            });
+          }
           rafId = null;
         });
         resizeTimer = null;
@@ -169,7 +183,9 @@ export default function MediaTimeline({
     }
 
     return () => {
-      clearTimeout(timer);
+      // Promise cleanup - 더 이상 계산하지 않도록 플래그 설정
+      isActive = false;
+
       if (resizeTimer) {
         clearTimeout(resizeTimer);
       }
@@ -259,10 +275,10 @@ export default function MediaTimeline({
           height: `${timelineHeight}px`,
           width: '20px',
           pointerEvents: 'none',
-          ...(isDebugMode && {
+          ...(isDebugMode ? {
             backgroundColor: 'rgba(255, 165, 0, 0.1)',
             border: '1px dashed orange',
-          }),
+          } : {}),
         }}
       >
         {/* Debug label */}
@@ -343,10 +359,10 @@ export default function MediaTimeline({
           height: `${timelineHeight}px`,
           width: '20px',
           pointerEvents: 'none',
-          ...(isDebugMode && {
+          ...(isDebugMode ? {
             backgroundColor: 'rgba(0, 255, 255, 0.1)',
             border: '1px dashed cyan',
-          }),
+          } : {}),
         }}
       >
         {/* Debug label */}

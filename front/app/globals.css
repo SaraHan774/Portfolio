@@ -75,7 +75,7 @@
   --timeline-to-image-gap: calc(var(--base-edge-spacing) * var(--spacing-scale));
   --responsive-padding-left: calc(var(--category-margin-left) + var(--timeline-to-image-gap));
 
-  --category-spacing: 14px;                  /* 문장 간 간격 (20px → 16px로 축소) */
+  --category-spacing: 16px;                  /* 문장 간 간격 (20px → 16px로 축소) */
   --category-font-size: 12px;                /* 카테고리 글꼴 사이즈 (15px의 80%) */
 
   /* 중앙 컨텐츠 영역 */
@@ -95,7 +95,7 @@
 
   /* 점(˙) 표시 */
   --dot-size: 4px;
-  --dot-offset-top: -8px;                /* 글자 정중앙 위 */
+  --dot-offset-top: -4px;                /* 글자 정중앙 위 */
   --dot-color: var(--color-black);
 
   /* 카테고리 상태별 색상 */
@@ -136,7 +136,6 @@ body {
   background-color: var(--color-background);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  padding: 20px;
   min-height: 100vh;
   overflow-x: hidden; /* 가로 스크롤 방지 */
   width: 100%;

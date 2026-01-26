@@ -3,6 +3,8 @@ export { ErrorBoundary } from './errors/ErrorBoundary';
 
 // Layout components
 export { default as Footer } from './layout/Footer';
+export { DebugGrid } from './layout/DebugGrid';
+export { ColorPaletteDebugger } from './layout/ColorPaletteDebugger';
 
 // Mobile components
 export { MobileCategorySlider, MobileSwipeableCategories } from './mobile';

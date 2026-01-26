@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, useEffect, useCallback, ReactNode } from 'react';
+import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 
 // 뷰포트 높이 대비 스크롤 가능 영역의 최대 높이 비율 (기본값: 20%)
 const DEFAULT_VIEWPORT_HEIGHT_RATIO = 0.20;
@@ -39,7 +40,7 @@ export default function ScrollableCategoryList({
   const [maxHeight, setMaxHeight] = useState<number | null>(null);
 
   // Debug mode (development only)
-  const isDebugMode = process.env.NODE_ENV === 'development';
+  const isDebugMode = IS_DEBUG_LAYOUT_ENABLED;
   
   // 뷰포트 높이와 컨텐츠 높이를 비교하여 스크롤 모드 결정
   const checkScrollability = useCallback(() => {
@@ -64,20 +65,20 @@ export default function ScrollableCategoryList({
   const updateScrollPosition = useCallback(() => {
     const container = scrollContainerRef.current;
     if (!container || !isScrollable) return;
-    
+
     const { scrollTop, scrollHeight, clientHeight } = container;
     const scrollableDistance = scrollHeight - clientHeight;
-    
+
     // 스크롤 가능 거리가 거의 없으면 스크롤 불필요
-    if (scrollableDistance <= 5) {
+    if (scrollableDistance <= 10) {
       setScrollPosition('top');
       return;
     }
-    
-    // 스크롤 위치 판단 (5px 여유)
-    if (scrollTop <= 5) {
+
+    // 스크롤 위치 판단 - threshold를 10px로 증가 (소수점 픽셀 및 브라우저 차이 대응)
+    if (scrollTop <= 10) {
       setScrollPosition('top');
-    } else if (scrollTop >= scrollableDistance - 5) {
+    } else if (scrollTop >= scrollableDistance - 10) {
       setScrollPosition('bottom');
     } else {
       setScrollPosition('middle');
@@ -172,30 +173,13 @@ export default function ScrollableCategoryList({
       <div
         ref={contentRef}
         style={{
-          ...(isDebugMode && {
+          ...(isDebugMode ? {
             backgroundColor: 'rgba(173, 216, 230, 0.15)', // 하늘색 반투명
             border: '1px dashed lightblue',
             position: 'relative',
-          }),
+          } : {}),
         }}
-      >
-        {isDebugMode && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 2,
-              left: 4,
-              fontSize: '9px',
-              color: 'steelblue',
-              fontWeight: 'bold',
-              pointerEvents: 'none',
-              zIndex: 1000,
-            }}
-          >
-            ScrollableCategoryList (non-scrollable)
-          </div>
-        )}
-        {children}
+      >{children}
       </div>
     );
   }
@@ -214,33 +198,14 @@ export default function ScrollableCategoryList({
         // mask로 fade 효과 적용 - 스크롤 가능함을 시각적으로 표시
         maskImage: getMaskImage(),
         WebkitMaskImage: getMaskImage(),
-        ...(isDebugMode && {
+        ...(isDebugMode ? {
           backgroundColor: 'rgba(135, 206, 250, 0.2)', // 하늘색 반투명 (scrollable)
           border: '2px dashed deepskyblue',
           position: 'relative',
-        }),
+        } : {}),
       }}
       className="scrollable-category-list"
     >
-      {isDebugMode && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 2,
-            left: 4,
-            fontSize: '9px',
-            color: 'deepskyblue',
-            fontWeight: 'bold',
-            pointerEvents: 'none',
-            zIndex: 1000,
-            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-            padding: '2px 4px',
-            borderRadius: '2px',
-          }}
-        >
-          ScrollableCategoryList (scrollable, pos: {scrollPosition}, h: {maxHeight?.toFixed(0)}px)
-        </div>
-      )}
       {/* 상단 패딩 영역 - 카테고리 선택 시 점(˙)이 잘리지 않도록 여유 공간 */}
       <div ref={contentRef} style={{ paddingTop: `${TOP_PADDING_FOR_SELECTION_INDICATOR}px` }}>
         {children}

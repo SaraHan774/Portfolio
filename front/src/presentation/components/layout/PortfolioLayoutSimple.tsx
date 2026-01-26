@@ -2,10 +2,12 @@
 
 import { useState, useCallback, useMemo, ReactNode, useEffect } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 import StaticCategorySidebar from './StaticCategorySidebar';
 import { MobileSwipeableCategories } from '../mobile';
 import WorkListScrollerFlex from '../work/WorkListScrollerFlex';
 import Footer from './Footer';
+import { DebugGrid } from './DebugGrid';
 import { useCategories, useCategorySelection } from '@/state';
 import { useFilteredWorks, useMobileDetection } from '@/domain';
 import { LayoutStabilityProvider } from '@/presentation/contexts/LayoutStabilityContext';
@@ -52,7 +54,7 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
   );
 
   // Debug mode (development only)
-  const isDebugMode = process.env.NODE_ENV === 'development';
+  const isDebugMode = IS_DEBUG_LAYOUT_ENABLED;
 
   // URL에서 초기 카테고리 복원 (홈페이지 새로고침 시)
   useEffect(() => {
@@ -158,7 +160,7 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
           <div
             style={{
               position: 'relative',
-              marginTop: 'var(--space-3)',
+              marginTop: 'var(--space-6)',
               width: '100%',
             }}
           >
@@ -179,10 +181,10 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
           style={{
             marginTop: shouldShowWorkList ? 'var(--space-3)' : '0',
             flex: 1,
-            ...(isDebugMode && {
+            ...(isDebugMode ? {
               backgroundColor: 'rgba(255, 165, 0, 0.05)',
               border: '1px dashed orange',
-            }),
+            } : {}),
           }}
         >
           <LayoutStabilityProvider
@@ -194,6 +196,9 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
         </div>
 
       <Footer />
+
+      {/* 디버그 그리드 오버레이 */}
+      <DebugGrid />
     </div>
   );
 }
