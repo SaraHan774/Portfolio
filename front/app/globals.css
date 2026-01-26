@@ -75,9 +75,8 @@
   --timeline-to-image-gap: calc(var(--base-edge-spacing) * var(--spacing-scale));
   --responsive-padding-left: calc(var(--category-margin-left) + var(--timeline-to-image-gap));
 
-  --category-spacing: 20px;                  /* 10px - 문장 간 간격 (20px의 50%) */
+  --category-spacing: 14px;                  /* 문장 간 간격 (20px → 16px로 축소) */
   --category-font-size: 12px;                /* 카테고리 글꼴 사이즈 (15px의 80%) */
-  --category-line-height: 1.8;
 
   /* 중앙 컨텐츠 영역 */
   --content-gap: var(--space-10);        /* 카테고리와 중앙 간격 증가 (64px -> 80px) */
@@ -277,6 +276,11 @@ img {
     gap: var(--space-4) !important;
   }
 
+  /* 모바일에서 미디어 영역 하단 패딩 축소 */
+  .work-media-wrapper {
+    padding-bottom: var(--space-3) !important; /* 24px - 40px에서 줄임 */
+  }
+
   .work-caption-responsive {
     position: relative !important;  /* fixed에서 relative로 변경 */
     left: auto !important;
@@ -288,7 +292,7 @@ img {
     padding-right: var(--responsive-padding-right) !important;
     box-sizing: border-box !important;
     margin-top: var(--space-6) !important; /* 이미지와의 간격 (48px) */
-    margin-bottom: var(--space-12) !important; /* Footer와의 간격 (96px) */
+    margin-bottom: var(--space-6) !important; /* Footer와의 간격 (48px) - 96px에서 줄임 */
   }
 
   /* 모바일에서 MediaTimeline 숨김 */
@@ -340,6 +344,11 @@ img {
   .page-content-container {
     margin-top: 0 !important;
     /* paddingTop은 inline style에서 설정됨 */
+  }
+
+  /* Desktop에서만 work detail main의 최소 높이 적용 */
+  .work-detail-main {
+    min-height: 100vh;
   }
 }
 

@@ -403,8 +403,8 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
               backgroundColor: 'rgba(128, 0, 128, 0.05)', // 보라색 반투명
               border: '1px dashed purple',
             }),
-            minHeight: '100vh',
           }}
+          className="work-detail-main"
         >
           {/* 디버그 라벨 */}
           {mounted && isDebugMode && (
@@ -460,6 +460,7 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
                 >
                   {/* 미디어 영역 */}
                   <div
+                    className="work-media-wrapper"
                     style={{
                       width: 'var(--media-width)',
                       paddingLeft: 'var(--responsive-padding-left)',

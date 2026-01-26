@@ -24,6 +24,9 @@ const TextCategory = memo(function TextCategory({
 }: TextCategoryProps) {
   const isHovered = hoveredCategoryId === category.id;
 
+  // Debug mode (development only)
+  const isDebugMode = process.env.NODE_ENV === 'development';
+
   // 상태 계산 (useKeywordState는 generic이므로 ExhibitionCategory도 지원)
   const state = useKeywordState({
     keyword: category,
@@ -70,6 +73,7 @@ const TextCategory = memo(function TextCategory({
           fontSize: 'var(--font-size-sm)',
           color: 'var(--color-category-disabled)',
           fontWeight: 400,
+          marginTop: '-6px', // 전시명과의 간격 축소
         }}
       >
         {text}
@@ -93,8 +97,33 @@ const TextCategory = memo(function TextCategory({
         display: 'inline-block',
         whiteSpace: 'normal',
         cursor: isClickable ? 'pointer' : 'default',
+        ...(isDebugMode && {
+          backgroundColor: 'rgba(147, 112, 219, 0.1)', // 보라색 반투명
+          border: '1px dashed mediumpurple',
+          padding: '2px',
+        }),
       }}
     >
+      {isDebugMode && (
+        <div
+          style={{
+            position: 'absolute',
+            top: -14,
+            right: 0,
+            fontSize: '8px',
+            color: 'mediumpurple',
+            fontWeight: 'bold',
+            pointerEvents: 'none',
+            zIndex: 1000,
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            padding: '1px 3px',
+            borderRadius: '2px',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          TextCategory ({category.id}, state: {state})
+        </div>
+      )}
       {/* 점 공간 - 항상 동일한 높이 차지 (들썩임 방지) */}
       <span
         style={{
