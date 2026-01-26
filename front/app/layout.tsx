@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Nanum_Myeongjo } from "next/font/google";
 import "./globals.css";
-import { ErrorBoundary, PortfolioLayoutSimple } from '@/presentation';
+import { ErrorBoundary, PortfolioLayoutSimple, DebugGrid, ColorPaletteDebugger } from '@/presentation';
 import ImageZoomProvider from '@/presentation/components/layout/ImageZoomProvider';
 import { AnalyticsProvider } from '@/presentation/components/analytics/AnalyticsProvider';
 import {
@@ -68,6 +68,8 @@ export default function RootLayout({
             </AnalyticsProvider>
           </QueryProvider>
         </ErrorBoundary>
+        <DebugGrid />
+        <ColorPaletteDebugger />
       </body>
     </html>
   );

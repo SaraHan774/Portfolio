@@ -24,3 +24,10 @@ export const IS_DEBUG_LAYOUT_ENABLED = true;
  * - false: 그리드 숨김
  */
 export const IS_DEBUG_GRID_ENABLED = true;
+
+/**
+ * 색상 팔레트 디버거 표시 여부
+ * - true: 실시간 색상 조절 패널 표시
+ * - false: 패널 숨김
+ */
+export const IS_DEBUG_COLOR_ENABLED = true;
