@@ -30,13 +30,16 @@ export default function ScrollableCategoryList({
 }: ScrollableCategoryListProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  
+
   // 스크롤 위치 상태: 'top' | 'middle' | 'bottom'
   const [scrollPosition, setScrollPosition] = useState<'top' | 'middle' | 'bottom'>('top');
   // 스크롤 모드 활성화 여부
   const [isScrollable, setIsScrollable] = useState(false);
   // 동적으로 계산된 최대 높이
   const [maxHeight, setMaxHeight] = useState<number | null>(null);
+
+  // Debug mode (development only)
+  const isDebugMode = process.env.NODE_ENV === 'development';
   
   // 뷰포트 높이와 컨텐츠 높이를 비교하여 스크롤 모드 결정
   const checkScrollability = useCallback(() => {
@@ -166,7 +169,32 @@ export default function ScrollableCategoryList({
   // 스크롤 가능하지 않으면 컨텐츠만 렌더링 (높이 측정용 div는 유지)
   if (!isScrollable) {
     return (
-      <div ref={contentRef}>
+      <div
+        ref={contentRef}
+        style={{
+          ...(isDebugMode && {
+            backgroundColor: 'rgba(173, 216, 230, 0.15)', // 하늘색 반투명
+            border: '1px dashed lightblue',
+            position: 'relative',
+          }),
+        }}
+      >
+        {isDebugMode && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 2,
+              left: 4,
+              fontSize: '9px',
+              color: 'steelblue',
+              fontWeight: 'bold',
+              pointerEvents: 'none',
+              zIndex: 1000,
+            }}
+          >
+            ScrollableCategoryList (non-scrollable)
+          </div>
+        )}
         {children}
       </div>
     );
@@ -186,9 +214,33 @@ export default function ScrollableCategoryList({
         // mask로 fade 효과 적용 - 스크롤 가능함을 시각적으로 표시
         maskImage: getMaskImage(),
         WebkitMaskImage: getMaskImage(),
+        ...(isDebugMode && {
+          backgroundColor: 'rgba(135, 206, 250, 0.2)', // 하늘색 반투명 (scrollable)
+          border: '2px dashed deepskyblue',
+          position: 'relative',
+        }),
       }}
       className="scrollable-category-list"
     >
+      {isDebugMode && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 2,
+            left: 4,
+            fontSize: '9px',
+            color: 'deepskyblue',
+            fontWeight: 'bold',
+            pointerEvents: 'none',
+            zIndex: 1000,
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            padding: '2px 4px',
+            borderRadius: '2px',
+          }}
+        >
+          ScrollableCategoryList (scrollable, pos: {scrollPosition}, h: {maxHeight?.toFixed(0)}px)
+        </div>
+      )}
       {/* 상단 패딩 영역 - 카테고리 선택 시 점(˙)이 잘리지 않도록 여유 공간 */}
       <div ref={contentRef} style={{ paddingTop: `${TOP_PADDING_FOR_SELECTION_INDICATOR}px` }}>
         {children}
