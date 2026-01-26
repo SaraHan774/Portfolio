@@ -126,7 +126,7 @@ const StaticCategorySidebar = memo(function StaticCategorySidebar({
               <div
                 key={category.id}
                 style={{
-                  marginBottom: isLast ? 0 : 'var(--category-spacing)',
+                  marginBottom: isLast ? 0 : '18px',
                 }}
               >
                 <SentenceCategory
@@ -179,7 +179,7 @@ const StaticCategorySidebar = memo(function StaticCategorySidebar({
               <div
                 key={category.id}
                 style={{
-                  marginBottom: isLast ? 0 : 'var(--category-spacing)',
+                  marginBottom: isLast ? 0 : '14px',
                 }}
               >
                 <TextCategory

@@ -75,7 +75,7 @@
   --timeline-to-image-gap: calc(var(--base-edge-spacing) * var(--spacing-scale));
   --responsive-padding-left: calc(var(--category-margin-left) + var(--timeline-to-image-gap));
 
-  --category-spacing: 14px;                  /* 문장 간 간격 (20px → 16px로 축소) */
+  --category-spacing: 16px;                  /* 문장 간 간격 (20px → 16px로 축소) */
   --category-font-size: 12px;                /* 카테고리 글꼴 사이즈 (15px의 80%) */
 
   /* 중앙 컨텐츠 영역 */
