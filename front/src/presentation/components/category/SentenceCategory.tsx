@@ -31,6 +31,9 @@ const SentenceCategory = memo(function SentenceCategory({
   onKeywordHover,
   selectedWorkIds = [],
 }: SentenceCategoryProps) {
+  // Debug mode (development only)
+  const isDebugMode = process.env.NODE_ENV === 'development';
+
   // Render sentence with keywords as interactive spans
   const renderSentence = () => {
     const { sentence, keywords } = category;
@@ -86,9 +89,34 @@ const SentenceCategory = memo(function SentenceCategory({
         fontSize: 'var(--font-size-sm)',
         lineHeight: 'var(--line-height-relaxed)',
         color: 'var(--color-text-secondary)',
+        ...(isDebugMode && {
+          backgroundColor: 'rgba(255, 215, 0, 0.1)', // 노란색 반투명
+          border: '1px dashed gold',
+          position: 'relative',
+          padding: '4px',
+        }),
       }}
     >
-      {'‘'}{renderSentence()}{'’'}
+      {isDebugMode && (
+        <div
+          style={{
+            position: 'absolute',
+            top: -12,
+            left: 0,
+            fontSize: '8px',
+            color: 'goldenrod',
+            fontWeight: 'bold',
+            pointerEvents: 'none',
+            zIndex: 1000,
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            padding: '1px 3px',
+            borderRadius: '2px',
+          }}
+        >
+          SentenceCategory ({category.id})
+        </div>
+      )}
+      {'\u2018'}{renderSentence()}{'\u2019'}
     </div>
   );
 }, (prevProps, nextProps) => {
@@ -134,6 +162,9 @@ function AnimatedKeyword({
   onSelect: (keywordId: string) => void;
   onHover: (keywordId: string | null) => void;
 }) {
+  // Debug mode (development only)
+  const isDebugMode = process.env.NODE_ENV === 'development';
+
   // 클릭 가능 여부 확인 (state 먼저 계산 필요)
   const state = useKeywordState({
     keyword,
@@ -174,6 +205,10 @@ function AnimatedKeyword({
       style={{
         ...keywordStyle,
         color: 'inherit', // Don't apply color from keywordStyle (controlled in characterStyle)
+        ...(isDebugMode && {
+          outline: '1px dotted orange',
+          position: 'relative',
+        }),
       }}
     >
       <AnimatedCharacterText
