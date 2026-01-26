@@ -202,6 +202,7 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
 
   // Refs
   const imageScrollContainerRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
 
   // 모달이 열릴 때 hover 상태 초기화
   useEffect(() => {
@@ -395,6 +396,7 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
         </main>
       ) : (
         <main
+          ref={mainRef}
           style={{
             position: 'relative', // timeline을 위한 기준점
             ...(isDebugMode && {
@@ -423,12 +425,13 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
             </div>
           )}
 
-          {/* 타임라인 UI - viewport 기준 fixed */}
+          {/* 타임라인 UI - main 내부 기준 */}
           {sortedMedia.length > 1 && (
             <div className="media-timeline-wrapper">
               <MediaTimeline
                 mediaItems={sortedMedia}
                 currentMediaId={currentImageId}
+                containerRef={mainRef}
                 positionStyle={{
                   left: 'var(--category-margin-left)',
                 }}
