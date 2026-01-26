@@ -1,6 +1,7 @@
 'use client';
 
 import {useState, useRef, useEffect} from 'react';
+import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 import {useWorkListScroll} from '@/domain';
 import type {Work} from '@/types';
 import WorkTitleButton from './WorkTitleButton';
@@ -51,7 +52,7 @@ export default function WorkListScroller({
     }, []);
 
     // Debug mode (development only)
-    const isDebugMode = process.env.NODE_ENV === 'development';
+    const isDebugMode = IS_DEBUG_LAYOUT_ENABLED;
 
     // Delayed mouse leave to prevent flickering
     const handleMouseLeave = () => {
@@ -84,10 +85,10 @@ export default function WorkListScroller({
                 justifyContent: direction === 'ltr' ? 'flex-start' : 'flex-end',
                 paddingLeft: fullWidth ? 'var(--category-margin-left)' : (direction === 'ltr' ? 'var(--category-margin-left)' : '0'),
                 paddingRight: fullWidth ? 'var(--category-margin-right)' : (direction === 'rtl' ? 'var(--category-margin-right)' : '0'),
-                ...(isDebugMode && {
+                ...(isDebugMode ? {
                     backgroundColor: 'rgba(0, 0, 255, 0.1)', // 파란색 반투명
                     border: '1px dashed blue',
-                }),
+                } : {}),
                 position: 'relative',
             }}
         >
@@ -141,10 +142,10 @@ export default function WorkListScroller({
                             transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), padding-bottom 0.3s ease',
                             pointerEvents: showLeftArrow ? 'auto' : 'none',
                             zIndex: 20,
-                            ...(isDebugMode && {
+                            ...(isDebugMode ? {
                                 backgroundColor: 'rgba(255, 0, 0, 0.1)',
                                 border: '1px dashed red',
-                            }),
+                            } : {}),
                         }}
                     >
                         <button
@@ -200,9 +201,9 @@ export default function WorkListScroller({
                             zIndex: 10,
                             opacity: showLeftArrow ? 1 : 0,
                             transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                            ...(isDebugMode && {
+                            ...(isDebugMode ? {
                                 border: '1px dashed orange',
-                            }),
+                            } : {}),
                         }}
                     />
                 )}
@@ -247,9 +248,9 @@ export default function WorkListScroller({
                             zIndex: 10,
                             opacity: showRightArrow ? 1 : 0,
                             transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                            ...(isDebugMode && {
+                            ...(isDebugMode ? {
                                 border: '1px dashed purple',
-                            }),
+                            } : {}),
                         }}
                     />
                 )}
@@ -277,10 +278,10 @@ export default function WorkListScroller({
                             transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), padding-bottom 0.3s ease',
                             pointerEvents: showRightArrow ? 'auto' : 'none',
                             zIndex: 20,
-                            ...(isDebugMode && {
+                            ...(isDebugMode ? {
                                 backgroundColor: 'rgba(0, 255, 0, 0.1)',
                                 border: '1px dashed green',
-                            }),
+                            } : {}),
                         }}
                     >
                         <button

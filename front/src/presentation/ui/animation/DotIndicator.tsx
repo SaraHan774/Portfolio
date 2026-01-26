@@ -92,7 +92,7 @@ const DotIndicator = memo(function DotIndicator({
     // Inline keyword positioning (SentenceCategory)
     'top-center': {
       position: 'absolute',
-      top: 'var(--dot-offset-top)', // -8px (centered above text)
+      top: 'var(--dot-offset-top)',
       left: '50%',
       transform: 'translateX(-50%)',
       fontSize: '14px',

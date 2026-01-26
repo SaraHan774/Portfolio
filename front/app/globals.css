@@ -95,7 +95,7 @@
 
   /* 점(˙) 표시 */
   --dot-size: 4px;
-  --dot-offset-top: -8px;                /* 글자 정중앙 위 */
+  --dot-offset-top: -4px;                /* 글자 정중앙 위 */
   --dot-color: var(--color-black);
 
   /* 카테고리 상태별 색상 */
@@ -136,7 +136,6 @@ body {
   background-color: var(--color-background);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  padding: 20px;
   min-height: 100vh;
   overflow-x: hidden; /* 가로 스크롤 방지 */
   width: 100%;

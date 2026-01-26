@@ -1,4 +1,5 @@
 import React from 'react';
+import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 
 export interface MobileCategorySliderProps {
   activeIndex: 0 | 1;
@@ -25,7 +26,7 @@ export const MobileCategorySlider: React.FC<MobileCategorySliderProps> = ({
   const dotPosition = Math.max(0, Math.min(100, basePosition + progressOffset));
 
   // Debug mode (development only)
-  const isDebugMode = process.env.NODE_ENV === 'development';
+  const isDebugMode = IS_DEBUG_LAYOUT_ENABLED;
 
   return (
     <div
@@ -35,10 +36,10 @@ export const MobileCategorySlider: React.FC<MobileCategorySliderProps> = ({
         alignItems: 'center',
         width: '100%',
         paddingBottom: 'var(--space-3)', // 24px spacing below slider
-        ...(isDebugMode && {
+        ...(isDebugMode ? {
           backgroundColor: 'rgba(255, 192, 203, 0.2)', // 핑크색 반투명 (디버그)
           border: '1px dashed pink',
-        }),
+        } : {}),
         position: 'relative',
       }}
     >

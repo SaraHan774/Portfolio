@@ -1,6 +1,7 @@
 'use client';
 
 import { Component, ErrorInfo, ReactNode } from 'react';
+import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -39,7 +40,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Log error to console in development
-    if (process.env.NODE_ENV === 'development') {
+    if (IS_DEBUG_LAYOUT_ENABLED) {
       console.error('[ErrorBoundary] Caught error:', error);
       console.error('[ErrorBoundary] Error info:', errorInfo);
     }
@@ -113,7 +114,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             >
               페이지 새로고침
             </button>
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {IS_DEBUG_LAYOUT_ENABLED && this.state.error && (
               <details
                 style={{
                   marginTop: 'var(--space-6)',

@@ -13,6 +13,7 @@
 import { useSearchParams } from 'next/navigation';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 import {
   Spinner,
   FloatingWorkWindow,
@@ -183,7 +184,7 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
   }, []);
 
   // Debug mode (development only)
-  const isDebugMode = process.env.NODE_ENV === 'development';
+  const isDebugMode = IS_DEBUG_LAYOUT_ENABLED;
 
   // Fetch work data
   const { data: work, isLoading } = useWork(workId);
@@ -399,10 +400,10 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
           ref={mainRef}
           style={{
             position: 'relative', // timeline을 위한 기준점
-            ...(isDebugMode && {
+            ...(isDebugMode ? {
               backgroundColor: 'rgba(128, 0, 128, 0.05)', // 보라색 반투명
               border: '1px dashed purple',
-            }),
+            } : {}),
           }}
           className="work-detail-main"
         >
@@ -432,9 +433,6 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
                 mediaItems={sortedMedia}
                 currentMediaId={currentImageId}
                 containerRef={mainRef}
-                positionStyle={{
-                  left: 'var(--category-margin-left)',
-                }}
               />
             </div>
           )}

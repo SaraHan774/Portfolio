@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useState, useMemo } from 'react';
+import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 import ScrollableCategoryList from '../category/ScrollableCategoryList';
 import SentenceCategory from '../category/SentenceCategory';
 import TextCategory from '../category/TextCategory';
@@ -33,7 +34,7 @@ const StaticCategorySidebar = memo(function StaticCategorySidebar({
   const [hoveredExhibitionCategoryId, setHoveredExhibitionCategoryId] = useState<string | null>(null);
 
   // Debug mode (development only)
-  const isDebugMode = process.env.NODE_ENV === 'development';
+  const isDebugMode = IS_DEBUG_LAYOUT_ENABLED;
 
   // 문장형 카테고리만 필터링 및 정렬
   const sortedSentenceCategories = useMemo(
@@ -56,20 +57,20 @@ const StaticCategorySidebar = memo(function StaticCategorySidebar({
     return handlers;
   }, [sortedExhibitionCategories, onExhibitionCategorySelect]);
 
-  return (
+    return (
     <div
       style={{
         display: 'flex',
         justifyContent: 'space-between',
-        paddingTop: 'var(--space-4)',
+        marginTop: 'var(--space-3)',
         paddingLeft: 'var(--category-margin-left)',
         paddingRight: 'var(--category-margin-right)',
         gap: 'var(--content-gap)',
-        ...(isDebugMode && {
+        ...(isDebugMode ? {
           backgroundColor: 'rgba(144, 238, 144, 0.1)', // 초록색 반투명
           border: '2px dashed limegreen',
           position: 'relative',
-        }),
+        } : {}),
       }}
     >
       {isDebugMode && (
@@ -96,11 +97,11 @@ const StaticCategorySidebar = memo(function StaticCategorySidebar({
         style={{
           flex: '0 0 auto',
           maxWidth: 'calc(50% - var(--content-gap) / 2)',
-          ...(isDebugMode && {
+          ...(isDebugMode ? {
             backgroundColor: 'rgba(255, 182, 193, 0.15)', // 연한 핑크
             border: '1px dashed lightcoral',
             position: 'relative',
-          }),
+          } : {}),
         }}
       >
         {isDebugMode && (
@@ -126,7 +127,7 @@ const StaticCategorySidebar = memo(function StaticCategorySidebar({
               <div
                 key={category.id}
                 style={{
-                  marginBottom: isLast ? 0 : '18px',
+                  marginBottom: isLast ? 0 : '24px',
                 }}
               >
                 <SentenceCategory
@@ -149,11 +150,11 @@ const StaticCategorySidebar = memo(function StaticCategorySidebar({
           flex: '0 0 auto',
           maxWidth: 'calc(50% - var(--content-gap) / 2)',
           textAlign: 'right',
-          ...(isDebugMode && {
+          ...(isDebugMode ? {
             backgroundColor: 'rgba(176, 224, 230, 0.15)', // 연한 파랑
             border: '1px dashed powderblue',
             position: 'relative',
-          }),
+          } : {}),
         }}
       >
         {isDebugMode && (
@@ -179,7 +180,7 @@ const StaticCategorySidebar = memo(function StaticCategorySidebar({
               <div
                 key={category.id}
                 style={{
-                  marginBottom: isLast ? 0 : '14px',
+                  marginBottom: isLast ? 0 : '18px',
                 }}
               >
                 <TextCategory
