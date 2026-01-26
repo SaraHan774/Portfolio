@@ -48,6 +48,8 @@ describe('validation utils', () => {
       expect(isValidYouTubeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')).toBe(true);
       expect(isValidYouTubeUrl('https://youtu.be/dQw4w9WgXcQ')).toBe(true);
       expect(isValidYouTubeUrl('https://www.youtube.com/embed/dQw4w9WgXcQ')).toBe(true);
+      expect(isValidYouTubeUrl('https://youtube.com/shorts/YFF4FGmw_6E')).toBe(true);
+      expect(isValidYouTubeUrl('https://youtube.com/shorts/YFF4FGmw_6E?feature=share')).toBe(true);
     });
 
     it('should return false for invalid YouTube URLs', () => {
