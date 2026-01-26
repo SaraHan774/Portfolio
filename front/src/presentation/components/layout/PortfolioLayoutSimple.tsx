@@ -160,10 +160,6 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
               position: 'relative',
               marginTop: 'var(--space-3)',
               width: '100%',
-              ...(isDebugMode && {
-                backgroundColor: 'rgba(0, 255, 0, 0.05)',
-                border: '1px dashed green',
-              }),
             }}
           >
             <WorkListScrollerFlex

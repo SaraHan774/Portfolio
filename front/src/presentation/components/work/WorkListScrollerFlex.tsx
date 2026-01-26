@@ -106,81 +106,86 @@ export default function WorkListScroller({
                     WorkListScrollerFlex
                 </div>
             )}
+
+            {/* Scroll container with fading edges and overlapping indicators */}
             <div
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
                 style={{
-                    display: 'flex',
-                    alignItems: anyWorkHovered ? 'flex-end' : 'flex-start',
-                    gap: '8px',
+                    position: 'relative',
                     maxWidth: fullWidth ? '100vw' : '70vw',
                     width: 'fit-content',
-                }}
-            >
-            {/* Left indicators */}
-            <div
-                onMouseEnter={() => {
-                    if (anyWorkHovered) return;
-                    if (hoverTimeoutRef.current) {
-                        clearTimeout(hoverTimeoutRef.current);
-                    }
-                    setIsMouseInContainer(false);
-                }}
-                style={{
-                    display: hideOverflowIndicators ? 'none' : 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    flexShrink: 0,
-                    paddingBottom: anyWorkHovered ? '24px' : '0',
-                    visibility: showLeftArrow ? 'visible' : 'hidden',
-                    opacity: showLeftArrow ? 1 : 0,
-                    transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                }}
-            >
-                <button
-                    onClick={() => scroll('left')}
-                    disabled={!showLeftArrow}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.opacity = '1';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.opacity = '0.7';
-                    }}
-                    style={{
-                        background: 'var(--color-white)',
-                        border: 'none',
-                        cursor: showLeftArrow ? 'pointer' : 'default',
-                        padding: '4px 8px',
-                        fontSize: '14px',
-                        color: '#000000',
-                        opacity: 0.7,
-                    }}
-                    aria-label="Scroll left"
-                >
-                    {'<<'}
-                </button>
-                <div
-                    style={{
-                        fontSize: '12px',
-                        color: '#B3B3B3',
-                        opacity: 0.7,
-                        letterSpacing: '2px',
-                        userSelect: 'none',
-                    }}
-                >
-                    ...
-                </div>
-            </div>
-
-            {/* Scroll container with fading edges */}
-            <div
-                style={{
-                    position: 'relative',
-                    flex: 1,
-                    minWidth: 0,
                     overflow: 'hidden',
                 }}
             >
+                {/* Left indicators - overlapping */}
+                {!hideOverflowIndicators && (
+                    <div
+                        onMouseEnter={() => {
+                            if (anyWorkHovered) return;
+                            if (hoverTimeoutRef.current) {
+                                clearTimeout(hoverTimeoutRef.current);
+                            }
+                            setIsMouseInContainer(false);
+                        }}
+                        style={{
+                            position: 'absolute',
+                            left: 0,
+                            top: 0,
+                            display: 'flex',
+                            flexDirection: anyWorkHovered ? 'column' : 'row',
+                            alignItems: anyWorkHovered ? 'flex-start' : 'flex-start',
+                            gap: '4px',
+                            paddingBottom: anyWorkHovered ? '24px' : '0',
+                            opacity: showLeftArrow ? 1 : 0,
+                            transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), padding-bottom 0.3s ease',
+                            pointerEvents: showLeftArrow ? 'auto' : 'none',
+                            zIndex: 20,
+                            ...(isDebugMode && {
+                                backgroundColor: 'rgba(255, 0, 0, 0.1)',
+                                border: '1px dashed red',
+                            }),
+                        }}
+                    >
+                        <button
+                            onClick={() => scroll('left')}
+                            disabled={!showLeftArrow}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.opacity = '1';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.opacity = '0.7';
+                            }}
+                            style={{
+                                background: 'var(--color-white)',
+                                border: 'none',
+                                cursor: showLeftArrow ? 'pointer' : 'default',
+                                padding: '4px 8px',
+                                fontSize: '14px',
+                                color: '#000000',
+                                opacity: 0.7,
+                            }}
+                            aria-label="Scroll left"
+                        >
+                            {'<<'}
+                        </button>
+                        <div
+                            style={{
+                                fontSize: '12px',
+                                color: '#B3B3B3',
+                                opacity: 0.7,
+                                letterSpacing: '2px',
+                                userSelect: 'none',
+                                marginTop: anyWorkHovered ? '30px' : '0',
+                                transition: 'margin-top 0.3s ease',
+                                alignSelf: anyWorkHovered ? 'flex-end' : 'flex-start',
+                            }}
+                        >
+                            ...
+                        </div>
+                    </div>
+                )}
+
                 {/* Left fade */}
                 {!hideOverflowIndicators && (
                     <div
@@ -189,12 +194,15 @@ export default function WorkListScroller({
                             left: 0,
                             top: 0,
                             bottom: 0,
-                            width: '20px',
-                            background: 'linear-gradient(to right, var(--color-white) 0%, transparent 100%)',
+                            width: '140px',
+                            background: 'linear-gradient(to right, var(--color-white) 0%, var(--color-white) 40%, rgba(255, 255, 255, 0.6) 70%, transparent 100%)',
                             pointerEvents: 'none',
                             zIndex: 10,
                             opacity: showLeftArrow ? 1 : 0,
                             transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                            ...(isDebugMode && {
+                                border: '1px dashed orange',
+                            }),
                         }}
                     />
                 )}
@@ -233,71 +241,86 @@ export default function WorkListScroller({
                             right: 0,
                             top: 0,
                             bottom: 0,
-                            width: '40px',
-                            background: 'linear-gradient(to left, var(--color-white) 0%, transparent 100%)',
+                            width: '140px',
+                            background: 'linear-gradient(to left, var(--color-white) 0%, var(--color-white) 40%, rgba(255, 255, 255, 0.6) 70%, transparent 100%)',
                             pointerEvents: 'none',
                             zIndex: 10,
                             opacity: showRightArrow ? 1 : 0,
                             transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                            ...(isDebugMode && {
+                                border: '1px dashed purple',
+                            }),
                         }}
                     />
                 )}
-            </div>
 
-            {/* Right indicators */}
-            <div
-                onMouseEnter={() => {
-                    if (anyWorkHovered) return;
-                    if (hoverTimeoutRef.current) {
-                        clearTimeout(hoverTimeoutRef.current);
-                    }
-                    setIsMouseInContainer(false);
-                }}
-                style={{
-                    display: hideOverflowIndicators ? 'none' : 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    flexShrink: 0,
-                    paddingBottom: anyWorkHovered ? '24px' : '0',
-                    visibility: showRightArrow ? 'visible' : 'hidden',
-                    opacity: showRightArrow ? 1 : 0,
-                    transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                }}
-            >
-                <div
-                    style={{
-                        fontSize: '12px',
-                        color: '#B3B3B3',
-                        opacity: 0.7,
-                        letterSpacing: '2px',
-                        userSelect: 'none',
-                    }}
-                >
-                    ...
-                </div>
-                <button
-                    onClick={() => scroll('right')}
-                    disabled={!showRightArrow}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.opacity = '1';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.opacity = '0.7';
-                    }}
-                    style={{
-                        background: 'var(--color-white)',
-                        border: 'none',
-                        cursor: showRightArrow ? 'pointer' : 'default',
-                        padding: '4px 8px',
-                        fontSize: '14px',
-                        color: '#000000',
-                        opacity: 0.7,
-                    }}
-                    aria-label="Scroll right"
-                >
-                    {'>>'}
-                </button>
-            </div>
+                {/* Right indicators - overlapping */}
+                {!hideOverflowIndicators && (
+                    <div
+                        onMouseEnter={() => {
+                            if (anyWorkHovered) return;
+                            if (hoverTimeoutRef.current) {
+                                clearTimeout(hoverTimeoutRef.current);
+                            }
+                            setIsMouseInContainer(false);
+                        }}
+                        style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: 0,
+                            display: 'flex',
+                            flexDirection: anyWorkHovered ? 'column' : 'row-reverse',
+                            alignItems: anyWorkHovered ? 'flex-end' : 'flex-start',
+                            gap: '4px',
+                            paddingBottom: anyWorkHovered ? '24px' : '0',
+                            opacity: showRightArrow ? 1 : 0,
+                            transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), padding-bottom 0.3s ease',
+                            pointerEvents: showRightArrow ? 'auto' : 'none',
+                            zIndex: 20,
+                            ...(isDebugMode && {
+                                backgroundColor: 'rgba(0, 255, 0, 0.1)',
+                                border: '1px dashed green',
+                            }),
+                        }}
+                    >
+                        <button
+                            onClick={() => scroll('right')}
+                            disabled={!showRightArrow}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.opacity = '1';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.opacity = '0.7';
+                            }}
+                            style={{
+                                background: 'var(--color-white)',
+                                border: 'none',
+                                cursor: showRightArrow ? 'pointer' : 'default',
+                                padding: '4px 8px',
+                                fontSize: '14px',
+                                color: '#000000',
+                                opacity: 0.7,
+                            }}
+                            aria-label="Scroll right"
+                        >
+                            {'>>'}
+                        </button>
+                        <div
+                            style={{
+                                fontSize: '12px',
+                                color: '#B3B3B3',
+                                opacity: 0.7,
+                                letterSpacing: '2px',
+                                userSelect: 'none',
+                                marginTop: anyWorkHovered ? '30px' : '0',
+                                transition: 'margin-top 0.3s ease',
+                                alignSelf: 'flex-start',
+                            }}
+                        >
+                            ...
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
