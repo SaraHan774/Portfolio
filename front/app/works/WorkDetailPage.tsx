@@ -495,7 +495,7 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
                             data-image-id={item.data.id}
                             className="work-image-container"
                             style={{
-                              marginBottom: isLast ? 0 : 'var(--space-10)',
+                              marginBottom: isLast ? 0 : 'var(--space-8)',
                               position: 'relative',
                               width: '100%',
                               scrollSnapAlign: 'start',
