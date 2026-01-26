@@ -22,6 +22,7 @@ interface MediaTimelineProps {
   currentMediaId: string | null;
   positionStyle?: React.CSSProperties;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
+  containerRef?: RefObject<HTMLElement | null>;  // Page 모드에서 main 컨테이너
 }
 
 interface MediaBounds {
@@ -33,11 +34,15 @@ export default function MediaTimeline({
   mediaItems,
   positionStyle,
   scrollContainerRef,
+  containerRef,
 }: MediaTimelineProps) {
   const [mediaBounds, setMediaBounds] = useState<MediaBounds | null>(null);
   const [scrollPosition, setScrollPosition] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(0);
   const thumbRef = useRef<HTMLDivElement>(null);
+
+  // Debug mode (development only)
+  const isDebugMode = process.env.NODE_ENV === 'development';
 
   // 미디어 위치 계산 (이미지 로드 시에만)
   useEffect(() => {
@@ -109,15 +114,27 @@ export default function MediaTimeline({
     const timer = setTimeout(calculateBounds, 100);
 
     const container = scrollContainerRef?.current || document;
-    const images = container.querySelectorAll('img');
+    const images = Array.from(container.querySelectorAll('img'));
 
-    images.forEach((img) => {
-      if (!img.complete) {
-        img.addEventListener('load', calculateBounds);
-      }
+    // 모든 이미지 로드 완료 대기 후 한 번만 재계산
+    Promise.all(
+      images.map(img =>
+        img.complete
+          ? Promise.resolve()
+          : new Promise<void>(resolve => {
+              img.addEventListener('load', () => resolve(), { once: true });
+              img.addEventListener('error', () => resolve(), { once: true });
+            })
+      )
+    ).then(() => {
+      calculateBounds();
+      logLayout('MediaTimeline', 'all-images-loaded', {
+        ...getViewportInfo(),
+        mode: isModal ? 'modal' : 'page',
+        imageCount: images.length,
+      });
     });
 
-    const resizeObserver = new ResizeObserver(calculateBounds);
     let resizeTimer: NodeJS.Timeout | null = null;
     let rafId: number | null = null;
 
@@ -146,9 +163,8 @@ export default function MediaTimeline({
       }, 200);
     };
 
-    if (scrollContainerRef?.current) {
-      resizeObserver.observe(scrollContainerRef.current);
-    } else {
+    // Page 모드에만 window resize 리스너 추가
+    if (!scrollContainerRef?.current) {
       window.addEventListener('resize', handleResize, { passive: true });
     }
 
@@ -160,10 +176,6 @@ export default function MediaTimeline({
       if (rafId !== null) {
         cancelAnimationFrame(rafId);
       }
-      images.forEach((img) => {
-        img.removeEventListener('load', calculateBounds);
-      });
-      resizeObserver.disconnect();
       if (!scrollContainerRef?.current) {
         window.removeEventListener('resize', handleResize);
       }
@@ -171,7 +183,7 @@ export default function MediaTimeline({
         mode: isModal ? 'modal' : 'page',
       });
     };
-  }, [scrollContainerRef, mediaItems]);
+  }, [scrollContainerRef, containerRef, mediaItems]);
 
   // 스크롤 위치 추적 (직접 DOM 업데이트)
   useEffect(() => {
@@ -220,7 +232,7 @@ export default function MediaTimeline({
         window.removeEventListener('resize', updateScroll);
       };
     }
-  }, [scrollContainerRef, mediaBounds]);
+  }, [scrollContainerRef, containerRef, mediaBounds]);
 
   if (mediaItems.length <= 1 || !mediaBounds) {
     return null;
@@ -247,8 +259,28 @@ export default function MediaTimeline({
           height: `${timelineHeight}px`,
           width: '20px',
           pointerEvents: 'none',
+          ...(isDebugMode && {
+            backgroundColor: 'rgba(255, 165, 0, 0.1)',
+            border: '1px dashed orange',
+          }),
         }}
       >
+        {/* Debug label */}
+        {isDebugMode && (
+          <div style={{
+            position: 'absolute',
+            top: 2,
+            left: 2,
+            fontSize: '8px',
+            color: 'orange',
+            fontWeight: 'bold',
+            pointerEvents: 'none',
+            zIndex: 1000,
+          }}>
+            Timeline(Modal)
+          </div>
+        )}
+
         {/* Track (점선) */}
         <div
           style={{
@@ -282,11 +314,12 @@ export default function MediaTimeline({
       </div>
     );
   } else {
-    // Page 렌더링
-    // viewport 내에서 보이는 미디어 영역 계산 (점선 표시 범위)
-    const trackStart = Math.max(0, mediaBounds.firstTop - scrollPosition);
-    const trackEnd = Math.min(viewportHeight, mediaBounds.lastBottom - scrollPosition);
-    const trackHeight = trackEnd - trackStart;
+    // Page 렌더링 - 미디어 범위만 그리기
+    const timelineHeight = mediaBounds.lastBottom - mediaBounds.firstTop;
+
+    // containerRef의 offsetTop을 빼서 상대 위치로 변환
+    const containerOffsetTop = containerRef?.current ? getElementOffset(containerRef.current) : 0;
+    const relativeTop = mediaBounds.firstTop - containerOffsetTop;
 
     // 전체 페이지 스크롤 비율 계산
     const documentHeight = typeof document !== 'undefined'
@@ -297,34 +330,49 @@ export default function MediaTimeline({
       ? Math.max(0, Math.min(1, scrollPosition / scrollableHeight))
       : 0;
 
-    // 점(thumb)의 위치: 점선 내에서 전체 페이지 스크롤 비율에 따라 배치
-    const thumbPosition = trackStart + trackHeight * pageScrollRatio;
-
-    // 점선이 viewport 내에 보이는지 확인
-    const isVisible = trackHeight > 0;
-
-    if (!isVisible) return null;
+    // Thumb 위치: 미디어 범위 내에서 페이지 스크롤 비율에 따라 배치
+    const thumbPos = timelineHeight * pageScrollRatio;
 
     return (
       <div
         style={{
-          position: 'fixed',
+          position: 'absolute',
           left: 'var(--space-4)',
-          top: 0,
+          top: `${relativeTop}px`,
           ...positionStyle,
-          height: `${viewportHeight}px`,
+          height: `${timelineHeight}px`,
           width: '20px',
           pointerEvents: 'none',
+          ...(isDebugMode && {
+            backgroundColor: 'rgba(0, 255, 255, 0.1)',
+            border: '1px dashed cyan',
+          }),
         }}
       >
-        {/* Track (점선) - 미디어가 보이는 영역만 표시 */}
+        {/* Debug label */}
+        {isDebugMode && (
+          <div style={{
+            position: 'absolute',
+            top: 2,
+            left: 2,
+            fontSize: '8px',
+            color: 'cyan',
+            fontWeight: 'bold',
+            pointerEvents: 'none',
+            zIndex: 1000,
+          }}>
+            Timeline(Page)
+          </div>
+        )}
+
+        {/* Track (점선) - 미디어 전체 범위 표시 */}
         <div
           style={{
             position: 'absolute',
             left: '50%',
             transform: 'translateX(-50%)',
-            top: `${trackStart}px`,
-            height: `${trackHeight}px`,
+            top: 0,
+            height: '100%',
             width: '1px',
             backgroundImage: 'linear-gradient(var(--color-gray-300) 50%, transparent 50%)',
             backgroundSize: '1px 6px',
@@ -332,19 +380,18 @@ export default function MediaTimeline({
           }}
         />
 
-        {/* Thumb (검은 점) - 전체 페이지 스크롤 비율에 따라 점선을 따라 이동 */}
+        {/* Thumb (검은 점) - 전체 페이지 스크롤 비율에 따라 이동 */}
         <div
           style={{
             position: 'absolute',
             left: '50%',
-            top: `${thumbPosition}px`,
-            transform: 'translateX(-50%)',
+            top: 0,
+            transform: `translate(-50%, ${thumbPos}px)`,
             width: '10px',
             height: '10px',
             borderRadius: '50%',
             backgroundColor: 'var(--color-gray-600)',
             zIndex: 2,
-            transition: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
           }}
         />
       </div>
