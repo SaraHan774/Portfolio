@@ -126,7 +126,9 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
 
   return (
     <div style={{
-      minHeight: '100vh',
+      height: mounted && isMobile ? '100vh' : 'auto',
+      minHeight: mounted && isMobile ? 'auto' : '100vh',
+      overflowY: mounted && isMobile ? 'auto' : 'visible',
       display: 'flex',
       flexDirection: 'column',
       position: 'relative',
@@ -160,7 +162,6 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
           <div
             style={{
               position: 'relative',
-              marginTop: 'var(--space-6)',
               width: '100%',
             }}
           >

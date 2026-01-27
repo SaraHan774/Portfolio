@@ -108,10 +108,10 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
           border: '1px dashed red',
         } : {}),
         paddingTop: 'var(--space-4)', // 32px (matching CategorySidebar)
+          paddingBottom: 'var(--space-4)',
         width: '100%',
         maxWidth: '100vw',
         boxSizing: 'border-box',
-        overflow: 'hidden', // Hide overflowing content
         backgroundColor: 'var(--color-white)', // 배경색 추가 (스크롤 시 콘텐츠 가림)
       }}
       role="tablist"
@@ -191,12 +191,11 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
             ) : (
               <ScrollableCategoryList viewportHeightRatio={0.2}>
                 {sortedSentenceCategories.map((category, index) => {
-                  const isLast = index === sortedSentenceCategories.length - 1;
                   return (
                     <div
                       key={category.id}
                       style={{
-                        marginBottom: isLast ? 0 : 'var(--category-spacing)',
+                        marginBottom: 'var(--category-spacing)',
                       }}
                     >
                       <SentenceCategory

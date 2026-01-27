@@ -25,7 +25,7 @@ export const IS_DEBUG_LAYOUT_ENABLED = isDebug;
  * - true: 화면 전체에 10px 정방형 그리드 표시
  * - false: 그리드 숨김
  */
-export const IS_DEBUG_GRID_ENABLED = isDebug;
+export const IS_DEBUG_GRID_ENABLED = false;
 
 /**
  * 색상 팔레트 디버거 표시 여부
