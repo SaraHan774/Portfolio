@@ -249,7 +249,7 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
                     <div
                       key={category.id}
                       style={{
-                        marginBottom: isLast ? 0 : 'var(--category-spacing)',
+                        marginBottom: 'var(--category-spacing)',
                       }}
                     >
                       <TextCategory
