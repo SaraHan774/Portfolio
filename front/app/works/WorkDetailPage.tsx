@@ -438,7 +438,7 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
           )}
 
           {/* 선택된 작품의 미디어 표시 */}
-          <AnimatePresence mode="sync">
+          <AnimatePresence mode="wait">
             {work && hasMedia(work) && (
               <motion.div
                 key={workId}
