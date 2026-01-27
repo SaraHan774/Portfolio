@@ -8,8 +8,9 @@ import { MobileSwipeableCategories } from '../mobile';
 import WorkListScrollerFlex from '../work/WorkListScrollerFlex';
 import Footer from './Footer';
 import { DebugGrid } from './DebugGrid';
+import HomeIcon from './HomeIcon';
 import { useCategories, useCategorySelection } from '@/state';
-import { useFilteredWorks, useMobileDetection } from '@/domain';
+import { useFilteredWorks, useMobileDetection, useSiteSettings } from '@/domain';
 import { LayoutStabilityProvider } from '@/presentation/contexts/LayoutStabilityContext';
 
 interface PortfolioLayoutSimpleProps {
@@ -35,8 +36,11 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
   const searchParams = useSearchParams();
 
   // Global state
-  const { selectedKeywordId, selectedExhibitionCategoryId, selectKeyword, selectExhibitionCategory } = useCategorySelection();
+  const { selectedKeywordId, selectedExhibitionCategoryId, selectKeyword, selectExhibitionCategory, clearSelection } = useCategorySelection();
   const { sentenceCategories, exhibitionCategories } = useCategories();
+
+  // Site settings for home icon
+  const { data: siteSettings } = useSiteSettings();
 
   // Mobile detection
   const isMobile = useMobileDetection();
@@ -197,6 +201,16 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
         </div>
 
       <Footer />
+
+      {/* 홈 아이콘 (웹/태블릿 화면에서만 표시, 화면 중앙 상단 고정) */}
+      {siteSettings?.homeIconUrl && siteSettings?.homeIconHoverUrl && (
+        <HomeIcon
+          defaultIconUrl={siteSettings.homeIconUrl}
+          hoverIconUrl={siteSettings.homeIconHoverUrl}
+          size={siteSettings.homeIconSize}
+          onReset={clearSelection}
+        />
+      )}
 
       {/* 디버그 그리드 오버레이 */}
       <DebugGrid />

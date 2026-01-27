@@ -9,19 +9,23 @@ interface HomeIconProps {
   defaultIconUrl: string;
   hoverIconUrl: string;
   size?: number; // 아이콘 크기 (px, 기본값 48)
+  onReset?: () => void; // 선택 상태 초기화 콜백
 }
 
 /**
  * 홈 아이콘 컴포넌트
  * - 웹/태블릿 화면 (md 이상, 768px+)에서만 표시
  * - 호버 시 다른 이미지 표시
- * - 클릭 시 홈으로 이동
+ * - 클릭 시 홈으로 이동 및 선택 상태 초기화
  */
-const HomeIcon = memo(function HomeIcon({ defaultIconUrl, hoverIconUrl, size = 48 }: HomeIconProps) {
+const HomeIcon = memo(function HomeIcon({ defaultIconUrl, hoverIconUrl, size = 48, onReset }: HomeIconProps) {
   const router = useRouter();
   const [isHovered, setIsHovered] = useState(false);
 
   const handleClick = () => {
+    // 선택 상태 초기화
+    onReset?.();
+    // 홈으로 이동
     router.push('/');
   };
 
