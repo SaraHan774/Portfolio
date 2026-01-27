@@ -60,17 +60,22 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
   // Debug mode (development only)
   const isDebugMode = IS_DEBUG_LAYOUT_ENABLED;
 
-  // URL에서 초기 카테고리 복원 (홈페이지 새로고침 시)
+  // URL과 카테고리 선택 상태 동기화
   useEffect(() => {
     const urlKeywordId = searchParams.get('keywordId');
     const urlExhibitionId = searchParams.get('exhibitionId');
 
+    // URL → State 동기화: URL에 파라미터가 있으면 상태 복원
     if (urlKeywordId && !selectedKeywordId) {
       selectKeyword(urlKeywordId);
     } else if (urlExhibitionId && !selectedExhibitionCategoryId) {
       selectExhibitionCategory(urlExhibitionId);
     }
-  }, [searchParams, selectedKeywordId, selectedExhibitionCategoryId, selectKeyword, selectExhibitionCategory]);
+    // URL이 비어있으면 상태도 초기화
+    else if (!urlKeywordId && !urlExhibitionId && (selectedKeywordId || selectedExhibitionCategoryId)) {
+      clearSelection();
+    }
+  }, [searchParams, selectedKeywordId, selectedExhibitionCategoryId, selectKeyword, selectExhibitionCategory, clearSelection]);
 
   // 선택된 카테고리의 작업 ID 목록
   const selectedWorkIds = useMemo(() => works.map(work => work.id), [works]);
