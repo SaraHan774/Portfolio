@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 import { useSwipeGesture } from '@/domain/hooks/useSwipeGesture';
 import { MobileCategorySlider } from './MobileCategorySlider';
 import ScrollableCategoryList from '../category/ScrollableCategoryList';
@@ -50,7 +51,7 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
   }, []);
 
   // Debug mode (development only)
-  const isDebugMode = process.env.NODE_ENV === 'development';
+  const isDebugMode = IS_DEBUG_LAYOUT_ENABLED;
 
   // Filter and sort categories (matching CategorySidebar pattern)
   const sortedSentenceCategories = useMemo(
@@ -102,10 +103,10 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
         position: 'sticky',
         top: 0,
         zIndex: 100,
-        ...(isDebugMode && {
+        ...(isDebugMode ? {
           backgroundColor: 'rgba(255, 0, 0, 0.1)', // 빨간색 반투명 (디버그)
           border: '1px dashed red',
-        }),
+        } : {}),
         paddingTop: 'var(--space-4)', // 32px (matching CategorySidebar)
         width: '100%',
         maxWidth: '100vw',

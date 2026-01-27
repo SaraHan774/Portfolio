@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 import { useLayoutStability } from '@/presentation/contexts/LayoutStabilityContext';
 
 interface CaptionWithBoundaryProps {
@@ -36,9 +37,21 @@ export default function CaptionWithBoundary({
   const captionRef = useRef<HTMLDivElement>(null);
   const { isLayoutStable, contentPaddingTop } = useLayoutStability();
 
+  // Client-side mount state (for hydration-safe debug labels)
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Debug mode (development only)
+  const isDebugMode = IS_DEBUG_LAYOUT_ENABLED;
+
+  useEffect(() => {
+    // Promise cleanup을 위한 abort 플래그
+    let isActive = true;
+
     const updateCaptionPosition = () => {
-      if (!mediaContainerRef.current || !captionRef.current) {
+      if (!isActive || !mediaContainerRef.current || !captionRef.current) {
         return;
       }
 
@@ -68,18 +81,41 @@ export default function CaptionWithBoundary({
       return;
     }
 
-    // 초기 위치 설정
-    updateCaptionPosition();
+    // 이미지 로드 완료 후 위치 계산
+    const container = mediaContainerRef.current;
+    if (container) {
+      const images = Array.from(container.querySelectorAll('img'));
+
+      Promise.all(
+        images.map(img =>
+          img.complete
+            ? Promise.resolve()
+            : new Promise<void>(resolve => {
+                img.addEventListener('load', () => resolve(), { once: true });
+                img.addEventListener('error', () => resolve(), { once: true });
+              })
+        )
+      ).then(() => {
+        if (isActive) {
+          updateCaptionPosition();
+        }
+      });
+    } else {
+      // 이미지가 없거나 즉시 계산 가능한 경우
+      updateCaptionPosition();
+    }
 
     // 스크롤 이벤트로 위치 업데이트
     window.addEventListener('scroll', updateCaptionPosition, { passive: true });
     window.addEventListener('resize', updateCaptionPosition, { passive: true });
 
     return () => {
+      // Promise cleanup
+      isActive = false;
       window.removeEventListener('scroll', updateCaptionPosition);
       window.removeEventListener('resize', updateCaptionPosition);
     };
-  }, [mediaContainerRef, captionId, captionBottom, isLayoutStable, contentPaddingTop]);
+  }, [mediaContainerRef, captionId, isLayoutStable, contentPaddingTop]);
 
   return (
     <div
@@ -94,8 +130,33 @@ export default function CaptionWithBoundary({
         paddingRight: 'var(--category-margin-right)',
         zIndex: 40,
         transition: 'bottom 0.15s ease-out, left 0.15s ease-out',
+        ...(isDebugMode ? {
+          backgroundColor: 'rgba(255, 228, 196, 0.15)', // 비스크색 반투명
+          border: '2px dashed bisque',
+          position: 'fixed' as const,
+        } : {}),
       }}
     >
+      {/* 디버그 라벨 */}
+      {mounted && isDebugMode && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 2,
+            right: 4,
+            fontSize: '9px',
+            color: 'burlywood',
+            fontWeight: 'bold',
+            pointerEvents: 'none',
+            zIndex: 1000,
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            padding: '2px 4px',
+            borderRadius: '2px',
+          }}
+        >
+          CaptionWithBoundary (bottom: {captionBottom}px)
+        </div>
+      )}
       {renderCaption(caption, captionId)}
     </div>
   );
