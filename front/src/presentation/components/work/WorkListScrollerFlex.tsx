@@ -134,7 +134,7 @@ export default function WorkListScroller({
                             left: 0,
                             top: 0,
                             display: 'flex',
-                            flexDirection: anyWorkHovered ? 'column' : 'row',
+                            flexDirection: anyWorkHovered ? 'column-reverse' : 'row',
                             alignItems: anyWorkHovered ? 'flex-start' : 'flex-start',
                             gap: '4px',
                             paddingBottom: anyWorkHovered ? '24px' : '0',
@@ -158,13 +158,13 @@ export default function WorkListScroller({
                                 e.currentTarget.style.opacity = '0.7';
                             }}
                             style={{
-                                background: 'var(--color-white)',
                                 border: 'none',
                                 cursor: showLeftArrow ? 'pointer' : 'default',
                                 padding: '4px 8px',
                                 fontSize: '14px',
                                 color: '#000000',
                                 opacity: 0.7,
+                                marginTop: anyWorkHovered ? '30px' : '0',
                             }}
                             aria-label="Scroll left"
                         >
@@ -177,9 +177,9 @@ export default function WorkListScroller({
                                 opacity: 0.7,
                                 letterSpacing: '2px',
                                 userSelect: 'none',
-                                marginTop: anyWorkHovered ? '30px' : '0',
+                                marginTop: anyWorkHovered ? '12px' : '0',
                                 transition: 'margin-top 0.3s ease',
-                                alignSelf: anyWorkHovered ? 'flex-end' : 'flex-start',
+                                alignSelf: 'flex-start', // 항상 왼쪽 정렬
                             }}
                         >
                             ...
@@ -270,7 +270,7 @@ export default function WorkListScroller({
                             right: 0,
                             top: 0,
                             display: 'flex',
-                            flexDirection: anyWorkHovered ? 'column' : 'row-reverse',
+                            flexDirection: anyWorkHovered ? 'column-reverse' : 'row-reverse',
                             alignItems: anyWorkHovered ? 'flex-end' : 'flex-start',
                             gap: '4px',
                             paddingBottom: anyWorkHovered ? '24px' : '0',
@@ -294,9 +294,9 @@ export default function WorkListScroller({
                                 e.currentTarget.style.opacity = '0.7';
                             }}
                             style={{
-                                background: 'var(--color-white)',
                                 border: 'none',
                                 cursor: showRightArrow ? 'pointer' : 'default',
+                                marginTop: anyWorkHovered ? '30px' : '0',
                                 padding: '4px 8px',
                                 fontSize: '14px',
                                 color: '#000000',
@@ -313,9 +313,9 @@ export default function WorkListScroller({
                                 opacity: 0.7,
                                 letterSpacing: '2px',
                                 userSelect: 'none',
-                                marginTop: anyWorkHovered ? '30px' : '0',
+                                marginTop: anyWorkHovered ? '12px' : '0',
                                 transition: 'margin-top 0.3s ease',
-                                alignSelf: 'flex-start',
+                                alignSelf: 'flex-end', // 항상 오른쪽 정렬
                             }}
                         >
                             ...
