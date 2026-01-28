@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, ReactNode, useCallback, useMemo, startTransition } from 'react';
 
 /**
  * Category selection state
@@ -42,20 +42,26 @@ export function CategorySelectionProvider({ children }: { children: ReactNode })
   const [selectedKeywordId, setSelectedKeywordId] = useState<string | null>(null);
   const [selectedExhibitionCategoryId, setSelectedExhibitionCategoryId] = useState<string | null>(null);
 
-  // Actions
+  // Actions - startTransition으로 감싸서 배칭 보장
   const selectKeyword = useCallback((keywordId: string) => {
-    setSelectedKeywordId(keywordId);
-    setSelectedExhibitionCategoryId(null); // Clear exhibition selection
+    startTransition(() => {
+      setSelectedKeywordId(keywordId);
+      setSelectedExhibitionCategoryId(null); // Clear exhibition selection
+    });
   }, []);
 
   const selectExhibitionCategory = useCallback((categoryId: string) => {
-    setSelectedExhibitionCategoryId(categoryId);
-    setSelectedKeywordId(null); // Clear keyword selection
+    startTransition(() => {
+      setSelectedExhibitionCategoryId(categoryId);
+      setSelectedKeywordId(null); // Clear keyword selection
+    });
   }, []);
 
   const clearSelection = useCallback(() => {
-    setSelectedKeywordId(null);
-    setSelectedExhibitionCategoryId(null);
+    startTransition(() => {
+      setSelectedKeywordId(null);
+      setSelectedExhibitionCategoryId(null);
+    });
   }, []);
 
   // Selectors (derived state)
