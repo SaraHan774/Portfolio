@@ -2,6 +2,7 @@
 
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { LoadingContainer } from '@/presentation/ui';
 import { useCategories } from '@/state';
 import WorkDetailPage from './works/WorkDetailPage';
@@ -27,13 +28,22 @@ function HomePageContent() {
     return <LoadingContainer size={24} />;
   }
 
-  // workId가 있으면 작품 상세 페이지 표시
-  if (workId) {
-    return <WorkDetailPage workId={workId} />;
-  }
-
-  // workId가 없으면 빈 홈페이지
-  return null;
+  // workId가 있으면 작품 상세 페이지 표시 (부드러운 전환)
+  return (
+    <AnimatePresence mode="wait">
+      {workId && (
+        <motion.div
+          key={workId}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15, ease: 'easeOut' }}
+        >
+          <WorkDetailPage workId={workId} />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 }
 
 export default function HomePage() {
