@@ -1,6 +1,6 @@
 'use client';
 
-import {useState, useRef, useEffect} from 'react';
+import {useState, useRef, useEffect, useMemo} from 'react';
 import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 import {useWorkListScroll} from '@/domain';
 import type {Work} from '@/types';
@@ -77,20 +77,23 @@ export default function WorkListScroller({
         };
     }, []);
 
+    // Memoize container style to prevent unnecessary re-creation
+    const containerStyle = useMemo(() => ({
+        width: '100%',
+        display: 'flex',
+        justifyContent: direction === 'ltr' ? 'flex-start' : 'flex-end',
+        paddingLeft: fullWidth ? 'var(--category-margin-left)' : (direction === 'ltr' ? 'var(--category-margin-left)' : '0'),
+        paddingRight: fullWidth ? 'var(--category-margin-right)' : (direction === 'rtl' ? 'var(--category-margin-right)' : '0'),
+        ...(isDebugMode ? {
+            backgroundColor: 'rgba(0, 0, 255, 0.1)', // 파란색 반투명
+            border: '1px dashed blue',
+        } : {}),
+        position: 'relative',
+    } as const), [direction, fullWidth, isDebugMode]);
+
     return (
         <div
-            style={{
-                width: '100%',
-                display: 'flex',
-                justifyContent: direction === 'ltr' ? 'flex-start' : 'flex-end',
-                paddingLeft: fullWidth ? 'var(--category-margin-left)' : (direction === 'ltr' ? 'var(--category-margin-left)' : '0'),
-                paddingRight: fullWidth ? 'var(--category-margin-right)' : (direction === 'rtl' ? 'var(--category-margin-right)' : '0'),
-                ...(isDebugMode ? {
-                    backgroundColor: 'rgba(0, 0, 255, 0.1)', // 파란색 반투명
-                    border: '1px dashed blue',
-                } : {}),
-                position: 'relative',
-            }}
+            style={containerStyle}
         >
             {/* 디버그 라벨 */}
             {mounted && isDebugMode && (
