@@ -30,7 +30,7 @@ interface PortfolioLayoutSimpleProps {
  * - /?exhibitionId=xxx
  * - /?keywordId=xxx&workId=123
  */
-export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpleProps) {
+export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpleProps): JSX.Element {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -87,8 +87,8 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
 
   // 카테고리 선택 핸들러 (쿼리 파라미터만 변경)
   const handleKeywordSelect = useCallback((keywordId: string) => {
-    // 모바일에서 scroll to top
-    if (mounted && isMobile) {
+    // 모바일에서 scroll to top (only if scrolled down significantly to avoid interrupting UX)
+    if (mounted && isMobile && window.scrollY > window.innerHeight * 0.5) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -101,8 +101,8 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
   }, [selectKeyword, router, mounted, isMobile]);
 
   const handleExhibitionCategorySelect = useCallback((categoryId: string) => {
-    // 모바일에서 scroll to top
-    if (mounted && isMobile) {
+    // 모바일에서 scroll to top (only if scrolled down significantly to avoid interrupting UX)
+    if (mounted && isMobile && window.scrollY > window.innerHeight * 0.5) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -133,16 +133,33 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
   const shouldShowWorkList = hasData && (selectedKeywordId || selectedExhibitionCategoryId);
   const workListPosition = selectedKeywordId ? 'left' : 'right';
 
+  // Memoize style objects to prevent unnecessary re-creation
+  const rootContainerStyle = useMemo(() => ({
+    height: mounted && isMobile ? '100vh' : 'auto',
+    minHeight: mounted && isMobile ? 'auto' : '100vh',
+    overflowY: mounted && isMobile ? 'auto' : 'visible',
+    display: 'flex',
+    flexDirection: 'column',
+    position: 'relative',
+    width: '100%',
+  } as const), [mounted, isMobile]);
+
+  const workListContainerStyle = useMemo(() => ({
+    position: 'relative',
+    width: '100%',
+  } as const), []);
+
+  const contentContainerStyle = useMemo(() => ({
+    marginTop: shouldShowWorkList ? 'var(--space-3)' : '0',
+    flex: 1,
+    ...(isDebugMode ? {
+      backgroundColor: 'rgba(255, 165, 0, 0.05)',
+      border: '1px dashed orange',
+    } : {}),
+  } as const), [shouldShowWorkList, isDebugMode]);
+
   return (
-    <div style={{
-      height: mounted && isMobile ? '100vh' : 'auto',
-      minHeight: mounted && isMobile ? 'auto' : '100vh',
-      overflowY: mounted && isMobile ? 'auto' : 'visible',
-      display: 'flex',
-      flexDirection: 'column',
-      position: 'relative',
-      width: '100%',
-    }}>
+    <div style={rootContainerStyle}>
         {/* 카테고리 영역 - Mobile만 sticky */}
         {mounted && isMobile ? (
           <MobileSwipeableCategories
@@ -169,10 +186,7 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
         {/* 작업 목록 영역 */}
         {shouldShowWorkList && (
           <div
-            style={{
-              position: 'relative',
-              width: '100%',
-            }}
+            style={workListContainerStyle}
           >
             <WorkListScrollerFlex
               works={works}
@@ -188,14 +202,7 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
 
         {/* 페이지별 컨텐츠 */}
         <div
-          style={{
-            marginTop: shouldShowWorkList ? 'var(--space-3)' : '0',
-            flex: 1,
-            ...(isDebugMode ? {
-              backgroundColor: 'rgba(255, 165, 0, 0.05)',
-              border: '1px dashed orange',
-            } : {}),
-          }}
+          style={contentContainerStyle}
         >
           <LayoutStabilityProvider
             isLayoutStable={true}

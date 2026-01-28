@@ -43,10 +43,12 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
   const [hoveredKeywordId, setHoveredKeywordId] = useState<string | null>(null);
   const [hoveredExhibitionCategoryId, setHoveredExhibitionCategoryId] = useState<string | null>(null);
 
-  // Client-side mount state (for hydration-safe debug labels)
+  // Client-side mount state (for hydration safety)
+  // Prevents SSR/client mismatch by ensuring debug labels and device-specific
+  // content only render after hydration completes
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Safe pattern for post-hydration effects
     setMounted(true);
   }, []);
 
@@ -97,23 +99,26 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
   const progressOffset = swipeProgress * 50;
   const totalTransform = baseTransform + progressOffset;
 
+  // Memoize container style to prevent unnecessary re-creation
+  const containerStyle = useMemo(() => ({
+    position: 'sticky',
+    top: 0,
+    zIndex: 100,
+    ...(isDebugMode ? {
+      backgroundColor: 'rgba(255, 0, 0, 0.1)', // 빨간색 반투명 (디버그)
+      border: '1px dashed red',
+    } : {}),
+    paddingTop: 'var(--space-4)', // 32px (matching CategorySidebar)
+    paddingBottom: 'var(--space-4)',
+    width: '100%',
+    maxWidth: '100vw',
+    boxSizing: 'border-box',
+    backgroundColor: 'var(--color-white)', // 배경색 추가 (스크롤 시 콘텐츠 가림)
+  } as const), [isDebugMode]);
+
   return (
     <div
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        ...(isDebugMode ? {
-          backgroundColor: 'rgba(255, 0, 0, 0.1)', // 빨간색 반투명 (디버그)
-          border: '1px dashed red',
-        } : {}),
-        paddingTop: 'var(--space-4)', // 32px (matching CategorySidebar)
-          paddingBottom: 'var(--space-4)',
-        width: '100%',
-        maxWidth: '100vw',
-        boxSizing: 'border-box',
-        backgroundColor: 'var(--color-white)', // 배경색 추가 (스크롤 시 콘텐츠 가림)
-      }}
+      style={containerStyle}
       role="tablist"
       aria-label="Category views"
     >
