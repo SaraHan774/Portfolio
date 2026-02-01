@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, ReactNode, useEffect } from 'react';
+import { useState, useCallback, useMemo, ReactNode, useEffect, CSSProperties } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 import StaticCategorySidebar from './StaticCategorySidebar';
@@ -30,7 +30,7 @@ interface PortfolioLayoutSimpleProps {
  * - /?exhibitionId=xxx
  * - /?keywordId=xxx&workId=123
  */
-export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpleProps) {
+export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpleProps): JSX.Element {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -133,16 +133,19 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
   const shouldShowWorkList = hasData && (selectedKeywordId || selectedExhibitionCategoryId);
   const workListPosition = selectedKeywordId ? 'left' : 'right';
 
+  // Memoize container style to prevent re-creation on every render
+  const containerStyle = useMemo<CSSProperties>(() => ({
+    height: mounted && isMobile ? '100vh' : 'auto',
+    minHeight: mounted && isMobile ? 'auto' : '100vh',
+    overflowY: mounted && isMobile ? 'auto' : 'visible',
+    display: 'flex',
+    flexDirection: 'column',
+    position: 'relative',
+    width: '100%',
+  }), [mounted, isMobile]);
+
   return (
-    <div style={{
-      height: mounted && isMobile ? '100vh' : 'auto',
-      minHeight: mounted && isMobile ? 'auto' : '100vh',
-      overflowY: mounted && isMobile ? 'auto' : 'visible',
-      display: 'flex',
-      flexDirection: 'column',
-      position: 'relative',
-      width: '100%',
-    }}>
+    <div style={containerStyle}>
         {/* 카테고리 영역 - Mobile만 sticky */}
         {mounted && isMobile ? (
           <MobileSwipeableCategories

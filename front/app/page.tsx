@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic';
  *
  * workId가 있으면 WorkDetailPage를 조건부 렌더링
  */
-function HomePageContent() {
+function HomePageContent(): JSX.Element {
   const { isLoading } = useCategories();
   const searchParams = useSearchParams();
   const workId = searchParams.get('workId');

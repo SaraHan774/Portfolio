@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, CSSProperties } from 'react';
 import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 import { useSwipeGesture } from '@/domain/hooks/useSwipeGesture';
 import { MobileCategorySlider } from './MobileCategorySlider';
@@ -43,10 +43,9 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
   const [hoveredKeywordId, setHoveredKeywordId] = useState<string | null>(null);
   const [hoveredExhibitionCategoryId, setHoveredExhibitionCategoryId] = useState<string | null>(null);
 
-  // Client-side mount state (for hydration-safe debug labels)
+  // Hydration safety: mounted state prevents SSR/client mismatch
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -97,23 +96,26 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
   const progressOffset = swipeProgress * 50;
   const totalTransform = baseTransform + progressOffset;
 
+  // Memoize sticky container style to prevent re-creation on every render
+  const stickyContainerStyle = useMemo<CSSProperties>(() => ({
+    position: 'sticky',
+    top: 0,
+    zIndex: 100,
+    ...(isDebugMode ? {
+      backgroundColor: 'rgba(255, 0, 0, 0.1)', // 빨간색 반투명 (디버그)
+      border: '1px dashed red',
+    } : {}),
+    paddingTop: 'var(--space-4)', // 32px (matching CategorySidebar)
+    paddingBottom: 'var(--space-4)',
+    width: '100%',
+    maxWidth: '100vw',
+    boxSizing: 'border-box',
+    backgroundColor: 'var(--color-white)', // 배경색 추가 (스크롤 시 콘텐츠 가림)
+  }), [isDebugMode]);
+
   return (
     <div
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        ...(isDebugMode ? {
-          backgroundColor: 'rgba(255, 0, 0, 0.1)', // 빨간색 반투명 (디버그)
-          border: '1px dashed red',
-        } : {}),
-        paddingTop: 'var(--space-4)', // 32px (matching CategorySidebar)
-          paddingBottom: 'var(--space-4)',
-        width: '100%',
-        maxWidth: '100vw',
-        boxSizing: 'border-box',
-        backgroundColor: 'var(--color-white)', // 배경색 추가 (스크롤 시 콘텐츠 가림)
-      }}
+      style={stickyContainerStyle}
       role="tablist"
       aria-label="Category views"
     >
