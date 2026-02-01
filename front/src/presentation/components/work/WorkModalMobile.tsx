@@ -247,6 +247,10 @@ export default function WorkModalMobile({
             onClose();
           }
         }}
+        onWheel={(e) => {
+          // Prevent wheel events from propagating to background page
+          e.stopPropagation();
+        }}
         className="modal-overlay"
       >
       <motion.div

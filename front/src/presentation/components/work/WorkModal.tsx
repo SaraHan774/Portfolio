@@ -253,6 +253,10 @@ export default function WorkModal({
           onClose();
         }
       }}
+      onWheel={(e) => {
+        // Prevent wheel events from propagating to background page
+        e.stopPropagation();
+      }}
       className="modal-overlay"
     >
       <motion.div
@@ -431,6 +435,7 @@ export default function WorkModal({
             }}
             onWheel={(e) => {
               // 캡션 영역에서 스크롤 시 이미지 영역으로 전달
+              e.preventDefault(); // Prevent scroll from propagating to background
               if (overlayScrollbarsRef.current) {
                 const { viewport } = overlayScrollbarsRef.current.elements();
                 if (viewport) {
