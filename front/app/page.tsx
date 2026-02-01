@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, ReactElement } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LoadingContainer } from '@/presentation/ui';
@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic';
  *
  * workId가 있으면 WorkDetailPage를 조건부 렌더링
  */
-function HomePageContent(): JSX.Element {
+function HomePageContent(): ReactElement {
   const { isLoading } = useCategories();
   const searchParams = useSearchParams();
   const workId = searchParams.get('workId');

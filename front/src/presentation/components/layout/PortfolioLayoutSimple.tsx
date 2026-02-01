@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, ReactNode, useEffect, CSSProperties } from 'react';
+import { useState, useCallback, useMemo, ReactNode, useEffect, CSSProperties, ReactElement } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 import StaticCategorySidebar from './StaticCategorySidebar';
@@ -30,7 +30,7 @@ interface PortfolioLayoutSimpleProps {
  * - /?exhibitionId=xxx
  * - /?keywordId=xxx&workId=123
  */
-export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpleProps): JSX.Element {
+export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpleProps): ReactElement {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
