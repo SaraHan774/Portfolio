@@ -66,11 +66,17 @@ export default function WorkModal({
     clearHover();
   }, [workId, clearHover]);
 
-  // 모달 열릴 때 배경 스크롤 방지
+  // 모달 열릴 때 배경 스크롤 방지 (html과 body 모두)
   useEffect(() => {
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+
     document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
     };
   }, []);
 
@@ -262,7 +268,14 @@ export default function WorkModal({
       }}
       onWheel={(e) => {
         // Prevent wheel events from propagating to background page
+        e.preventDefault();
         e.stopPropagation();
+      }}
+      onTouchMove={(e) => {
+        // Prevent touch scroll on modal overlay
+        if (e.target === e.currentTarget) {
+          e.preventDefault();
+        }
       }}
       className="modal-overlay"
     >
