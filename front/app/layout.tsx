@@ -32,7 +32,7 @@ export const viewport = {
 
 // 기본 메타데이터 (하드코딩)
 export const metadata: Metadata = {
-  title: "Portfolio",
+  title: "hyebinna",
   description: "여백의 미를 살린 미니멀한 디지털 갤러리",
   icons: {
     icon: '/favicon.ico',
