@@ -37,7 +37,7 @@ export default function WorkModalMobile({
   renderCaption,
 }: WorkModalMobileProps) {
   // Fetch work data using domain hook
-  const { data: modalWork } = useWork(workId);
+  const { data: modalWork, isLoading, isError, error } = useWork(workId);
 
   // Caption hover events 설정
   const { hoveredWorkId, hoverPosition, clearHover } = useCaptionHoverEvents({
@@ -193,8 +193,15 @@ export default function WorkModalMobile({
     };
   }, [onWorkClick, clearHover]);
 
+  // 에러 상태 - 자동으로 모달 닫기 (전역 Toast가 에러 메시지 표시)
+  useEffect(() => {
+    if (isError) {
+      onClose();
+    }
+  }, [isError, onClose]);
+
   // 로딩 상태
-  if (!modalWork) {
+  if (isLoading || !modalWork) {
     return (
       <div
         style={{
