@@ -34,11 +34,12 @@ const HomeIcon = memo(function HomeIcon({ defaultIconUrl, hoverIconUrl, size = 4
       onClick={handleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="hidden md:block fixed top-8 left-1/2 transform -translate-x-1/2 cursor-pointer transition-opacity duration-200 hover:opacity-90"
+      className="hidden md:block absolute left-1/2 transform -translate-x-1/2 cursor-pointer transition-opacity duration-200 hover:opacity-90"
       aria-label="홈으로 이동"
       style={{
         width: `${size}px`,
         height: `${size}px`,
+        top: 'var(--space-3)',
         zIndex: Z_INDEX.HOME_ICON,
       }}
     >

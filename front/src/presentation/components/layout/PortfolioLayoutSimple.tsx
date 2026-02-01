@@ -158,15 +158,26 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
             selectedWorkIds={selectedWorkIds}
           />
         ) : (
-          <StaticCategorySidebar
-            sentenceCategories={sentenceCategories}
-            exhibitionCategories={exhibitionCategories}
-            selectedKeywordId={selectedKeywordId}
-            selectedExhibitionCategoryId={selectedExhibitionCategoryId}
-            onKeywordSelect={handleKeywordSelect}
-            onExhibitionCategorySelect={handleExhibitionCategorySelect}
-            selectedWorkIds={selectedWorkIds}
-          />
+          <div style={{ position: 'relative' }}>
+            <StaticCategorySidebar
+              sentenceCategories={sentenceCategories}
+              exhibitionCategories={exhibitionCategories}
+              selectedKeywordId={selectedKeywordId}
+              selectedExhibitionCategoryId={selectedExhibitionCategoryId}
+              onKeywordSelect={handleKeywordSelect}
+              onExhibitionCategorySelect={handleExhibitionCategorySelect}
+              selectedWorkIds={selectedWorkIds}
+            />
+            {/* 홈 아이콘 (웹/태블릿 화면에서만 표시, StaticCategorySidebar 중앙 상단) */}
+            {siteSettings?.homeIconUrl && siteSettings?.homeIconHoverUrl && (
+              <HomeIcon
+                defaultIconUrl={siteSettings.homeIconUrl}
+                hoverIconUrl={siteSettings.homeIconHoverUrl}
+                size={siteSettings.homeIconSize}
+                onReset={clearSelection}
+              />
+            )}
+          </div>
         )}
 
         {/* 작업 목록 영역 */}
@@ -209,16 +220,6 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
         </div>
 
       <Footer />
-
-      {/* 홈 아이콘 (웹/태블릿 화면에서만 표시, 화면 중앙 상단 고정) */}
-      {siteSettings?.homeIconUrl && siteSettings?.homeIconHoverUrl && (
-        <HomeIcon
-          defaultIconUrl={siteSettings.homeIconUrl}
-          hoverIconUrl={siteSettings.homeIconHoverUrl}
-          size={siteSettings.homeIconSize}
-          onReset={clearSelection}
-        />
-      )}
 
       {/* 디버그 그리드 오버레이 */}
       <DebugGrid />
