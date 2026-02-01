@@ -16,14 +16,16 @@ interface ModalImageProps {
   alt: string;
   /** 마지막 이미지 여부 (하단 마진 결정) */
   isLast: boolean;
+  /** 커스텀 하단 마진 (optional, 기본값: var(--space-8)) */
+  marginBottom?: string;
 }
 
-export default function ModalImage({ image, alt, isLast }: ModalImageProps) {
+export default function ModalImage({ image, alt, isLast, marginBottom = 'var(--space-8)' }: ModalImageProps) {
   return (
     <div
       data-image-id={image.id}
       style={{
-        marginBottom: isLast ? 0 : 'var(--space-8)',
+        marginBottom: isLast ? 0 : marginBottom,
         position: 'relative',
         width: '100%',
       }}
