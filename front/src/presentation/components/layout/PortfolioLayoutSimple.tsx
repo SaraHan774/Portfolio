@@ -221,6 +221,16 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
 
       <Footer />
 
+      {/* 홈 아이콘 (웹/태블릿 화면에서만 표시, 화면 중앙 상단 고정) */}
+      {siteSettings?.homeIconUrl && siteSettings?.homeIconHoverUrl && (
+        <HomeIcon
+          defaultIconUrl={siteSettings.homeIconUrl}
+          hoverIconUrl={siteSettings.homeIconHoverUrl}
+          size={siteSettings.homeIconSize}
+          onReset={clearSelection}
+        />
+      )}
+
       {/* 디버그 그리드 오버레이 */}
       <DebugGrid />
     </div>
