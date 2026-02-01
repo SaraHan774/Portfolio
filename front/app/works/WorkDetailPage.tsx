@@ -236,7 +236,7 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
    */
   useEffect(() => {
     if (work) {
-      document.title = `${work.title} | Portfolio`;
+      document.title = `${work.title} | hyebinna`;
     }
   }, [work]);
 

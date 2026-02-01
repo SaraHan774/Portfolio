@@ -24,8 +24,8 @@ interface CaptionWithBoundaryProps {
   mediaContainerRef: React.RefObject<HTMLDivElement | null>;
 }
 
-/** 기본 bottom 값 (px) */
-const DEFAULT_BOTTOM_PX = 75;
+/** 기본 bottom 값 (px) - 뷰포트 하단에서 30px 떨어진 위치 */
+const DEFAULT_BOTTOM_PX = 30;
 
 export default function CaptionWithBoundary({
   caption,

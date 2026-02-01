@@ -96,11 +96,9 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
   const progressOffset = swipeProgress * 50;
   const totalTransform = baseTransform + progressOffset;
 
-  // Memoize sticky container style to prevent re-creation on every render
-  const stickyContainerStyle = useMemo<CSSProperties>(() => ({
-    position: 'sticky',
-    top: 0,
-    zIndex: 100,
+  // Memoize container style to prevent re-creation on every render
+  const containerStyle = useMemo<CSSProperties>(() => ({
+    position: 'relative',
     ...(isDebugMode ? {
       backgroundColor: 'rgba(255, 0, 0, 0.1)', // 빨간색 반투명 (디버그)
       border: '1px dashed red',
@@ -110,12 +108,11 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
     width: '100%',
     maxWidth: '100vw',
     boxSizing: 'border-box',
-    backgroundColor: 'var(--color-white)', // 배경색 추가 (스크롤 시 콘텐츠 가림)
   }), [isDebugMode]);
 
   return (
     <div
-      style={stickyContainerStyle}
+      style={containerStyle}
       role="tablist"
       aria-label="Category views"
     >
