@@ -314,33 +314,6 @@ export default function WorkModalMobile({
           }}
         />
 
-        {/* 닫기 버튼 */}
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: 'var(--space-4)',
-            right: 'var(--space-4)',
-            zIndex: 1001,
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '24px',
-            color: 'var(--color-text-primary)',
-            width: '32px',
-            height: '32px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '4px',
-            transition: 'background-color 0.2s ease',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-gray-100)')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-        >
-          ×
-        </button>
-
         {/* 전체 스크롤 영역 */}
         <div
           ref={scrollContainerRef}
@@ -360,10 +333,38 @@ export default function WorkModalMobile({
             style={{
               display: 'flex',
               flexDirection: 'column',
-              padding: 'var(--space-6)',
+              padding: 'var(--space-2)',
               gap: 'var(--space-3)',
+              position: 'relative',
             }}
           >
+            {/* 닫기 버튼 */}
+            <button
+              onClick={onClose}
+              style={{
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '24px',
+                color: 'var(--color-text-primary)',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '4px',
+                transition: 'background-color 0.2s ease',
+                zIndex: 10,
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-gray-100)')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              ×
+            </button>
+
             {/* 1. 작품명 */}
             <div>
               <h2
@@ -412,7 +413,7 @@ export default function WorkModalMobile({
                 style={{
                   display: 'flex',
                   justifyContent: 'center',
-                  padding: 'var(--space-2) 0',
+                  padding: '0 0 var(--space-2) 0',
                 }}
               >
                 <div
