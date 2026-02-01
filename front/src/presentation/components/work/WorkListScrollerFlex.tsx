@@ -1,6 +1,6 @@
 'use client';
 
-import {useState, useRef, useEffect} from 'react';
+import {useState, useRef, useEffect, useMemo, CSSProperties} from 'react';
 import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 import {useWorkListScroll} from '@/domain';
 import type {Work} from '@/types';
@@ -77,21 +77,22 @@ export default function WorkListScroller({
         };
     }, []);
 
+    // Memoize container style to prevent re-creation on every render
+    const containerStyle = useMemo<CSSProperties>(() => ({
+        width: '100%',
+        display: 'flex',
+        justifyContent: direction === 'ltr' ? 'flex-start' : 'flex-end',
+        paddingLeft: fullWidth ? 'var(--category-margin-left)' : (direction === 'ltr' ? 'var(--category-margin-left)' : '0'),
+        paddingRight: fullWidth ? 'var(--category-margin-right)' : (direction === 'rtl' ? 'var(--category-margin-right)' : '0'),
+        ...(isDebugMode ? {
+            backgroundColor: 'rgba(0, 0, 255, 0.1)', // 파란색 반투명
+            border: '1px dashed blue',
+        } : {}),
+        position: 'relative',
+    }), [direction, fullWidth, isDebugMode]);
+
     return (
-        <div
-            style={{
-                width: '100%',
-                display: 'flex',
-                justifyContent: direction === 'ltr' ? 'flex-start' : 'flex-end',
-                paddingLeft: fullWidth ? 'var(--category-margin-left)' : (direction === 'ltr' ? 'var(--category-margin-left)' : '0'),
-                paddingRight: fullWidth ? 'var(--category-margin-right)' : (direction === 'rtl' ? 'var(--category-margin-right)' : '0'),
-                ...(isDebugMode ? {
-                    backgroundColor: 'rgba(0, 0, 255, 0.1)', // 파란색 반투명
-                    border: '1px dashed blue',
-                } : {}),
-                position: 'relative',
-            }}
-        >
+        <div style={containerStyle}>
             {/* 디버그 라벨 */}
             {mounted && isDebugMode && (
                 <div style={{
@@ -134,7 +135,7 @@ export default function WorkListScroller({
                             left: 0,
                             top: 0,
                             display: 'flex',
-                            flexDirection: anyWorkHovered ? 'column' : 'row',
+                            flexDirection: anyWorkHovered ? 'column-reverse' : 'row',
                             alignItems: anyWorkHovered ? 'flex-start' : 'flex-start',
                             gap: '4px',
                             paddingBottom: anyWorkHovered ? '24px' : '0',
@@ -158,13 +159,13 @@ export default function WorkListScroller({
                                 e.currentTarget.style.opacity = '0.7';
                             }}
                             style={{
-                                background: 'var(--color-white)',
                                 border: 'none',
                                 cursor: showLeftArrow ? 'pointer' : 'default',
                                 padding: '4px 8px',
                                 fontSize: '14px',
                                 color: '#000000',
                                 opacity: 0.7,
+                                marginTop: anyWorkHovered ? '30px' : '0',
                             }}
                             aria-label="Scroll left"
                         >
@@ -177,9 +178,9 @@ export default function WorkListScroller({
                                 opacity: 0.7,
                                 letterSpacing: '2px',
                                 userSelect: 'none',
-                                marginTop: anyWorkHovered ? '30px' : '0',
+                                marginTop: anyWorkHovered ? '12px' : '0',
                                 transition: 'margin-top 0.3s ease',
-                                alignSelf: anyWorkHovered ? 'flex-end' : 'flex-start',
+                                alignSelf: 'flex-start', // 항상 왼쪽 정렬
                             }}
                         >
                             ...
@@ -270,7 +271,7 @@ export default function WorkListScroller({
                             right: 0,
                             top: 0,
                             display: 'flex',
-                            flexDirection: anyWorkHovered ? 'column' : 'row-reverse',
+                            flexDirection: anyWorkHovered ? 'column-reverse' : 'row-reverse',
                             alignItems: anyWorkHovered ? 'flex-end' : 'flex-start',
                             gap: '4px',
                             paddingBottom: anyWorkHovered ? '24px' : '0',
@@ -294,9 +295,9 @@ export default function WorkListScroller({
                                 e.currentTarget.style.opacity = '0.7';
                             }}
                             style={{
-                                background: 'var(--color-white)',
                                 border: 'none',
                                 cursor: showRightArrow ? 'pointer' : 'default',
+                                marginTop: anyWorkHovered ? '30px' : '0',
                                 padding: '4px 8px',
                                 fontSize: '14px',
                                 color: '#000000',
@@ -313,9 +314,9 @@ export default function WorkListScroller({
                                 opacity: 0.7,
                                 letterSpacing: '2px',
                                 userSelect: 'none',
-                                marginTop: anyWorkHovered ? '30px' : '0',
+                                marginTop: anyWorkHovered ? '12px' : '0',
                                 transition: 'margin-top 0.3s ease',
-                                alignSelf: 'flex-start',
+                                alignSelf: 'flex-end', // 항상 오른쪽 정렬
                             }}
                         >
                             ...

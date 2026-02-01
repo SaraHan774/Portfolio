@@ -1,8 +1,9 @@
 'use client';
 
 /**
- * 작품 상세 모달 컴포넌트
+ * 작품 상세 모달 컴포넌트 (모바일 버전)
  * 캡션 내 링크 클릭 시 다른 작품 정보를 모달로 표시
+ * 모바일에서는 작품명 - 작품 리스트 - 캡션 순으로 세로 배치
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -13,10 +14,8 @@ import { Spinner } from '@/presentation';
 import { YouTubeEmbed } from '../media';
 import ModalImage from './ModalImage';
 import FloatingWorkWindow from './FloatingWorkWindow';
-import { OverlayScrollbarsComponent } from 'overlayscrollbars-react';
-import 'overlayscrollbars/overlayscrollbars.css';
 
-interface WorkModalProps {
+interface WorkModalMobileProps {
   /** 표시할 작품 ID */
   workId: string;
   /** 모달 닫기 핸들러 */
@@ -31,12 +30,12 @@ interface WorkModalProps {
   ) => React.ReactNode;
 }
 
-export default function WorkModal({
+export default function WorkModalMobile({
   workId,
   onClose,
   onWorkClick,
   renderCaption,
-}: WorkModalProps) {
+}: WorkModalMobileProps) {
   // Fetch work data using domain hook
   const { data: modalWork, isLoading, isError, error } = useWork(workId);
 
@@ -52,14 +51,8 @@ export default function WorkModal({
   // Hover 중인 작업 데이터
   const { data: hoveredWork } = useWork(hoveredWorkId || '');
 
-  interface OverlayScrollbarsInstance {
-    elements: () => {
-      viewport: HTMLElement | null;
-    };
-  }
-
   const [modalCurrentImageId, setModalCurrentImageId] = useState<string | null>(null);
-  const overlayScrollbarsRef = useRef<OverlayScrollbarsInstance | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   // 모달 작품이 변경될 때 hover 상태 초기화
   useEffect(() => {
@@ -89,23 +82,17 @@ export default function WorkModal({
         setModalCurrentImageId(mediaItems[0].data.id);
       }
       // 스크롤 초기화 (다른 작품으로 이동 시)
-      if (overlayScrollbarsRef.current) {
-        const { viewport } = overlayScrollbarsRef.current.elements();
-        if (viewport) {
-          viewport.scrollTop = 0;
-        }
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = 0;
       }
     }
   }, [modalWork, workId]);
 
   // 모달 내 이미지 Intersection Observer + 스크롤 끝 감지
   useEffect(() => {
-    if (!modalWork || !modalCurrentImageId || !overlayScrollbarsRef.current) return;
+    if (!modalWork || !modalCurrentImageId || !scrollContainerRef.current) return;
 
-    const { viewport } = overlayScrollbarsRef.current.elements();
-    if (!viewport) return;
-
-    const container = viewport as HTMLElement;
+    const container = scrollContainerRef.current;
     const imageElements = container.querySelectorAll('[data-image-id]');
     const sortedMedia = getMediaItems(modalWork);
     let lastTrackedImageId: string | null = null;
@@ -244,41 +231,48 @@ export default function WorkModal({
   const modalMediaItems = getMediaItems(modalWork);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'transparent',
-        zIndex: 1000,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
+    <>
+      <style>{`
+        .mobile-modal-scroll::-webkit-scrollbar {
+          display: none;
         }
-      }}
-      onWheel={(e) => {
-        // Prevent wheel events from propagating to background page
-        e.preventDefault();
-        e.stopPropagation();
-      }}
-      onTouchMove={(e) => {
-        // Prevent touch scroll on modal overlay
-        if (e.target === e.currentTarget) {
+      `}</style>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'transparent',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 'var(--space-4)',
+        }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
+        onWheel={(e) => {
+          // Prevent wheel events from propagating to background page
           e.preventDefault();
-        }
-      }}
-      className="modal-overlay"
-    >
+          e.stopPropagation();
+        }}
+        onTouchMove={(e) => {
+          // Prevent touch scroll on modal overlay
+          if (e.target === e.currentTarget) {
+            e.preventDefault();
+          }
+        }}
+        className="modal-overlay"
+      >
       <motion.div
         initial={{ opacity: 0.8, scale: 0.4 }}
         animate={{
@@ -298,14 +292,13 @@ export default function WorkModal({
           },
         }}
         style={{
-          maxWidth: '1200px',
           width: '100%',
+          maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
-          overflow: 'visible',
+          overflow: 'hidden',
           border: 'none',
-            paddingBottom: '40px',
         }}
         onClick={(e) => e.stopPropagation()}
         className="modal-content"
@@ -348,75 +341,50 @@ export default function WorkModal({
           ×
         </button>
 
-        {/* 상단: 작품명 */}
+        {/* 전체 스크롤 영역 */}
         <div
+          ref={scrollContainerRef}
+          className="mobile-modal-scroll"
           style={{
-            position: 'relative',
-            padding: 'var(--space-6)',
-            paddingBottom: 'var(--space-4)',
-            zIndex: 1,
-          }}
-        >
-          <h2
-            style={{
-              fontSize: 'var(--font-size-lg)',
-              color: 'var(--color-text-primary)',
-              margin: 0,
-              textAlign: 'center',
-            }}
-          >
-              {`「‘${modalWork.title}’」${modalWork.year ? `,\u00A0${modalWork.year}` : ''}`}
-          </h2>
-        </div>
-
-        {/* 본문: 스크롤 영역 + 고정 캡션 */}
-        <div
-          style={{
-            display: 'flex',
-            flex: 1,
-            overflow: 'hidden',
+            height: '100%',
             position: 'relative',
             zIndex: 1,
-            borderRadius: '0 0 4px 4px',
-          }}
+            overflowX: 'hidden',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none', // Firefox
+            msOverflowStyle: 'none', // IE and Edge
+          } as React.CSSProperties}
         >
-          {/* 좌측: 타임라인 + 미디어 영역 */}
           <div
             style={{
-              width: '65%',
-              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: 'var(--space-6)',
+              gap: 'var(--space-3)',
             }}
           >
-            {/* 미디어 스크롤 영역 (이미지 + 영상) */}
-            <OverlayScrollbarsComponent
-              element="div"
-              className="os-theme-dotted-left"
-              options={{
-                scrollbars: {
-                  autoHide: 'never',
-                  autoHideDelay: 0,
-                },
-                overflow: {
-                  x: 'hidden',
-                  y: 'scroll',
-                },
-              }}
-              events={{
-                initialized: (instance) => {
-                  overlayScrollbarsRef.current = instance;
-                  console.log('OverlayScrollbars initialized:', instance);
-                },
-              }}
+            {/* 1. 작품명 */}
+            <div>
+              <h2
+                style={{
+                  fontSize: 'var(--font-size-lg)',
+                  color: 'var(--color-text-primary)',
+                  margin: 0,
+                  textAlign: 'center',
+                }}
+              >
+                {`「'${modalWork.title}'」${modalWork.year ? `,\u00A0${modalWork.year}` : ''}`}
+              </h2>
+            </div>
+
+            {/* 2. 작품 리스트 (미디어) */}
+            <div
               style={{
-                height: 'calc(70vh - 80px)',
+                display: 'flex',
+                flexDirection: 'column',
               }}
             >
-              <div style={{
-                // paddingTop: 'var(--space-6)',
-                paddingRight: 'var(--space-6)',
-                // paddingBottom: 'var(--space-6)',
-                paddingLeft: 'calc(var(--space-4) + 20px + var(--space-4))',
-              }}>
               {modalMediaItems.map((item, index) => {
                 const isLast = index === modalMediaItems.length - 1;
 
@@ -432,44 +400,31 @@ export default function WorkModal({
                     image={item.data}
                     alt={modalWork.title}
                     isLast={isLast}
+                    marginBottom='var(--space-2)'
                   />
                 );
               })}
-              </div>
-            </OverlayScrollbarsComponent>
-          </div>
+            </div>
 
-          {/* 우측: 캡션 (고정, 정중앙) */}
-          <div
-            style={{
-              width: '35%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 'var(--space-6)',
-              paddingRight: 'calc(var(--space-6) + var(--space-8))',
-              position: 'sticky',
-              top: 0,
-              alignSelf: 'flex-start',
-              height: 'calc(70vh - 100px)',
-            }}
-            onWheel={(e) => {
-              // 캡션 영역에서 스크롤 시 이미지 영역으로 전달
-              e.preventDefault(); // Prevent scroll from propagating to background
-              if (overlayScrollbarsRef.current) {
-                const { viewport } = overlayScrollbarsRef.current.elements();
-                if (viewport) {
-                  viewport.scrollTop += e.deltaY;
-                }
-              }
-            }}
-          >
+            {/* 3. 캡션 */}
             {modalWork.caption && (
               <div
-                className="work-caption"
-                data-is-modal="true"
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  padding: 'var(--space-2) 0',
+                }}
               >
-                {renderCaption(modalWork.caption, `modal-${modalWork.id}`, true)}
+                <div
+                  className="work-caption"
+                  data-is-modal="true"
+                  style={{
+                    maxWidth: '600px',
+                    width: '100%',
+                  }}
+                >
+                  {renderCaption(modalWork.caption, `modal-${modalWork.id}`, true)}
+                </div>
               </div>
             )}
           </div>
@@ -492,6 +447,6 @@ export default function WorkModal({
         </AnimatePresence>
       </motion.div>
     </motion.div>
+    </>
   );
 }
-

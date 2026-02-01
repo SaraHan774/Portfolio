@@ -4,6 +4,7 @@ import "./globals.css";
 import { ErrorBoundary, PortfolioLayoutSimple, DebugGrid, ColorPaletteDebugger } from '@/presentation';
 import ImageZoomProvider from '@/presentation/components/layout/ImageZoomProvider';
 import { AnalyticsProvider } from '@/presentation/components/analytics/AnalyticsProvider';
+import { ToastProvider } from '@/presentation/contexts/ToastContext';
 import {
   CategoriesProvider,
   CategorySelectionProvider,
@@ -50,8 +51,9 @@ export default function RootLayout({
         style={{ fontFamily: 'var(--font-nanum-myeongjo)' }}
       >
         <ErrorBoundary>
-          <QueryProvider>
-            <AnalyticsProvider>
+          <ToastProvider>
+            <QueryProvider>
+              <AnalyticsProvider>
               <CategoriesProvider>
                 <CategorySelectionProvider>
                   <UIStateProvider>
@@ -67,6 +69,7 @@ export default function RootLayout({
               </CategoriesProvider>
             </AnalyticsProvider>
           </QueryProvider>
+          </ToastProvider>
         </ErrorBoundary>
         <DebugGrid />
         <ColorPaletteDebugger />

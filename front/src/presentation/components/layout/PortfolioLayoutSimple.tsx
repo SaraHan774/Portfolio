@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, ReactNode, useEffect } from 'react';
+import { useState, useCallback, useMemo, ReactNode, useEffect, CSSProperties, ReactElement } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 import StaticCategorySidebar from './StaticCategorySidebar';
@@ -8,8 +8,9 @@ import { MobileSwipeableCategories } from '../mobile';
 import WorkListScrollerFlex from '../work/WorkListScrollerFlex';
 import Footer from './Footer';
 import { DebugGrid } from './DebugGrid';
+import HomeIcon from './HomeIcon';
 import { useCategories, useCategorySelection } from '@/state';
-import { useFilteredWorks, useMobileDetection } from '@/domain';
+import { useFilteredWorks, useMobileDetection, useSiteSettings } from '@/domain';
 import { LayoutStabilityProvider } from '@/presentation/contexts/LayoutStabilityContext';
 
 interface PortfolioLayoutSimpleProps {
@@ -29,14 +30,17 @@ interface PortfolioLayoutSimpleProps {
  * - /?exhibitionId=xxx
  * - /?keywordId=xxx&workId=123
  */
-export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpleProps) {
+export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpleProps): ReactElement {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   // Global state
-  const { selectedKeywordId, selectedExhibitionCategoryId, selectKeyword, selectExhibitionCategory } = useCategorySelection();
+  const { selectedKeywordId, selectedExhibitionCategoryId, selectKeyword, selectExhibitionCategory, clearSelection } = useCategorySelection();
   const { sentenceCategories, exhibitionCategories } = useCategories();
+
+  // Site settings for home icon
+  const { data: siteSettings } = useSiteSettings();
 
   // Mobile detection
   const isMobile = useMobileDetection();
@@ -56,17 +60,22 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
   // Debug mode (development only)
   const isDebugMode = IS_DEBUG_LAYOUT_ENABLED;
 
-  // URL에서 초기 카테고리 복원 (홈페이지 새로고침 시)
+  // URL과 카테고리 선택 상태 동기화
   useEffect(() => {
     const urlKeywordId = searchParams.get('keywordId');
     const urlExhibitionId = searchParams.get('exhibitionId');
 
+    // URL → State 동기화: URL에 파라미터가 있으면 상태 복원
     if (urlKeywordId && !selectedKeywordId) {
       selectKeyword(urlKeywordId);
     } else if (urlExhibitionId && !selectedExhibitionCategoryId) {
       selectExhibitionCategory(urlExhibitionId);
     }
-  }, [searchParams, selectedKeywordId, selectedExhibitionCategoryId, selectKeyword, selectExhibitionCategory]);
+    // URL이 비어있으면 상태도 초기화
+    else if (!urlKeywordId && !urlExhibitionId && (selectedKeywordId || selectedExhibitionCategoryId)) {
+      clearSelection();
+    }
+  }, [searchParams, selectedKeywordId, selectedExhibitionCategoryId, selectKeyword, selectExhibitionCategory, clearSelection]);
 
   // 선택된 카테고리의 작업 ID 목록
   const selectedWorkIds = useMemo(() => works.map(work => work.id), [works]);
@@ -124,14 +133,19 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
   const shouldShowWorkList = hasData && (selectedKeywordId || selectedExhibitionCategoryId);
   const workListPosition = selectedKeywordId ? 'left' : 'right';
 
+  // Memoize container style to prevent re-creation on every render
+  const containerStyle = useMemo<CSSProperties>(() => ({
+    height: mounted && isMobile ? '100vh' : 'auto',
+    minHeight: mounted && isMobile ? 'auto' : '100vh',
+    overflowY: mounted && isMobile ? 'auto' : 'visible',
+    display: 'flex',
+    flexDirection: 'column',
+    position: 'relative',
+    width: '100%',
+  }), [mounted, isMobile]);
+
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      position: 'relative',
-      width: '100%',
-    }}>
+    <div style={containerStyle}>
         {/* 카테고리 영역 - Mobile만 sticky */}
         {mounted && isMobile ? (
           <MobileSwipeableCategories
@@ -160,7 +174,6 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
           <div
             style={{
               position: 'relative',
-              marginTop: 'var(--space-6)',
               width: '100%',
             }}
           >
@@ -196,6 +209,16 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
         </div>
 
       <Footer />
+
+      {/* 홈 아이콘 (웹/태블릿 화면에서만 표시, 화면 중앙 상단 고정) */}
+      {siteSettings?.homeIconUrl && siteSettings?.homeIconHoverUrl && (
+        <HomeIcon
+          defaultIconUrl={siteSettings.homeIconUrl}
+          hoverIconUrl={siteSettings.homeIconHoverUrl}
+          size={siteSettings.homeIconSize}
+          onReset={clearSelection}
+        />
+      )}
 
       {/* 디버그 그리드 오버레이 */}
       <DebugGrid />

@@ -20,6 +20,7 @@ import {
   YouTubeEmbed,
   FadeInImage,
   WorkModal,
+  WorkModalMobile,
   CaptionWithBoundary,
   MediaTimeline,
   AnimatedCharacterText,
@@ -176,11 +177,29 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
   // 상태 관리
   const [currentImageId, setCurrentImageId] = useState<string | null>(null);
   const [modalWorkId, setModalWorkId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Client-side mount state (for hydration-safe debug labels)
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // 화면 크기 감지 (모바일 여부)
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    // 초기 체크
+    checkMobile();
+
+    // 리사이즈 이벤트 리스너
+    window.addEventListener('resize', checkMobile);
+
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
   }, []);
 
   // Debug mode (development only)
@@ -438,7 +457,7 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
           )}
 
           {/* 선택된 작품의 미디어 표시 */}
-          <AnimatePresence mode="sync">
+          <AnimatePresence mode="wait">
             {work && hasMedia(work) && (
               <motion.div
                 key={workId}
@@ -547,12 +566,21 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
       {/* 작품 상세 모달 */}
       <AnimatePresence>
         {modalWorkId && (
-          <WorkModal
-            workId={modalWorkId}
-            onClose={() => setModalWorkId(null)}
-            onWorkClick={(clickedWorkId) => setModalWorkId(clickedWorkId)}
-            renderCaption={renderCaption}
-          />
+          isMobile ? (
+            <WorkModalMobile
+              workId={modalWorkId}
+              onClose={() => setModalWorkId(null)}
+              onWorkClick={(clickedWorkId) => setModalWorkId(clickedWorkId)}
+              renderCaption={renderCaption}
+            />
+          ) : (
+            <WorkModal
+              workId={modalWorkId}
+              onClose={() => setModalWorkId(null)}
+              onWorkClick={(clickedWorkId) => setModalWorkId(clickedWorkId)}
+              renderCaption={renderCaption}
+            />
+          )
         )}
       </AnimatePresence>
 
