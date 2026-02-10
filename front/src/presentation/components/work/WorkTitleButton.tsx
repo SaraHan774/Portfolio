@@ -98,8 +98,8 @@ export default function WorkTitleButton({
     }
   }, []);
 
-  // Format title with quotes and year
-  const displayText = `「‘${work.title}’」${work.year ? `,\u00A0${work.year}` : ''}`;
+  // Format title with year
+  const displayText = `${work.title}${work.year ? `,\u00A0${work.year}` : ''}`;
 
   // Container styling for dot positioning (no overflow)
   const containerStyle: React.CSSProperties = {
