@@ -237,28 +237,37 @@ export default function MediaTimeline({
   useEffect(() => {
     if (!mediaBounds) return;
 
+    const isModal = !!scrollContainerRef?.current;
+    let rafId: number | null = null;
+
     const updateScroll = () => {
       const container = scrollContainerRef?.current;
 
       if (container) {
+        // Modal 모드: setState 없이 직접 DOM만 업데이트
         const scrollTop = container.scrollTop;
         const clientHeight = container.clientHeight;
         const viewportCenter = scrollTop + clientHeight / 2;
         const thumbPos = viewportCenter - mediaBounds.firstTop;
 
-        // 직접 DOM 업데이트 (React state 우회)
+        // 직접 DOM 업데이트 (React state 우회, 리렌더링 방지)
         if (thumbRef.current) {
           thumbRef.current.style.transform = `translate(-50%, ${thumbPos}px)`;
         }
-
-        setScrollPosition(scrollTop);
-        setViewportHeight(clientHeight);
       } else {
-        const scrollTop = window.scrollY;
-        const clientHeight = window.innerHeight;
+        // Page 모드: RAF + setState (throttled)
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+        }
 
-        setScrollPosition(scrollTop);
-        setViewportHeight(clientHeight);
+        rafId = requestAnimationFrame(() => {
+          const scrollTop = window.scrollY;
+          const clientHeight = window.innerHeight;
+
+          setScrollPosition(scrollTop);
+          setViewportHeight(clientHeight);
+          rafId = null;
+        });
       }
     };
 
@@ -269,6 +278,9 @@ export default function MediaTimeline({
       container.addEventListener('scroll', updateScroll, { passive: true });
 
       return () => {
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+        }
         container.removeEventListener('scroll', updateScroll);
       };
     } else {
@@ -276,6 +288,9 @@ export default function MediaTimeline({
       window.addEventListener('resize', updateScroll);
 
       return () => {
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+        }
         window.removeEventListener('scroll', updateScroll);
         window.removeEventListener('resize', updateScroll);
       };
@@ -289,13 +304,8 @@ export default function MediaTimeline({
   const isModal = !!scrollContainerRef;
 
   if (isModal) {
-    // Modal 렌더링
+    // Modal 렌더링 - thumb 위치는 직접 DOM 업데이트로만 제어
     const timelineHeight = mediaBounds.lastBottom - mediaBounds.firstTop;
-    const viewportCenter = scrollPosition + viewportHeight / 2;
-    const thumbPos = viewportCenter - mediaBounds.firstTop;
-    const isVisible = thumbPos >= 0 && thumbPos <= timelineHeight;
-
-    if (!isVisible) return null;
 
     return (
       <div
@@ -351,12 +361,13 @@ export default function MediaTimeline({
             position: 'absolute',
             left: '50%',
             top: 0,
-            transform: `translate(-50%, ${thumbPos}px)`,
+            transform: 'translate(-50%, 0)',
             width: '10px',
             height: '10px',
             borderRadius: '50%',
             backgroundColor: 'var(--color-gray-600)',
             zIndex: 2,
+            willChange: 'transform',
           }}
         />
       </div>
@@ -435,8 +446,8 @@ export default function MediaTimeline({
             left: '50%',
             top: 0,
             transform: `translate(-50%, ${thumbPos}px)`,
-            width: '10px',
-            height: '10px',
+            width: '8px',
+            height: '8px',
             borderRadius: '50%',
             backgroundColor: 'var(--color-gray-300)',
             zIndex: 2,

@@ -375,7 +375,7 @@ export default function WorkModalMobile({
                   textAlign: 'center',
                 }}
               >
-                {`「'${modalWork.title}'」${modalWork.year ? `,\u00A0${modalWork.year}` : ''}`}
+                {`${modalWork.title}${modalWork.year ? `,\u00A0${modalWork.year}` : ''}`}
               </h2>
             </div>
 

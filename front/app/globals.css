@@ -571,15 +571,15 @@ img {
 
 /* Handle(Thumb) - 둥근 점, 점선 중앙에 위치 */
 .os-theme-dotted-left .os-scrollbar-vertical .os-scrollbar-handle {
-  background: var(--color-gray-600) !important;
+  background: var(--color-gray-300) !important;
   border-radius: 50% !important;
-  width: 10px !important;
-  min-width: 10px !important;
-  max-width: 10px !important;
-  height: 10px !important;
-  min-height: 10px !important;
-  max-height: 10px !important;
-  left: 5px !important;
+  width: 8px !important;
+  min-width: 8px !important;
+  max-width: 8px !important;
+  height: 8px !important;
+  min-height: 8px !important;
+  max-height: 8px !important;
+  left: 6px !important;
   right: auto !important;
   opacity: 1 !important;
   visibility: visible !important;
@@ -588,7 +588,7 @@ img {
 }
 
 .os-theme-dotted-left .os-scrollbar-vertical .os-scrollbar-handle:hover {
-  background: var(--color-text-primary) !important;
+  background: var(--color-gray-600) !important;
 }
 
 /* 가로 스크롤바 숨김 */

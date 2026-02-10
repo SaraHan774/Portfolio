@@ -38,6 +38,8 @@ export default function ScrollableCategoryList({
   const [isScrollable, setIsScrollable] = useState(false);
   // 동적으로 계산된 최대 높이
   const [maxHeight, setMaxHeight] = useState<number | null>(null);
+  // 스크롤 진행률 (0~100%)
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   // Debug mode (development only)
   const isDebugMode = IS_DEBUG_LAYOUT_ENABLED;
@@ -72,8 +74,13 @@ export default function ScrollableCategoryList({
     // 스크롤 가능 거리가 거의 없으면 스크롤 불필요
     if (scrollableDistance <= 10) {
       setScrollPosition('top');
+      setScrollProgress(0);
       return;
     }
+
+    // 스크롤 진행률 계산 (0~100%)
+    const progress = Math.max(0, Math.min(100, (scrollTop / scrollableDistance) * 100));
+    setScrollProgress(progress);
 
     // 스크롤 위치 판단 - threshold를 10px로 증가 (소수점 픽셀 및 브라우저 차이 대응)
     if (scrollTop <= 10) {
