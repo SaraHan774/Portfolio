@@ -18,6 +18,8 @@ interface ScrollableCategoryListProps {
   fadeHeight?: number;
   /** 스크롤바 위치 (기본값: 'left') */
   scrollbarPosition?: 'left' | 'right';
+  /** 스크롤바 숨김 여부 (기본값: false) */
+  hideScrollbar?: boolean;
 }
 
 /**
@@ -31,6 +33,7 @@ export default function ScrollableCategoryList({
   viewportHeightRatio = DEFAULT_VIEWPORT_HEIGHT_RATIO,
   fadeHeight = DEFAULT_FADE_HEIGHT,
   scrollbarPosition = 'left',
+  hideScrollbar = false,
 }: ScrollableCategoryListProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -209,8 +212,8 @@ export default function ScrollableCategoryList({
           // mask로 fade 효과 적용 - 스크롤 가능함을 시각적으로 표시
           maskImage: getMaskImage(),
           WebkitMaskImage: getMaskImage(),
-          // 스크롤바와 겹치지 않도록 패딩 추가 (스크롤 활성화 시)
-          ...(isScrollable ? {
+          // 스크롤바와 겹치지 않도록 패딩 추가 (스크롤바 표시 시에만)
+          ...(isScrollable && !hideScrollbar ? {
             [scrollbarPosition === 'left' ? 'paddingLeft' : 'paddingRight']: '28px', // 20px(스크롤바) + 8px(여유)
           } : {}),
           ...(isDebugMode ? {
@@ -228,7 +231,7 @@ export default function ScrollableCategoryList({
       </div>
 
       {/* 세로 스크롤바 - 위치에 따라 좌측 또는 우측에만 표시 */}
-      {isScrollable && maxHeight && (
+      {isScrollable && maxHeight && !hideScrollbar && (
         <div
           style={{
             position: 'absolute',

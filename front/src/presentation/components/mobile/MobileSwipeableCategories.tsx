@@ -188,7 +188,7 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
                 No categories available
               </div>
             ) : (
-              <ScrollableCategoryList viewportHeightRatio={0.2}>
+              <ScrollableCategoryList viewportHeightRatio={0.2} hideScrollbar>
                 {sortedSentenceCategories.map((category, index) => {
                   return (
                     <div
@@ -241,7 +241,7 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
                 No categories available
               </div>
             ) : (
-              <ScrollableCategoryList viewportHeightRatio={0.2}>
+              <ScrollableCategoryList viewportHeightRatio={0.2} hideScrollbar>
                 {sortedExhibitionCategories.map((category, index) => {
                   const isLast = index === sortedExhibitionCategories.length - 1;
                   return (
