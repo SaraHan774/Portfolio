@@ -1,8 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
-import { useFloatingPosition, useThumbnailUrl } from '@/domain';
+import { useFloatingPosition } from '@/domain';
 import { FLOATING_WINDOW_ANIMATION } from '@/core/constants';
 import type { Work } from '@/types';
 
@@ -18,6 +18,8 @@ const WINDOW_DIMENSIONS = {
 };
 
 export default function FloatingWorkWindow({ work, position, onClick }: FloatingWorkWindowProps) {
+  const [isLoaded, setIsLoaded] = useState(false);
+
   // Use custom hooks for positioning and thumbnail
   const adjustedPosition = useFloatingPosition({
     position,
@@ -26,8 +28,12 @@ export default function FloatingWorkWindow({ work, position, onClick }: Floating
     edgePadding: 20,
   });
 
-  const thumbnailUrl = useThumbnailUrl(work);
-  const hasThumbnail = !!thumbnailUrl;
+  // Get thumbnail image with width/height info
+  const thumbnailImage =
+    work.images?.find((img) => img.id === work.thumbnailImageId) ||
+    work.images?.[0];
+
+  const hasThumbnail = !!thumbnailImage;
 
   return (
     <motion.div
@@ -83,22 +89,43 @@ export default function FloatingWorkWindow({ work, position, onClick }: Floating
         </span>
 
         {/* 썸네일 */}
-        {hasThumbnail && (
+        {hasThumbnail && thumbnailImage && (
           <div
             style={{
               width: '80px',
               height: '80px',
               position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               overflow: 'hidden',
             }}
           >
-            <Image
-              src={thumbnailUrl}
+            {/* 스켈레톤 - 로딩 중일 때만 표시 */}
+            {!isLoaded && (
+              <div
+                className="skeleton-shimmer"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'linear-gradient(90deg, #d8d8d8 0%, #d0d0d0 30%, #c8c8c8 50%, #d0d0d0 70%, #d8d8d8 100%)',
+                  backgroundSize: '200% 100%',
+                  animation: 'shimmer 1.5s infinite',
+                }}
+              />
+            )}
+            <img
+              src={thumbnailImage.url}
               alt={work.title}
-              fill
-              sizes="80px"
+              onLoad={() => setIsLoaded(true)}
               style={{
-                objectFit: 'cover',
+                width: '100%',
+                height: 'auto',
+                maxHeight: '80px',
+                objectFit: 'contain',
+                display: 'block',
+                opacity: isLoaded ? 1 : 0,
+                transition: 'opacity 0.3s ease-in-out',
               }}
             />
           </div>

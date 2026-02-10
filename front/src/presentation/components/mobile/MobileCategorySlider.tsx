@@ -90,7 +90,7 @@ export const MobileCategorySlider: React.FC<MobileCategorySliderProps> = ({
             left: `${dotPosition}%`,
             width: '10px',
             height: '10px',
-            backgroundColor: '#D32F2F', // 빨간색
+            backgroundColor: 'rgba(178,34,34,0.8)', // 빨간색
             borderRadius: '50%',
             transform: 'translate(-50%, -50%)',
             transition:

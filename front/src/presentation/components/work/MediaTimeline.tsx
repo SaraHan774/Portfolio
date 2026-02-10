@@ -15,6 +15,8 @@ import { logLayout, getViewportInfo, getElementInfo } from '@/core/utils/layoutD
 interface MediaItem {
   data: {
     id: string;
+    width?: number;
+    height?: number;
   };
 }
 
@@ -117,33 +119,63 @@ export default function MediaTimeline({
       }
     };
 
-    const container = scrollContainerRef?.current || document;
-    const images = Array.from(container.querySelectorAll('img'));
+    // 즉시 초기 계산 시도 (이미지가 aspect-ratio로 공간을 확보한 경우 작동)
+    const tryCalculate = () => {
+      if (!isActive) return false;
 
-    // 모든 이미지 로드 완료 대기 후 한 번만 재계산 (초기 타이머 제거)
-    Promise.all(
-      images.map(img =>
-        img.complete
-          ? Promise.resolve()
-          : new Promise<void>(resolve => {
-              img.addEventListener('load', () => resolve(), { once: true });
-              img.addEventListener('error', () => resolve(), { once: true });
-            })
-      )
-    ).then(() => {
-      // 컴포넌트가 아직 마운트되어 있을 때만 계산
-      if (isActive) {
+      const container = scrollContainerRef?.current;
+      const firstElement = container
+        ? container.querySelector(`[data-image-id="${mediaItems[0]?.data.id}"]`) as HTMLElement
+        : document.querySelector(`[data-image-id="${mediaItems[0]?.data.id}"]`) as HTMLElement;
+
+      const lastElement = container
+        ? container.querySelector(`[data-image-id="${mediaItems[mediaItems.length - 1]?.data.id}"]`) as HTMLElement
+        : document.querySelector(`[data-image-id="${mediaItems[mediaItems.length - 1]?.data.id}"]`) as HTMLElement;
+
+      // 요소가 존재하고 높이가 있으면 계산 가능
+      if (firstElement && lastElement && lastElement.offsetHeight > 0) {
         calculateBounds();
-        logLayout('MediaTimeline', 'all-images-loaded', {
-          ...getViewportInfo(),
-          mode: isModal ? 'modal' : 'page',
-          imageCount: images.length,
-        });
+        return true;
       }
-    });
+      return false;
+    };
+
+    // 즉시 계산 시도
+    const immediateSuccess = tryCalculate();
+
+    if (!immediateSuccess) {
+      // 실패하면 이미지 로드 대기
+      const container = scrollContainerRef?.current || document;
+      const images = Array.from(container.querySelectorAll('img'));
+
+      Promise.all(
+        images.map(img =>
+          img.complete
+            ? Promise.resolve()
+            : new Promise<void>(resolve => {
+                img.addEventListener('load', () => resolve(), { once: true });
+                img.addEventListener('error', () => resolve(), { once: true });
+              })
+        )
+      ).then(() => {
+        if (isActive) {
+          calculateBounds();
+          logLayout('MediaTimeline', 'all-images-loaded', {
+            ...getViewportInfo(),
+            mode: isModal ? 'modal' : 'page',
+            imageCount: images.length,
+          });
+        }
+      });
+    } else {
+      logLayout('MediaTimeline', 'immediate-calculate-success', {
+        ...getViewportInfo(),
+        mode: isModal ? 'modal' : 'page',
+      });
+    }
 
     let resizeTimer: NodeJS.Timeout | null = null;
-    let rafId: number | null = null;
+    let resizeRafId: number | null = null;
 
     // Page 모드: window resize 이벤트 감지 (RAF + debounced)
     const handleResize = () => {
@@ -154,15 +186,15 @@ export default function MediaTimeline({
       if (resizeTimer) {
         clearTimeout(resizeTimer);
       }
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
+      if (resizeRafId !== null) {
+        cancelAnimationFrame(resizeRafId);
       }
 
       // 200ms debounce 후 RAF로 실행 (category height 측정 완료 대기)
       resizeTimer = setTimeout(() => {
         if (!isActive) return;
 
-        rafId = requestAnimationFrame(() => {
+        resizeRafId = requestAnimationFrame(() => {
           if (isActive) {
             calculateBounds();
             logLayout('MediaTimeline', 'resize-recalculate', {
@@ -171,7 +203,7 @@ export default function MediaTimeline({
               optimized: 'RAF+debounce',
             });
           }
-          rafId = null;
+          resizeRafId = null;
         });
         resizeTimer = null;
       }, 200);
@@ -189,8 +221,8 @@ export default function MediaTimeline({
       if (resizeTimer) {
         clearTimeout(resizeTimer);
       }
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
+      if (resizeRafId !== null) {
+        cancelAnimationFrame(resizeRafId);
       }
       if (!scrollContainerRef?.current) {
         window.removeEventListener('resize', handleResize);
@@ -406,7 +438,7 @@ export default function MediaTimeline({
             width: '10px',
             height: '10px',
             borderRadius: '50%',
-            backgroundColor: 'var(--color-gray-600)',
+            backgroundColor: 'var(--color-gray-300)',
             zIndex: 2,
           }}
         />
