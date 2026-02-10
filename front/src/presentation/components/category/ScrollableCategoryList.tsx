@@ -16,6 +16,8 @@ interface ScrollableCategoryListProps {
   viewportHeightRatio?: number;
   /** fade 영역의 높이 (기본값: 24px) */
   fadeHeight?: number;
+  /** 스크롤바 위치 (기본값: 'left') */
+  scrollbarPosition?: 'left' | 'right';
 }
 
 /**
@@ -28,6 +30,7 @@ export default function ScrollableCategoryList({
   children,
   viewportHeightRatio = DEFAULT_VIEWPORT_HEIGHT_RATIO,
   fadeHeight = DEFAULT_FADE_HEIGHT,
+  scrollbarPosition = 'left',
 }: ScrollableCategoryListProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -192,31 +195,78 @@ export default function ScrollableCategoryList({
   }
   
   return (
-    <div
-      ref={scrollContainerRef}
-      style={{
-        // 상단 패딩을 포함한 최대 높이 계산
-        maxHeight: maxHeight ? `${maxHeight + TOP_PADDING_FOR_SELECTION_INDICATOR}px` : undefined,
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        // 스크롤바 완전히 숨김 - fading edge로 스크롤 가능함을 나타냄
-        scrollbarWidth: 'none',
-        msOverflowStyle: 'none',
-        // mask로 fade 효과 적용 - 스크롤 가능함을 시각적으로 표시
-        maskImage: getMaskImage(),
-        WebkitMaskImage: getMaskImage(),
-        ...(isDebugMode ? {
-          backgroundColor: 'rgba(135, 206, 250, 0.2)', // 하늘색 반투명 (scrollable)
-          border: '2px dashed deepskyblue',
-          position: 'relative',
-        } : {}),
-      }}
-      className="scrollable-category-list"
-    >
-      {/* 상단 패딩 영역 - 카테고리 선택 시 점(˙)이 잘리지 않도록 여유 공간 */}
-      <div ref={contentRef} style={{ paddingTop: `${TOP_PADDING_FOR_SELECTION_INDICATOR}px` }}>
-        {children}
+    <div style={{ position: 'relative' }}>
+      <div
+        ref={scrollContainerRef}
+        style={{
+          // 상단 패딩을 포함한 최대 높이 계산
+          maxHeight: maxHeight ? `${maxHeight + TOP_PADDING_FOR_SELECTION_INDICATOR}px` : undefined,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          // 스크롤바 완전히 숨김 - fading edge로 스크롤 가능함을 나타냄
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          // mask로 fade 효과 적용 - 스크롤 가능함을 시각적으로 표시
+          maskImage: getMaskImage(),
+          WebkitMaskImage: getMaskImage(),
+          // 스크롤바와 겹치지 않도록 패딩 추가 (스크롤 활성화 시)
+          ...(isScrollable ? {
+            [scrollbarPosition === 'left' ? 'paddingLeft' : 'paddingRight']: '28px', // 20px(스크롤바) + 8px(여유)
+          } : {}),
+          ...(isDebugMode ? {
+            backgroundColor: 'rgba(135, 206, 250, 0.2)', // 하늘색 반투명 (scrollable)
+            border: '2px dashed deepskyblue',
+            position: 'relative',
+          } : {}),
+        }}
+        className="scrollable-category-list"
+      >
+        {/* 상단 패딩 영역 - 카테고리 선택 시 점(˙)이 잘리지 않도록 여유 공간 */}
+        <div ref={contentRef} style={{ paddingTop: `${TOP_PADDING_FOR_SELECTION_INDICATOR}px` }}>
+          {children}
+        </div>
       </div>
+
+      {/* 세로 스크롤바 - 위치에 따라 좌측 또는 우측에만 표시 */}
+      {isScrollable && maxHeight && (
+        <div
+          style={{
+            position: 'absolute',
+            [scrollbarPosition]: 0,
+            top: `${TOP_PADDING_FOR_SELECTION_INDICATOR}px`,
+            width: '20px',
+            height: `${maxHeight}px`,
+            pointerEvents: 'none',
+          }}
+        >
+          {/* Track (회색 세로 선) */}
+          <div
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: 0,
+              bottom: 0,
+              width: '1px',
+              transform: 'translateX(-50%)',
+              backgroundColor: '#A9A9A9',
+            }}
+          />
+          {/* Thumb (빨간색 점) */}
+          <div
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: `${scrollProgress}%`,
+              width: '8px',
+              height: '8px',
+              backgroundColor: 'rgba(178,34,34,0.8)',
+              borderRadius: '50%',
+              transform: 'translate(-50%, -50%)',
+              transition: 'top 0.1s ease-out',
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -120,7 +120,7 @@ const StaticCategorySidebar = memo(function StaticCategorySidebar({
             Left: Sentence
           </div>
         )}
-        <ScrollableCategoryList viewportHeightRatio={0.13}>
+        <ScrollableCategoryList viewportHeightRatio={0.13} scrollbarPosition="left">
           {sortedSentenceCategories.map((category, index) => {
             const isLast = index === sortedSentenceCategories.length - 1;
             return (
@@ -173,7 +173,7 @@ const StaticCategorySidebar = memo(function StaticCategorySidebar({
             Right: Exhibition
           </div>
         )}
-        <ScrollableCategoryList viewportHeightRatio={0.13}>
+        <ScrollableCategoryList viewportHeightRatio={0.13} scrollbarPosition="right">
           {sortedExhibitionCategories.map((category, index) => {
             const isLast = index === sortedExhibitionCategories.length - 1;
             return (

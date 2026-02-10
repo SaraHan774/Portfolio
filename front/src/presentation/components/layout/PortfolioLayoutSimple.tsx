@@ -158,7 +158,7 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
             selectedWorkIds={selectedWorkIds}
           />
         ) : (
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative', marginBottom: '8px' }}>
             <StaticCategorySidebar
               sentenceCategories={sentenceCategories}
               exhibitionCategories={exhibitionCategories}
