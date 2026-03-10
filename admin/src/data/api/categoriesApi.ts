@@ -21,7 +21,7 @@ import {
   mapFirestoreToSentenceCategory,
   mapFirestoreToExhibitionCategory,
 } from '../mappers';
-import type { SentenceCategory, ExhibitionCategory } from '../../core/types';
+import type { SentenceCategory, ExhibitionCategory, WorkOrder } from '../../core/types';
 
 const logger = createLogger('categoriesApi');
 
@@ -76,6 +76,32 @@ const validateExhibitionCategoryData = (
     if (category.description.year < 1900 || category.description.year > currentYear + 10) {
       throw new ValidationError('유효하지 않은 연도입니다.', 'INVALID_YEAR');
     }
+  }
+};
+
+/**
+ * 작업 순서(WorkOrder) 유효성 검사
+ */
+const validateWorkOrders = (workOrders: WorkOrder[]): void => {
+  const workIds = new Set<string>();
+
+  for (const wo of workOrders) {
+    // 형식 검증
+    if (!wo.workId || typeof wo.order !== 'number' || wo.order < 1) {
+      throw new ValidationError(
+        'Invalid workOrder format: workId and order (>=1) required',
+        'INVALID_WORK_ORDER'
+      );
+    }
+
+    // 중복 검증
+    if (workIds.has(wo.workId)) {
+      throw new ValidationError(
+        `Duplicate workId in workOrders: ${wo.workId}`,
+        'DUPLICATE_WORK_ORDER'
+      );
+    }
+    workIds.add(wo.workId);
   }
 };
 
@@ -160,6 +186,15 @@ export const updateSentenceCategory = async (
   }
 
   validateSentenceCategoryData(updates);
+
+  // workOrders 검증 (키워드 내부)
+  if (updates.keywords) {
+    for (const keyword of updates.keywords) {
+      if (keyword.workOrders && keyword.workOrders.length > 0) {
+        validateWorkOrders(keyword.workOrders);
+      }
+    }
+  }
 
   try {
     const docRef = doc(db, collections.sentenceCategories, id);
@@ -283,6 +318,11 @@ export const updateExhibitionCategory = async (
   }
 
   validateExhibitionCategoryData(updates);
+
+  // workOrders 검증
+  if (updates.workOrders && updates.workOrders.length > 0) {
+    validateWorkOrders(updates.workOrders);
+  }
 
   try {
     const docRef = doc(db, collections.exhibitionCategories, id);

@@ -12,8 +12,41 @@ import {
 import { getDb } from './client';
 import { mapFirestoreToWork } from '../mappers';
 import { FIREBASE_COLLECTIONS, FIRESTORE_BATCH_LIMIT } from '@/core/constants';
-import type { Work } from '@/core/types';
+import type { Work, WorkOrder } from '@/core/types';
 import { NotFoundError, FirestoreError } from '@/core/errors';
+import { fetchKeywordById, fetchExhibitionCategoryById } from './categoriesApi';
+
+/**
+ * Sort works according to workOrders
+ * Works not in workOrders are appended at the end, sorted by createdAt desc
+ */
+const sortWorksByWorkOrders = (works: Work[], workOrders: WorkOrder[]): Work[] => {
+  if (!workOrders || workOrders.length === 0) {
+    // No workOrders - sort by createdAt desc
+    return works.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  // Create a map for quick lookup
+  const workMap = new Map(works.map((w) => [w.id, w]));
+  const orderMap = new Map(workOrders.map((wo) => [wo.workId, wo.order]));
+  const orderedWorkIds = new Set(workOrders.map((wo) => wo.workId));
+
+  // First: Add works in workOrders order
+  const orderedWorks: Work[] = [];
+  workOrders.forEach((wo) => {
+    const work = workMap.get(wo.workId);
+    if (work) {
+      orderedWorks.push(work);
+    }
+  });
+
+  // Second: Append works not in workOrders (sorted by createdAt desc)
+  const missingWorks = works
+    .filter((w) => !orderedWorkIds.has(w.id))
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+  return [...orderedWorks, ...missingWorks];
+};
 
 /**
  * Fetch all published works
@@ -66,6 +99,7 @@ export const fetchWorkById = async (id: string): Promise<Work> => {
 
 /**
  * Fetch works by keyword ID
+ * Works are sorted according to the keyword's workOrders
  */
 export const fetchWorksByKeywordId = async (keywordId: string): Promise<Work[]> => {
   try {
@@ -78,7 +112,13 @@ export const fetchWorksByKeywordId = async (keywordId: string): Promise<Work[]> 
     );
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map((doc) => mapFirestoreToWork(doc.id, doc.data()));
+    const works = snapshot.docs.map((doc) => mapFirestoreToWork(doc.id, doc.data()));
+
+    // Fetch keyword to get workOrders
+    const keyword = await fetchKeywordById(keywordId);
+
+    // Sort works according to workOrders
+    return sortWorksByWorkOrders(works, keyword.workOrders);
   } catch (error) {
     throw new FirestoreError(`Failed to fetch works by keyword ${keywordId}`, error);
   }
@@ -86,6 +126,7 @@ export const fetchWorksByKeywordId = async (keywordId: string): Promise<Work[]> 
 
 /**
  * Fetch works by exhibition category ID
+ * Works are sorted according to the category's workOrders
  */
 export const fetchWorksByExhibitionCategoryId = async (
   categoryId: string
@@ -100,7 +141,13 @@ export const fetchWorksByExhibitionCategoryId = async (
     );
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map((doc) => mapFirestoreToWork(doc.id, doc.data()));
+    const works = snapshot.docs.map((doc) => mapFirestoreToWork(doc.id, doc.data()));
+
+    // Fetch exhibition category to get workOrders
+    const category = await fetchExhibitionCategoryById(categoryId);
+
+    // Sort works according to workOrders
+    return sortWorksByWorkOrders(works, category.workOrders);
   } catch (error) {
     throw new FirestoreError(
       `Failed to fetch works by exhibition category ${categoryId}`,
