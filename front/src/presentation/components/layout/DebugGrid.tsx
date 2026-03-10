@@ -50,7 +50,7 @@ export function DebugGrid() {
           top: 0,
           left: 0,
           width: '100vw',
-          height: '100vh',
+          height: '100dvh', // iOS Safari 주소창 대응
           pointerEvents: 'none',
           zIndex: 9999,
           backgroundImage: `

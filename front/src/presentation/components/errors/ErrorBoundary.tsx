@@ -62,7 +62,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       return (
         <div
           style={{
-            minHeight: '100vh',
+            minHeight: '100dvh', // iOS Safari 주소창 대응
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
