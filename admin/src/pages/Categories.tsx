@@ -701,7 +701,7 @@ const Categories = () => {
                       size="small"
                       onClick={() => handleWorkOrderChange('sentence', keyword.id)}
                     >
-                      순서 변경
+                      작업 순서 변경
                     </Button>
                   </div>
                 );
