@@ -136,7 +136,7 @@ body {
   background-color: var(--color-background);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  min-height: 100vh;
+  min-height: 100dvh; /* iOS Safari 주소창 대응 */
   overflow-x: hidden; /* 가로 스크롤 방지 */
   width: 100%;
   position: relative;
@@ -241,7 +241,7 @@ img {
 
   html {
     overflow: hidden !important; /* html 스크롤 방지 - 내부 컨테이너에서 스크롤 */
-    height: 100vh !important;
+    height: 100dvh !important; /* iOS Safari 주소창 대응 */
     max-width: 100vw;
     position: relative;
   }
@@ -256,7 +256,7 @@ img {
     padding: 0 !important; /* 모바일에서 body padding 완전 제거 */
     margin: 0 !important;
     overflow: hidden !important; /* body 스크롤 방지 - 내부 컨테이너에서 스크롤 */
-    height: 100vh !important; /* 고정 높이 */
+    height: 100dvh !important; /* iOS Safari 주소창 대응 */
     /* 모바일 터치 동작 최적화 */
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y; /* 세로 스크롤만 허용 */
@@ -344,7 +344,7 @@ img {
 
   /* Desktop에서만 work detail main의 최소 높이 적용 */
   .work-detail-main {
-    min-height: 100vh;
+    min-height: 100dvh; /* iOS Safari 주소창 대응 */
   }
 }
 
@@ -393,9 +393,9 @@ img {
 
   .modal-content {
     max-width: 100% !important;
-    max-height: 100vh !important;
+    max-height: 100dvh !important; /* iOS Safari 주소창 대응 */
     border-radius: 0 !important;
-    height: 100vh !important;
+    height: 100dvh !important; /* iOS Safari 주소창 대응 */
     margin: 0 !important;
   }
 

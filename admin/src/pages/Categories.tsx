@@ -39,7 +39,8 @@ import {
   useUpdateCategoryOrders,
   useWorks,
 } from '../domain';
-import type { SentenceCategory, ExhibitionCategory, KeywordCategory } from '../core/types';
+import type { SentenceCategory, ExhibitionCategory, KeywordCategory, WorkOrder } from '../core/types';
+import WorkOrderManager from '../components/WorkOrderManager';
 import './Categories.css';
 
 const { Title } = Typography;
@@ -52,6 +53,15 @@ const Categories = () => {
   const [form] = Form.useForm();
   const [exhibitionForm] = Form.useForm();
   const [isMobile, setIsMobile] = useState(false);
+
+  // 작업 순서 관리 모달 상태
+  const [workOrderModalVisible, setWorkOrderModalVisible] = useState(false);
+  const [editingWorkOrder, setEditingWorkOrder] = useState<{
+    type: 'keyword' | 'exhibition';
+    categoryId: string;
+    categoryName: string;
+    workOrders: WorkOrder[];
+  } | null>(null);
 
   // 키워드 선택 관련 상태
   const [keywords, setKeywords] = useState<KeywordCategory[]>([]);
@@ -391,40 +401,67 @@ const Categories = () => {
       const category = sentenceCategories.find((cat) => cat.keywords.some((kw) => kw.id === categoryId));
       const keyword = category?.keywords.find((kw) => kw.id === categoryId);
 
-      if (!keyword || !keyword.workOrders || keyword.workOrders.length === 0) {
-        void message.warning('순서를 변경할 작업이 없습니다.');
-        return;
-      }
+      if (!keyword) return;
 
-      // 작업 순서 변경 모달 표시
-      Modal.confirm({
-        title: `"${keyword.name}" 작업 순서 변경`,
-        content: '작업 순서 변경 기능은 드래그 앤 드롭으로 구현할 예정입니다. 현재는 수동으로 작업 ID와 순서를 지정해야 합니다.',
-        okText: '확인',
-        cancelText: '취소',
-        onOk: () => {
-          void message.info('작업 순서 변경 UI는 향후 구현 예정입니다.');
-        },
+      setEditingWorkOrder({
+        type: 'keyword',
+        categoryId: keyword.id,
+        categoryName: keyword.name,
+        workOrders: keyword.workOrders || [],
       });
     } else {
       // 전시명 카테고리 찾기
       const category = exhibitionCategories.find((cat) => cat.id === categoryId);
 
-      if (!category || !category.workOrders || category.workOrders.length === 0) {
-        void message.warning('순서를 변경할 작업이 없습니다.');
-        return;
+      if (!category) return;
+
+      setEditingWorkOrder({
+        type: 'exhibition',
+        categoryId: category.id,
+        categoryName: category.title,
+        workOrders: category.workOrders || [],
+      });
+    }
+
+    setWorkOrderModalVisible(true);
+  };
+
+  // 작업 순서 저장
+  const handleSaveWorkOrder = async (newWorkOrders: WorkOrder[]) => {
+    if (!editingWorkOrder) return;
+
+    try {
+      if (editingWorkOrder.type === 'keyword') {
+        // 문장형 카테고리의 키워드 업데이트
+        const category = sentenceCategories.find((cat) =>
+          cat.keywords.some((kw) => kw.id === editingWorkOrder.categoryId)
+        );
+
+        if (!category) return;
+
+        const updatedKeywords = category.keywords.map((kw) =>
+          kw.id === editingWorkOrder.categoryId
+            ? { ...kw, workOrders: newWorkOrders }
+            : kw
+        );
+
+        await updateSentenceMutation.mutateAsync({
+          id: category.id,
+          updates: { keywords: updatedKeywords },
+        });
+      } else {
+        // 전시명 카테고리 업데이트
+        await updateExhibitionMutation.mutateAsync({
+          id: editingWorkOrder.categoryId,
+          updates: { workOrders: newWorkOrders },
+        });
       }
 
-      // 작업 순서 변경 모달 표시
-      Modal.confirm({
-        title: `"${category.title}" 작업 순서 변경`,
-        content: '작업 순서 변경 기능은 드래그 앤 드롭으로 구현할 예정입니다. 현재는 수동으로 작업 ID와 순서를 지정해야 합니다.',
-        okText: '확인',
-        cancelText: '취소',
-        onOk: () => {
-          void message.info('작업 순서 변경 UI는 향후 구현 예정입니다.');
-        },
-      });
+      message.success('작업 순서가 저장되었습니다.');
+      setWorkOrderModalVisible(false);
+      setEditingWorkOrder(null);
+    } catch {
+      message.error('작업 순서 저장에 실패했습니다.');
     }
   };
 
@@ -522,7 +559,6 @@ const Categories = () => {
           <Tag color="blue">작업 {workCount}개</Tag>
           <Button
             block
-            icon={<DragOutlined />}
             onClick={() => handleWorkOrderChange('exhibition', category.id)}
           >
             작업 순서 변경
@@ -663,10 +699,9 @@ const Categories = () => {
                     </span>
                     <Button
                       size="small"
-                      icon={<DragOutlined />}
                       onClick={() => handleWorkOrderChange('sentence', keyword.id)}
                     >
-                      순서 변경
+                      작업 순서 변경
                     </Button>
                   </div>
                 );
@@ -709,6 +744,12 @@ const Categories = () => {
                   disabled={index === exhibitionCategories.length - 1}
                 >
                   아래
+                </Button>,
+                <Button
+                  key="workOrder"
+                  onClick={() => handleWorkOrderChange('exhibition', category.id)}
+                >
+                  작업 순서 변경
                 </Button>,
                 <Popconfirm
                   key="delete"
@@ -918,6 +959,34 @@ const Categories = () => {
             <Input type="number" placeholder="예: 2024" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 작업 순서 관리 모달 */}
+      <Modal
+        title={`"${editingWorkOrder?.categoryName}" 작업 순서 관리`}
+        open={workOrderModalVisible}
+        onCancel={() => {
+          setWorkOrderModalVisible(false);
+          setEditingWorkOrder(null);
+        }}
+        footer={null}
+        width={800}
+        destroyOnClose
+      >
+        {editingWorkOrder && (
+          <WorkOrderManager
+            categoryType={editingWorkOrder.type}
+            categoryId={editingWorkOrder.categoryId}
+            categoryName={editingWorkOrder.categoryName}
+            workOrders={editingWorkOrder.workOrders}
+            works={works}
+            onSave={handleSaveWorkOrder}
+            onCancel={() => {
+              setWorkOrderModalVisible(false);
+              setEditingWorkOrder(null);
+            }}
+          />
+        )}
       </Modal>
     </div>
   );

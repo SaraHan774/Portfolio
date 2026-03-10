@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { disableBodyScroll, enableBodyScroll, clearAllBodyScrollLocks } from 'body-scroll-lock';
 import { useWork, useCaptionHoverEvents } from '@/domain';
 import { getMediaItems } from '@/core/utils';
 import { Spinner } from '@/presentation';
@@ -53,23 +54,43 @@ export default function WorkModalMobile({
 
   const [modalCurrentImageId, setModalCurrentImageId] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const touchStartY = useRef<number>(0);
 
   // 모달 작품이 변경될 때 hover 상태 초기화
   useEffect(() => {
     clearHover();
   }, [workId, clearHover]);
 
-  // 모달 열릴 때 배경 스크롤 방지 (html과 body 모두)
+  // 모달 열릴 때 배경 스크롤 방지 (iOS Safari 대응)
   useEffect(() => {
-    const originalBodyOverflow = document.body.style.overflow;
-    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const scrollContainer = scrollContainerRef.current;
 
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
+    if (scrollContainer) {
+      // iOS Safari에서 동작하는 body scroll lock
+      disableBodyScroll(scrollContainer, {
+        reserveScrollBarGap: true,
+        // iOS에서 스크롤 컨테이너 내부 터치는 허용
+        allowTouchMove: (el) => {
+          // 스크롤 컨테이너 또는 그 자식 요소의 터치는 허용
+          while (el && el !== document.body) {
+            if (el === scrollContainer) {
+              return true;
+            }
+            const parent = el.parentElement;
+            if (!parent) break;
+            el = parent;
+          }
+          return false;
+        },
+      });
+    }
 
     return () => {
-      document.body.style.overflow = originalBodyOverflow;
-      document.documentElement.style.overflow = originalHtmlOverflow;
+      if (scrollContainer) {
+        enableBodyScroll(scrollContainer);
+      }
+      // 모든 body scroll lock 정리 (안전장치)
+      clearAllBodyScrollLocks();
     };
   }, []);
 
@@ -266,9 +287,11 @@ export default function WorkModalMobile({
           e.stopPropagation();
         }}
         onTouchMove={(e) => {
-          // Prevent touch scroll on modal overlay
+          // Prevent touch scroll ONLY on the overlay itself, not its children
+          // body-scroll-lock handles the rest
           if (e.target === e.currentTarget) {
             e.preventDefault();
+            e.stopPropagation();
           }
         }}
         className="modal-overlay"
@@ -328,6 +351,31 @@ export default function WorkModalMobile({
             scrollbarWidth: 'none', // Firefox
             msOverflowStyle: 'none', // IE and Edge
           } as React.CSSProperties}
+          onTouchStart={(e) => {
+            // 터치 시작 위치 기록 (iOS 스크롤 경계 감지용)
+            touchStartY.current = e.touches[0].clientY;
+          }}
+          onTouchMove={(e) => {
+            // iOS Safari: 스크롤 경계에서 배경 스크롤 방지
+            const container = scrollContainerRef.current;
+            if (!container) return;
+
+            const scrollTop = container.scrollTop;
+            const scrollHeight = container.scrollHeight;
+            const clientHeight = container.clientHeight;
+            const touchY = e.touches[0].clientY;
+            const deltaY = touchStartY.current - touchY;
+
+            // 위쪽 경계: 맨 위에서 아래로 스크롤 시도
+            const isAtTop = scrollTop <= 0 && deltaY < 0;
+            // 아래쪽 경계: 맨 아래에서 위로 스크롤 시도
+            const isAtBottom = scrollTop + clientHeight >= scrollHeight && deltaY > 0;
+
+            // 경계에 도달했을 때만 이벤트 전파 차단
+            if (isAtTop || isAtBottom) {
+              e.preventDefault();
+            }
+          }}
         >
           <div
             style={{

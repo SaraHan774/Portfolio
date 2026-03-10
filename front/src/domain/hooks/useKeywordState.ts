@@ -47,19 +47,21 @@ export const useKeywordState = <T extends { workOrders?: WorkOrder[] }>({
       return 'hover';
     }
 
-    // Disabled state: Selected category exists, but this keyword has no common works
-    // Note: Even with empty workOrders, works may be linked via Work.sentenceCategoryIds
-    if (selectedWorkIds.length > 0 && keyword.workOrders && keyword.workOrders.length > 0) {
-      const keywordWorkIds = keyword.workOrders.map((order) => order.workId);
-      const hasCommonWork = keywordWorkIds.some((workId) => selectedWorkIds.includes(workId));
-
-      if (!hasCommonWork) {
-        return 'disabled';
-      }
-    }
+    // Disabled state: REMOVED - All categories are now always clickable
+    // Previously, categories without common works were disabled, causing navigation issues
+    // where the first exhibition category became unclickable after selecting another category
+    //
+    // Old logic (removed):
+    // if (selectedWorkIds.length > 0 && keyword.workOrders && keyword.workOrders.length > 0) {
+    //   const keywordWorkIds = keyword.workOrders.map((order) => order.workId);
+    //   const hasCommonWork = keywordWorkIds.some((workId) => selectedWorkIds.includes(workId));
+    //   if (!hasCommonWork) {
+    //     return 'disabled';
+    //   }
+    // }
 
     // Clickable state: All keywords are clickable by default
-    // (even with empty workOrders, works can be queried via Work.sentenceCategoryIds)
+    // Users can freely navigate between all categories regardless of work associations
     return 'clickable';
   }, [keyword, isSelected, isHovered, selectedWorkIds]);
 };

@@ -135,8 +135,8 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
 
   // Memoize container style to prevent re-creation on every render
   const containerStyle = useMemo<CSSProperties>(() => ({
-    height: mounted && isMobile ? '100vh' : 'auto',
-    minHeight: mounted && isMobile ? 'auto' : '100vh',
+    height: mounted && isMobile ? '100dvh' : 'auto', // iOS Safari 주소창 대응
+    minHeight: mounted && isMobile ? 'auto' : '100dvh', // iOS Safari 주소창 대응
     overflowY: mounted && isMobile ? 'auto' : 'visible',
     display: 'flex',
     flexDirection: 'column',

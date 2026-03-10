@@ -126,7 +126,7 @@ export default function CaptionWithBoundary({
         left: 'var(--caption-left)',
         bottom: `${captionBottom}px`,
         maxWidth: 'var(--caption-max-width)',
-        maxHeight: 'calc(100vh - 200px)',
+        maxHeight: 'calc(100dvh - 200px)', // iOS Safari 주소창 대응
         paddingRight: 'var(--category-margin-right)',
         zIndex: 40,
         transition: 'bottom 0.15s ease-out, left 0.15s ease-out',
