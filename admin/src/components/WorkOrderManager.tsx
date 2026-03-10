@@ -1,6 +1,6 @@
 // 카테고리 내 작업 순서 관리 컴포넌트
 import { useState, useEffect } from 'react';
-import { Card, Button, message, Modal, Image, Space } from 'antd';
+import { Card, Button, message, Image, Space } from 'antd';
 import {
   DragOutlined,
   ArrowUpOutlined,
@@ -171,19 +171,9 @@ const WorkOrderManager = ({
     }
   };
 
-  // 취소
+  // 취소 (변경사항 확인 없이 바로 닫기)
   const handleCancel = () => {
-    if (hasChanges) {
-      Modal.confirm({
-        title: '변경사항이 저장되지 않았습니다',
-        content: '정말 취소하시겠습니까?',
-        okText: '예',
-        cancelText: '아니오',
-        onOk: () => onCancel(),
-      });
-    } else {
-      onCancel();
-    }
+    onCancel();
   };
 
   // 썸네일 URL 가져오기
@@ -213,7 +203,14 @@ const WorkOrderManager = ({
     <div>
       {/* 안내 메시지 */}
       <div style={{ marginBottom: '16px', fontSize: '13px', color: '#595959' }}>
-        드래그하여 작업의 표시 순서를 조정하세요. 또는 화살표 버튼을 사용할 수 있습니다.
+        <div style={{ marginBottom: '8px' }}>
+          드래그하여 작업의 표시 순서를 조정하세요. 또는 화살표 버튼을 사용할 수 있습니다.
+        </div>
+        <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
+          {categoryType === 'exhibition'
+            ? '💡 순서가 높을수록 프론트에서 오른쪽에서 왼쪽으로 배치됩니다.'
+            : '💡 순서대로 프론트에서 왼쪽에서 오른쪽으로 배치됩니다.'}
+        </div>
       </div>
 
       {/* 삭제된 작업 경고 */}
