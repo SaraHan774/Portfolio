@@ -23,7 +23,7 @@ import { fetchKeywordById, fetchExhibitionCategoryById } from './categoriesApi';
 const sortWorksByWorkOrders = (works: Work[], workOrders: WorkOrder[]): Work[] => {
   if (!workOrders || workOrders.length === 0) {
     // No workOrders - sort by createdAt desc
-    return works.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return [...works].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
   // Create a map for quick lookup

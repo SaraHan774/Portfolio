@@ -165,7 +165,8 @@ const WorkOrderManager = ({
       setHasChanges(false);
     } catch (error) {
       console.error('작업 순서 저장 실패:', error);
-      // 에러는 부모에서 처리
+      // 에러를 부모로 전파하여 처리하도록 함
+      throw error;
     } finally {
       setIsLoading(false);
     }

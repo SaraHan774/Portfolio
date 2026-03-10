@@ -67,34 +67,9 @@ export default function WorkModal({
     clearHover();
   }, [workId, clearHover]);
 
-  // 모달 열릴 때 배경 스크롤 방지 (iOS Safari 및 터치 디바이스 대응)
+  // 모달 언마운트 시 body scroll lock 해제
   useEffect(() => {
-    // OverlayScrollbars의 viewport가 생성될 때까지 대기
-    const timer = setTimeout(() => {
-      if (overlayScrollbarsRef.current) {
-        const { viewport } = overlayScrollbarsRef.current.elements();
-        if (viewport) {
-          disableBodyScroll(viewport, {
-            reserveScrollBarGap: true,
-            allowTouchMove: (el) => {
-              // OverlayScrollbars viewport 내부 터치는 허용
-              while (el && el !== document.body) {
-                if (el === viewport) {
-                  return true;
-                }
-                const parent = el.parentElement;
-                if (!parent) break;
-                el = parent;
-              }
-              return false;
-            },
-          });
-        }
-      }
-    }, 100);
-
     return () => {
-      clearTimeout(timer);
       if (overlayScrollbarsRef.current) {
         const { viewport } = overlayScrollbarsRef.current.elements();
         if (viewport) {
@@ -446,6 +421,26 @@ export default function WorkModal({
                 initialized: (instance) => {
                   overlayScrollbarsRef.current = instance;
                   console.log('OverlayScrollbars initialized:', instance);
+
+                  // 초기화 완료 후 body scroll lock 적용
+                  const { viewport } = instance.elements();
+                  if (viewport) {
+                    disableBodyScroll(viewport, {
+                      reserveScrollBarGap: true,
+                      allowTouchMove: (el) => {
+                        // OverlayScrollbars viewport 내부 터치는 허용
+                        while (el && el !== document.body) {
+                          if (el === viewport) {
+                            return true;
+                          }
+                          const parent = el.parentElement;
+                          if (!parent) break;
+                          el = parent;
+                        }
+                        return false;
+                      },
+                    });
+                  }
                 },
               }}
               style={{
