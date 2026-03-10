@@ -745,6 +745,12 @@ const Categories = () => {
                 >
                   아래
                 </Button>,
+                <Button
+                  key="workOrder"
+                  onClick={() => handleWorkOrderChange('exhibition', category.id)}
+                >
+                  작업 순서 변경
+                </Button>,
                 <Popconfirm
                   key="delete"
                   title="정말 삭제하시겠습니까?"
