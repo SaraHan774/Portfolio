@@ -12,7 +12,7 @@ import {
 import { storage } from './client';
 import { storagePaths, appConfig } from '../../core/constants';
 import { ValidationError, UploadError } from '../../core/errors';
-import { processImage, createLogger } from '../../core/utils';
+import { processImage, getOutputExtension, createLogger } from '../../core/utils';
 import { v4 as uuidv4 } from 'uuid';
 import type { WorkImage } from '../../core/types';
 
@@ -47,65 +47,60 @@ const validateFileExtension = (filename: string): string => {
 
 /**
  * 이미지 업로드 (진행률 콜백 포함)
- * - 1회 디코딩으로 dimensions, thumbnail, medium, 압축 원본을 모두 생성
+ * - 1회 디코딩으로 dimensions, thumbnail, 압축 원본을 모두 생성
  * - 압축 원본(max 1920px)을 업로드하여 전송 크기 대폭 감소
  */
 export const uploadImage = async (
   file: File,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  options?: { compressOriginal?: boolean }
 ): Promise<WorkImage> => {
   // 파일 확장자 검증
   const extension = validateFileExtension(file.name);
+  const shouldCompress = options?.compressOriginal ?? true;
 
   const imageId = uuidv4();
   const fileName = `${imageId}.${extension}`;
+  const compressedFileName = `${imageId}.${getOutputExtension()}`;
 
   try {
-    // 1회 디코딩: dimensions + thumbnail + medium + 압축 원본 생성
-    const { dimensions, thumbnail, medium, original: compressedOriginal } = await processImage(file, {
+    // 1회 디코딩: dimensions + thumbnail + (선택적) 압축 원본 생성
+    const { dimensions, thumbnail, original: compressedOriginal } = await processImage(file, {
       thumbnail: appConfig.image.thumbnail,
-      medium: appConfig.image.medium,
-      original: appConfig.image.original,
+      original: shouldCompress ? appConfig.image.original : undefined,
     });
 
     // 업로드할 원본 데이터 결정 (압축본이 있으면 사용, 없으면 원본 파일 그대로)
     const originalData = compressedOriginal ?? file;
 
-    // 원본 업로드
-    const originalRef = ref(storage, `${storagePaths.worksImages}/${fileName}`);
+    // 압축 원본이 있으면 WebP/JPEG 확장자, 없으면 원본 확장자
+    const originalFileName = compressedOriginal ? compressedFileName : fileName;
 
-    if (onProgress) {
-      const uploadTask = uploadBytesResumable(originalRef, originalData);
+    const originalRef = ref(storage, `${storagePaths.worksImages}/${originalFileName}`);
+    const thumbnailRef = ref(storage, `${storagePaths.worksThumbnails}/${compressedFileName}`);
 
-      await new Promise<void>((resolve, reject) => {
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            onProgress(progress);
-          },
-          reject,
-          () => resolve()
-        );
-      });
-    } else {
-      await uploadBytes(originalRef, originalData);
-    }
+    const originalUpload = onProgress
+      ? new Promise<void>((resolve, reject) => {
+          const uploadTask = uploadBytesResumable(originalRef, originalData);
+          uploadTask.on('state_changed',
+            (snapshot) => onProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100),
+            reject,
+            () => resolve()
+          );
+        })
+      : uploadBytes(originalRef, originalData);
 
-    const originalUrl = await getDownloadURL(originalRef);
+    // 원본 + 썸네일 동시 업로드
+    await Promise.all([
+      originalUpload,
+      uploadBytes(thumbnailRef, thumbnail),
+    ]);
 
-    // 썸네일 업로드
-    const thumbnailRef = ref(storage, `${storagePaths.worksThumbnails}/${fileName}`);
-    await uploadBytes(thumbnailRef, thumbnail);
-    const thumbnailUrl = await getDownloadURL(thumbnailRef);
-
-    // Medium 변형 업로드
-    let mediumUrl: string | undefined;
-    if (medium) {
-      const mediumRef = ref(storage, `${storagePaths.worksMedium}/${fileName}`);
-      await uploadBytes(mediumRef, medium);
-      mediumUrl = await getDownloadURL(mediumRef);
-    }
+    // 다운로드 URL 동시 획득
+    const [originalUrl, thumbnailUrl] = await Promise.all([
+      getDownloadURL(originalRef),
+      getDownloadURL(thumbnailRef),
+    ]);
 
     logger.info('이미지 업로드 성공', { action: 'uploadImage', imageId, fileName });
 
@@ -113,7 +108,6 @@ export const uploadImage = async (
       id: imageId,
       url: originalUrl,
       thumbnailUrl,
-      mediumUrl,
       order: 0,
       width: dimensions.width,
       height: dimensions.height,
@@ -166,31 +160,35 @@ export const uploadImages = async (
 /**
  * 이미지 삭제
  */
-export const deleteImage = async (imageId: string, extension = 'jpg'): Promise<void> => {
-  const fileName = `${imageId}.${extension}`;
-
-  // 원본 삭제
-  try {
-    const originalRef = ref(storage, `${storagePaths.worksImages}/${fileName}`);
-    await deleteObject(originalRef);
-  } catch {
-    logger.warn(`원본 이미지 삭제 실패: ${fileName}`, { action: 'deleteImage', imageId });
+export const deleteImage = async (
+  imageId: string,
+  originalExtension?: string,
+  thumbnailExtension?: string
+): Promise<void> => {
+  // 원본 삭제 — 확장자가 주어지면 해당 확장자, 아니면 가능한 확장자를 모두 시도
+  const origExts = originalExtension ? [originalExtension] : ['webp', 'jpg', 'jpeg', 'png'];
+  for (const ext of origExts) {
+    try {
+      const originalRef = ref(storage, `${storagePaths.worksImages}/${imageId}.${ext}`);
+      await deleteObject(originalRef);
+      break;
+    } catch (error: unknown) {
+      const code = (error as { code?: string }).code;
+      if (code !== 'storage/object-not-found') throw error;
+    }
   }
 
-  // 썸네일 삭제
-  try {
-    const thumbnailRef = ref(storage, `${storagePaths.worksThumbnails}/${fileName}`);
-    await deleteObject(thumbnailRef);
-  } catch {
-    logger.warn(`썸네일 이미지 삭제 실패: ${fileName}`, { action: 'deleteImage', imageId });
-  }
-
-  // Medium 변형 삭제
-  try {
-    const mediumRef = ref(storage, `${storagePaths.worksMedium}/${fileName}`);
-    await deleteObject(mediumRef);
-  } catch {
-    // Medium이 없을 수 있으므로 무시
+  // 썸네일 삭제 — 항상 WebP 또는 JPG
+  const thumbExts = thumbnailExtension ? [thumbnailExtension] : ['webp', 'jpg'];
+  for (const ext of thumbExts) {
+    try {
+      const thumbnailRef = ref(storage, `${storagePaths.worksThumbnails}/${imageId}.${ext}`);
+      await deleteObject(thumbnailRef);
+      break;
+    } catch (error: unknown) {
+      const code = (error as { code?: string }).code;
+      if (code !== 'storage/object-not-found') throw error;
+    }
   }
 };
 
@@ -207,8 +205,9 @@ export const deleteImages = async (imageIds: string[]): Promise<void> => {
 export const deleteWorkImages = async (images: WorkImage[]): Promise<void> => {
   await Promise.all(
     images.map((image) => {
-      const extension = image.url.split('.').pop()?.split('?')[0] || 'jpg';
-      return deleteImage(image.id, extension);
+      const origExt = image.url.split('.').pop()?.split('?')[0];
+      const thumbExt = image.thumbnailUrl?.split('.').pop()?.split('?')[0];
+      return deleteImage(image.id, origExt, thumbExt);
     })
   );
 };

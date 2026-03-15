@@ -40,7 +40,7 @@ export default function FloatingWorkWindow({ work, position, onClick }: Floating
     : null;
 
   const hasThumbnail = !!thumbnailImage || !!videoThumbnailUrl;
-  const thumbnailUrl = thumbnailImage?.thumbnailUrl || thumbnailImage?.mediumUrl || thumbnailImage?.url || videoThumbnailUrl;
+  const thumbnailUrl = thumbnailImage?.thumbnailUrl || thumbnailImage?.url || videoThumbnailUrl;
 
   return (
     <motion.div

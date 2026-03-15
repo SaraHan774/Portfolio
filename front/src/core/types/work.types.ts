@@ -5,7 +5,6 @@ export interface WorkImage {
   url: string;
   thumbnailUrl: string;
   listThumbnailUrl?: string;
-  mediumUrl?: string;
   webpUrl?: string;
   order: number;
   width: number;

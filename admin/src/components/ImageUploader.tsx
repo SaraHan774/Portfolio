@@ -1,8 +1,8 @@
-// 이미지 업로드 및 관리 컴포넌트
+// 이미지 선택 및 관리 컴포넌트 (Storage 업로드는 부모에서 저장 시 수행)
 import { useState, useEffect, useRef } from 'react';
-import { Upload, Image, Button, Space, Card, message, Progress, Spin } from 'antd';
-import { DragOutlined, LoadingOutlined } from '@ant-design/icons';
-import type { UploadFile, UploadProps } from 'antd';
+import { Upload, Image, Button, Space, Card, message, Switch, Tooltip } from 'antd';
+import { DragOutlined, CompressOutlined } from '@ant-design/icons';
+import type { UploadProps } from 'antd';
 import {
   InboxOutlined,
   DeleteOutlined,
@@ -12,118 +12,97 @@ import {
   BulbOutlined,
 } from '@ant-design/icons';
 import type { WorkImage } from '../core/types';
-import { uploadImage, deleteImage } from '../data/repository';
 import './ImageUploader.css';
 
 const { Dragger } = Upload;
 
-// 업로드 중인 이미지 타입
-interface UploadingImage {
-  id: string;
-  fileName: string;
-  progress: number;
+/** 로컬에서 아직 업로드 안 된 이미지 (File + 미리보기 URL) */
+export interface PendingImage {
+  tempId: string;
+  file: File;
   previewUrl: string;
+  compressOriginal: boolean;
 }
 
 interface ImageUploaderProps {
   value?: WorkImage[];
   onChange?: (images: WorkImage[]) => void;
+  /** 새로 추가된 파일 (아직 Storage에 업로드 안 됨) */
+  onPendingFilesChange?: (pendingImages: PendingImage[]) => void;
+  /** 삭제 대기 이미지 (이미 Storage에 있는 것) */
+  onPendingDeletes?: (deletedImages: WorkImage[]) => void;
   maxCount?: number;
 }
 
-const ImageUploader = ({ value = [], onChange, maxCount = 50 }: ImageUploaderProps) => {
-  const [fileList] = useState<UploadFile[]>([]);
+const ImageUploader = ({
+  value = [],
+  onChange,
+  onPendingFilesChange,
+  onPendingDeletes,
+  maxCount = 50,
+}: ImageUploaderProps) => {
   const [images, setImages] = useState<WorkImage[]>(value);
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [uploadingImages, setUploadingImages] = useState<UploadingImage[]>([]);
-  // 업로드 중인지 추적하여 외부 value 동기화 방지
-  const isUploadingRef = useRef(false);
+  const [compressOriginal, setCompressOriginal] = useState(true);
 
-  // value가 변경되면 images도 업데이트 (단, 업로드 중이 아닐 때만)
+  // value가 변경되면 images도 업데이트
   useEffect(() => {
-    // 업로드 중에는 외부 value로 덮어쓰지 않음
-    if (!isUploadingRef.current) {
-      setImages(value);
-    }
+    setImages(value);
   }, [value]);
 
-  // 파일 업로드 핸들러 (Firebase Storage에 실제 업로드)
-  const handleUpload: UploadProps['customRequest'] = async ({ file, onSuccess, onError, onProgress }) => {
+  // pending 변경 시 부모에 알림
+  useEffect(() => {
+    onPendingFilesChange?.(pendingImages);
+  }, [pendingImages, onPendingFilesChange]);
+
+  // 컴포넌트 언마운트 시 미사용 blob URL 정리
+  const pendingImagesRef = useRef(pendingImages);
+  pendingImagesRef.current = pendingImages;
+  useEffect(() => {
+    return () => {
+      pendingImagesRef.current.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+    };
+  }, []);
+
+  // 파일 선택 핸들러 (Storage 업로드 없이 로컬 미리보기만)
+  const handleUpload: UploadProps['customRequest'] = ({ file, onSuccess }) => {
     const uploadFile = file as File;
-    const uploadId = `uploading-${Date.now()}-${Math.random()}`;
-
-    // 업로드 시작 표시
-    isUploadingRef.current = true;
-
-    // 로컬 미리보기 URL 생성
+    const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const previewUrl = URL.createObjectURL(uploadFile);
 
-    // 업로드 중 목록에 추가
-    setUploadingImages((prev) => [
-      ...prev,
-      {
-        id: uploadId,
-        fileName: uploadFile.name,
-        progress: 0,
-        previewUrl,
-      },
-    ]);
+    const pendingImage: PendingImage = {
+      tempId,
+      file: uploadFile,
+      previewUrl,
+      compressOriginal,
+    };
 
-    try {
-      // Firebase Storage에 업로드
-      const uploadedImage = await uploadImage(uploadFile, (progress) => {
-        // 진행률 업데이트
-        setUploadingImages((prev) =>
-          prev.map((img) =>
-            img.id === uploadId ? { ...img, progress: Math.round(progress) } : img
-          )
-        );
-        onProgress?.({ percent: progress } as Parameters<NonNullable<typeof onProgress>>[0]);
-      });
+    // pending 목록에 추가
+    setPendingImages((prev) => [...prev, pendingImage]);
 
-      // 업로드 완료 - 업로드 중 목록에서 제거
-      setUploadingImages((prev) => {
-        const newUploadingImages = prev.filter((img) => img.id !== uploadId);
-        // 모든 업로드가 완료되면 플래그 해제
-        if (newUploadingImages.length === 0) {
-          isUploadingRef.current = false;
-        }
-        return newUploadingImages;
-      });
-      URL.revokeObjectURL(previewUrl);
+    // 임시 WorkImage를 images 목록에 추가 (미리보기용)
+    setImages((prevImages) => {
+      const tempWorkImage: WorkImage = {
+        id: tempId,
+        url: previewUrl,
+        thumbnailUrl: previewUrl,
+        order: prevImages.length + 1,
+        width: 0,
+        height: 0,
+        fileSize: uploadFile.size,
+        uploadedFrom: 'desktop',
+      };
+      const newImages = [...prevImages, tempWorkImage];
+      setTimeout(() => onChange?.(newImages), 0);
+      return newImages;
+    });
 
-      // 업로드된 이미지에 순서 추가 - 함수형 업데이트 사용으로 동시 업로드 버그 해결
-      setImages((prevImages) => {
-        const newImage: WorkImage = {
-          ...uploadedImage,
-          order: prevImages.length + 1,
-        };
-        const newImages = [...prevImages, newImage];
-        // onChange는 setTimeout으로 다음 틱에 호출하여 상태 업데이트 완료 후 실행
-        setTimeout(() => onChange?.(newImages), 0);
-        return newImages;
-      });
-
-      message.success('이미지가 업로드되었습니다.');
-      onSuccess?.(uploadedImage);
-    } catch (error) {
-      console.error('이미지 업로드 실패:', error);
-      // 업로드 실패 - 업로드 중 목록에서 제거
-      setUploadingImages((prev) => {
-        const newUploadingImages = prev.filter((img) => img.id !== uploadId);
-        // 모든 업로드가 완료되면 플래그 해제
-        if (newUploadingImages.length === 0) {
-          isUploadingRef.current = false;
-        }
-        return newUploadingImages;
-      });
-      URL.revokeObjectURL(previewUrl);
-      message.error('이미지 업로드에 실패했습니다.');
-      onError?.(error as Error);
-    }
+    message.success(`${uploadFile.name} 추가됨 (저장 시 업로드)`);
+    onSuccess?.(null);
   };
 
-  // 파일 업로드 전 검증
+  // 파일 선택 전 검증
   const beforeUpload: UploadProps['beforeUpload'] = (file) => {
     const isImage = file.type.startsWith('image/');
     if (!isImage) {
@@ -145,33 +124,33 @@ const ImageUploader = ({ value = [], onChange, maxCount = 50 }: ImageUploaderPro
     return true;
   };
 
-  // 이미지 삭제 핸들러 (Firebase Storage에서도 삭제)
-  const handleRemove = async (imageId: string) => {
-    try {
-      // Firebase Storage에서 삭제
-      await deleteImage(imageId);
+  // 이미지 삭제 핸들러 (UI에서만 제거)
+  const handleRemove = (imageId: string) => {
+    const removedImage = images.find((img) => img.id === imageId);
+    const isPending = pendingImages.some((p) => p.tempId === imageId);
 
-      const newImages = images.filter((img) => img.id !== imageId);
-      // 순서 재정렬
-      const reorderedImages = newImages.map((img, index) => ({
-        ...img,
-        order: index + 1,
-      }));
-      setImages(reorderedImages);
-      onChange?.(reorderedImages);
-      message.success('이미지가 삭제되었습니다.');
-    } catch (error) {
-      console.error('이미지 삭제 실패:', error);
-      // Storage 삭제 실패해도 UI에서는 제거 (이미 업로드 안된 이미지일 수 있음)
-      const newImages = images.filter((img) => img.id !== imageId);
-      const reorderedImages = newImages.map((img, index) => ({
-        ...img,
-        order: index + 1,
-      }));
-      setImages(reorderedImages);
-      onChange?.(reorderedImages);
-      message.success('이미지가 삭제되었습니다.');
+    // images 목록에서 제거
+    const newImages = images.filter((img) => img.id !== imageId);
+    const reorderedImages = newImages.map((img, index) => ({
+      ...img,
+      order: index + 1,
+    }));
+    setImages(reorderedImages);
+    onChange?.(reorderedImages);
+
+    if (isPending) {
+      // 아직 업로드 안 된 파일 → pending 목록에서 제거, blob URL 해제
+      setPendingImages((prev) => {
+        const removed = prev.find((p) => p.tempId === imageId);
+        if (removed) URL.revokeObjectURL(removed.previewUrl);
+        return prev.filter((p) => p.tempId !== imageId);
+      });
+    } else if (removedImage) {
+      // 이미 Storage에 있는 이미지 → 삭제 대기 목록에 추가
+      onPendingDeletes?.([removedImage]);
     }
+
+    message.success('이미지가 목록에서 제거되었습니다.');
   };
 
   // 이미지 순서 변경 (위로)
@@ -200,10 +179,9 @@ const ImageUploader = ({ value = [], onChange, maxCount = 50 }: ImageUploaderPro
     onChange?.(reorderedImages);
   };
 
-  // 이미지 회전 핸들러 (간단한 구현 - 실제로는 서버에서 처리)
+  // 이미지 회전 핸들러
   const handleRotate = () => {
     message.info('이미지 회전 기능은 서버 연동 후 구현됩니다.');
-    // 실제 구현 시에는 이미지 회전 각도를 상태로 관리하고 서버에 전송
   };
 
   // 드래그 시작
@@ -229,7 +207,6 @@ const ImageUploader = ({ value = [], onChange, maxCount = 50 }: ImageUploaderPro
     newImages.splice(draggedIndex, 1);
     newImages.splice(dropIndex, 0, draggedImage);
 
-    // 순서 재정렬
     const reorderedImages = newImages.map((img, idx) => ({
       ...img,
       order: idx + 1,
@@ -246,122 +223,60 @@ const ImageUploader = ({ value = [], onChange, maxCount = 50 }: ImageUploaderPro
     setDraggedIndex(null);
   };
 
+  // pending 여부 확인
+  const isPending = (imageId: string) => pendingImages.some((p) => p.tempId === imageId);
+
   return (
     <div className="image-uploader">
+      {/* 원본 압축 옵션 */}
+      <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Tooltip title="끄면 원본 해상도 그대로 업로드됩니다. 파일 용량이 클 수 있습니다.">
+          <Space size="small">
+            <CompressOutlined />
+            <span style={{ fontSize: '14px' }}>원본 압축 (1920px, WebP)</span>
+            <Switch
+              size="small"
+              checked={compressOriginal}
+              onChange={setCompressOriginal}
+            />
+          </Space>
+        </Tooltip>
+      </div>
+
       {/* 업로드 영역 */}
       {images.length < maxCount && (
         <Dragger
           customRequest={handleUpload}
           beforeUpload={beforeUpload}
-          fileList={fileList}
+          fileList={[]}
           multiple
           accept="image/*"
-          showUploadList={true}
+          showUploadList={false}
           capture="environment"
-          progress={{
-            strokeColor: {
-              '0%': '#108ee9',
-              '100%': '#87d068',
-            },
-            strokeWidth: 3,
-            format: (percent) => `${parseFloat(percent?.toFixed(2) || '0')}%`,
-          }}
         >
           <p className="ant-upload-drag-icon">
             <InboxOutlined />
           </p>
-          <p className="ant-upload-text">이미지를 드래그하거나 클릭하여 업로드</p>
+          <p className="ant-upload-text">이미지를 드래그하거나 클릭하여 추가</p>
           <p className="ant-upload-hint">
             최대 {maxCount}장, JPG/PNG, 각 10MB 이하
             <br />
             <span style={{ fontSize: '12px', color: '#8c8c8c' }}>
-              모바일: 카메라로 촬영하거나 갤러리에서 선택
+              저장(게시/임시저장) 시 서버에 업로드됩니다
             </span>
           </p>
         </Dragger>
       )}
 
-      {/* 업로드된 이미지 개수 표시 */}
-      {(images.length > 0 || uploadingImages.length > 0) && (
+      {/* 이미지 개수 표시 */}
+      {images.length > 0 && (
         <div className="image-count" style={{ margin: '16px 0', fontWeight: 500 }}>
-          업로드된 이미지 ({images.length}/{maxCount})
-          {uploadingImages.length > 0 && (
-            <span style={{ marginLeft: '8px', color: '#1890ff' }}>
-              <LoadingOutlined style={{ marginRight: '4px' }} />
-              {uploadingImages.length}개 업로드 중...
+          이미지 ({images.length}/{maxCount})
+          {pendingImages.length > 0 && (
+            <span style={{ marginLeft: '8px', color: '#faad14', fontSize: '13px' }}>
+              ({pendingImages.length}개 업로드 대기 중)
             </span>
           )}
-        </div>
-      )}
-
-      {/* 업로드 중인 이미지 표시 */}
-      {uploadingImages.length > 0 && (
-        <div className="image-grid" style={{ marginBottom: '16px' }}>
-          {uploadingImages.map((uploadingImg) => (
-            <Card
-              key={uploadingImg.id}
-              className="image-card uploading-card"
-              style={{
-                opacity: 0.8,
-                border: '2px dashed #1890ff',
-              }}
-            >
-              <div className="image-number" style={{ background: '#1890ff' }}>
-                <LoadingOutlined style={{ marginRight: '4px' }} />
-                업로드 중
-              </div>
-              <div className="image-preview" style={{ position: 'relative' }}>
-                <img
-                  src={uploadingImg.previewUrl}
-                  alt="업로드 중"
-                  style={{
-                    width: '100%',
-                    height: 150,
-                    objectFit: 'cover',
-                    borderRadius: '4px',
-                    filter: 'brightness(0.7)',
-                  }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    textAlign: 'center',
-                    color: 'white',
-                  }}
-                >
-                  <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />
-                  <div style={{ marginTop: '8px', fontWeight: 'bold' }}>
-                    {uploadingImg.progress}%
-                  </div>
-                </div>
-              </div>
-              <div style={{ padding: '8px' }}>
-                <Progress
-                  percent={uploadingImg.progress}
-                  size="small"
-                  status="active"
-                  strokeColor={{
-                    '0%': '#108ee9',
-                    '100%': '#87d068',
-                  }}
-                />
-                <div
-                  style={{
-                    fontSize: '12px',
-                    color: '#8c8c8c',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {uploadingImg.fileName}
-                </div>
-              </div>
-            </Card>
-          ))}
         </div>
       )}
 
@@ -381,12 +296,19 @@ const ImageUploader = ({ value = [], onChange, maxCount = 50 }: ImageUploaderPro
               style={{
                 cursor: 'move',
                 opacity: draggedIndex === index ? 0.5 : 1,
-                border: draggedIndex === index ? '2px dashed #1890ff' : undefined,
+                border: isPending(image.id)
+                  ? '2px dashed #faad14'
+                  : draggedIndex === index
+                    ? '2px dashed #1890ff'
+                    : undefined,
               }}
             >
-              <div className="image-number">
+              <div
+                className="image-number"
+                style={isPending(image.id) ? { background: '#faad14' } : undefined}
+              >
                 <DragOutlined style={{ marginRight: '4px' }} />
-                {index + 1}
+                {isPending(image.id) ? `${index + 1} (대기)` : index + 1}
               </div>
               <div className="image-preview">
                 <Image
@@ -414,19 +336,19 @@ const ImageUploader = ({ value = [], onChange, maxCount = 50 }: ImageUploaderPro
                       disabled={index === images.length - 1}
                     />
                   </Space>
-                    <Button
-                      size="small"
-                      icon={<RotateRightOutlined />}
-                      onClick={handleRotate}
-                      block
-                    >
-                      회전
-                    </Button>
+                  <Button
+                    size="small"
+                    icon={<RotateRightOutlined />}
+                    onClick={handleRotate}
+                    block
+                  >
+                    회전
+                  </Button>
                   <Button
                     size="small"
                     danger
                     icon={<DeleteOutlined />}
-                    onClick={() => void handleRemove(image.id)}
+                    onClick={() => handleRemove(image.id)}
                     block
                   >
                     삭제
@@ -449,4 +371,3 @@ const ImageUploader = ({ value = [], onChange, maxCount = 50 }: ImageUploaderPro
 };
 
 export default ImageUploader;
-

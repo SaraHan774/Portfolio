@@ -129,7 +129,29 @@ export const getImageDimensions = (file: File): Promise<ImageDimensions> => {
 };
 
 /**
+ * WebP를 지원하는지 한 번만 확인하여 캐시
+ */
+let _supportsWebP: boolean | null = null;
+const supportsWebP = (): boolean => {
+  if (_supportsWebP !== null) return _supportsWebP;
+  const canvas = document.createElement('canvas');
+  canvas.width = 1;
+  canvas.height = 1;
+  _supportsWebP = canvas.toDataURL('image/webp').startsWith('data:image/webp');
+  return _supportsWebP;
+};
+
+/** WebP 가능하면 WebP, 아니면 JPEG 사용 */
+const getOutputMimeType = (): string =>
+  supportsWebP() ? 'image/webp' : 'image/jpeg';
+
+/** 압축 변형에 사용할 파일 확장자 반환 */
+export const getOutputExtension = (): string =>
+  supportsWebP() ? 'webp' : 'jpg';
+
+/**
  * 캔버스에서 지정 크기로 리사이즈된 Blob 생성 (내부 헬퍼)
+ * WebP를 지원하는 브라우저에서는 WebP로 출력 (~30% 더 작음)
  */
 const canvasToBlob = (
   img: HTMLImageElement,
@@ -162,7 +184,7 @@ const canvasToBlob = (
         if (blob) resolve(blob);
         else reject(new Error('이미지 변환 실패'));
       },
-      'image/jpeg',
+      getOutputMimeType(),
       quality
     );
   });
