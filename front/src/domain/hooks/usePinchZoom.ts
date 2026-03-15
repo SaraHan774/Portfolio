@@ -8,11 +8,8 @@ export interface UsePinchZoomOptions {
 }
 
 export interface UsePinchZoomReturn {
-  handlers: {
-    onTouchStart: (e: React.TouchEvent) => void;
-    onTouchMove: (e: React.TouchEvent) => void;
-    onTouchEnd: (e: React.TouchEvent) => void;
-  };
+  /** Callback ref — attach to a plain DOM element (not motion.div) */
+  setContainerRef: (el: HTMLDivElement | null) => void;
   scale: number;
   position: { x: number; y: number };
   isPinching: boolean;
@@ -25,31 +22,20 @@ interface TouchState {
   initialScale: number;
   isPinching: boolean;
   lastTouchTime: number;
-  touchCount: number;
   panStart: { x: number; y: number } | null;
   lastPanPosition: { x: number; y: number };
 }
 
-/**
- * Calculate distance between two touch points
- */
-function getTouchDistance(touch1: React.Touch, touch2: React.Touch): number {
+function getTouchDistance(touch1: Touch, touch2: Touch): number {
   const dx = touch2.clientX - touch1.clientX;
   const dy = touch2.clientY - touch1.clientY;
   return Math.sqrt(dx * dx + dy * dy);
 }
 
 /**
- * Pinch zoom gesture detection hook
- *
- * Features:
- * - Two-finger pinch to zoom (1x to 4x)
- * - Pan when zoomed in
- * - Double-tap to reset zoom
- * - Boundary constraints for panning
- *
- * @param options Configuration options
- * @returns Zoom state and gesture handlers
+ * Pinch zoom hook — uses a callback ref so listeners attach the
+ * moment the target element enters the DOM, even if that happens
+ * long after the hook is first called (e.g. conditional rendering).
  */
 export function usePinchZoom(
   options: UsePinchZoomOptions = {}
@@ -69,152 +55,129 @@ export function usePinchZoom(
     initialScale: minScale,
     isPinching: false,
     lastTouchTime: 0,
-    touchCount: 0,
     panStart: null,
     lastPanPosition: { x: 0, y: 0 },
   });
 
-  const containerRef = useRef<{ width: number; height: number }>({
-    width: 0,
-    height: 0,
-  });
+  const scaleRef = useRef(scale);
+  const positionRef = useRef(position);
+  scaleRef.current = scale;
+  positionRef.current = position;
+
+  const cleanupRef = useRef<(() => void) | null>(null);
 
   const resetZoom = useCallback(() => {
     setScale(minScale);
     setPosition({ x: 0, y: 0 });
     setIsPinching(false);
-    touchStateRef.current.initialDistance = null;
-    touchStateRef.current.isPinching = false;
-    touchStateRef.current.panStart = null;
+    const state = touchStateRef.current;
+    state.initialDistance = null;
+    state.isPinching = false;
+    state.panStart = null;
   }, [minScale]);
 
-  const onTouchStart = useCallback(
-    (e: React.TouchEvent) => {
-      const touches = e.touches;
-      const state = touchStateRef.current;
+  const setContainerRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      // Tear down previous listeners
+      if (cleanupRef.current) {
+        cleanupRef.current();
+        cleanupRef.current = null;
+      }
 
-      // Store container dimensions
-      const target = e.currentTarget as HTMLElement;
-      containerRef.current = {
-        width: target.offsetWidth,
-        height: target.offsetHeight,
+      if (!el) return;
+
+      const handleTouchStart = (e: TouchEvent) => {
+        const touches = e.touches;
+        const state = touchStateRef.current;
+
+        // Double-tap detection
+        if (resetOnDoubleTap && touches.length === 1) {
+          const now = Date.now();
+          const elapsed = now - state.lastTouchTime;
+          if (elapsed < PINCH_ZOOM.DOUBLE_TAP_DELAY && elapsed > 0) {
+            e.preventDefault();
+            resetZoom();
+            state.lastTouchTime = 0;
+            return;
+          }
+          state.lastTouchTime = now;
+        }
+
+        // Two-finger pinch start
+        if (touches.length === 2) {
+          e.preventDefault();
+          const dist = getTouchDistance(touches[0], touches[1]);
+          if (dist >= PINCH_ZOOM.MIN_PINCH_DISTANCE) {
+            state.initialDistance = dist;
+            state.initialScale = scaleRef.current;
+            state.isPinching = true;
+            setIsPinching(true);
+          }
+        }
+
+        // Single-finger pan when zoomed
+        if (touches.length === 1 && scaleRef.current > minScale) {
+          state.panStart = { x: touches[0].clientX, y: touches[0].clientY };
+          state.lastPanPosition = { ...positionRef.current };
+        }
       };
 
-      // Double-tap detection
-      if (resetOnDoubleTap && touches.length === 1) {
-        const now = Date.now();
-        const timeSinceLastTouch = now - state.lastTouchTime;
+      const handleTouchMove = (e: TouchEvent) => {
+        const touches = e.touches;
+        const state = touchStateRef.current;
 
-        if (
-          timeSinceLastTouch < PINCH_ZOOM.DOUBLE_TAP_DELAY &&
-          timeSinceLastTouch > 0
-        ) {
-          // Double-tap detected
-          resetZoom();
-          state.lastTouchTime = 0; // Reset to prevent triple-tap issues
-          return;
+        // Pinch
+        if (touches.length === 2 && state.isPinching && state.initialDistance) {
+          e.preventDefault();
+          const dist = getTouchDistance(touches[0], touches[1]);
+          const newScale = Math.max(
+            minScale,
+            Math.min(maxScale, state.initialScale * (dist / state.initialDistance))
+          );
+          setScale(newScale);
+          if (newScale === minScale) setPosition({ x: 0, y: 0 });
         }
 
-        state.lastTouchTime = now;
-      }
-
-      // Two-finger pinch detection
-      if (touches.length === 2) {
-        const distance = getTouchDistance(touches[0], touches[1]);
-
-        // Only start pinching if fingers are far enough apart
-        if (distance >= PINCH_ZOOM.MIN_PINCH_DISTANCE) {
-          state.initialDistance = distance;
-          state.initialScale = scale;
-          state.isPinching = true;
-          setIsPinching(true);
+        // Pan
+        if (touches.length === 1 && state.panStart && scaleRef.current > minScale) {
+          e.preventDefault();
+          const dx = touches[0].clientX - state.panStart.x;
+          const dy = touches[0].clientY - state.panStart.y;
+          const s = scaleRef.current;
+          const maxPanX = (el.offsetWidth * (s - 1)) / 2;
+          const maxPanY = (el.offsetHeight * (s - 1)) / 2;
+          setPosition({
+            x: Math.max(-maxPanX, Math.min(maxPanX, state.lastPanPosition.x + dx)),
+            y: Math.max(-maxPanY, Math.min(maxPanY, state.lastPanPosition.y + dy)),
+          });
         }
-      }
+      };
 
-      // Single-finger pan when zoomed
-      if (touches.length === 1 && scale > minScale) {
-        state.panStart = {
-          x: touches[0].clientX,
-          y: touches[0].clientY,
-        };
-        state.lastPanPosition = { ...position };
-      }
+      const handleTouchEnd = () => {
+        const state = touchStateRef.current;
+        if (state.isPinching) {
+          state.isPinching = false;
+          state.initialDistance = null;
+          setIsPinching(false);
+        }
+        state.panStart = null;
+      };
+
+      el.addEventListener('touchstart', handleTouchStart, { passive: false });
+      el.addEventListener('touchmove', handleTouchMove, { passive: false });
+      el.addEventListener('touchend', handleTouchEnd);
+
+      cleanupRef.current = () => {
+        el.removeEventListener('touchstart', handleTouchStart);
+        el.removeEventListener('touchmove', handleTouchMove);
+        el.removeEventListener('touchend', handleTouchEnd);
+      };
     },
-    [scale, position, minScale, resetOnDoubleTap, resetZoom]
+    [minScale, maxScale, resetOnDoubleTap, resetZoom]
   );
-
-  const onTouchMove = useCallback(
-    (e: React.TouchEvent) => {
-      const touches = e.touches;
-      const state = touchStateRef.current;
-
-      // Two-finger pinch
-      if (touches.length === 2 && state.isPinching && state.initialDistance) {
-        e.preventDefault(); // Prevent page zoom
-
-        const currentDistance = getTouchDistance(touches[0], touches[1]);
-        const scaleRatio = currentDistance / state.initialDistance;
-        const newScale = Math.max(
-          minScale,
-          Math.min(maxScale, state.initialScale * scaleRatio)
-        );
-
-        setScale(newScale);
-
-        // Reset position if zooming out to minScale
-        if (newScale === minScale) {
-          setPosition({ x: 0, y: 0 });
-        }
-      }
-
-      // Single-finger pan when zoomed
-      if (touches.length === 1 && state.panStart && scale > minScale) {
-        e.preventDefault(); // Prevent page scrolling
-
-        const touch = touches[0];
-        const deltaX = touch.clientX - state.panStart.x;
-        const deltaY = touch.clientY - state.panStart.y;
-
-        // Calculate new position
-        const newX = state.lastPanPosition.x + deltaX;
-        const newY = state.lastPanPosition.y + deltaY;
-
-        // Apply boundary constraints
-        // Maximum pan distance is based on how much the image extends beyond viewport
-        const maxPanX =
-          (containerRef.current.width * (scale - 1)) / 2;
-        const maxPanY =
-          (containerRef.current.height * (scale - 1)) / 2;
-
-        const constrainedX = Math.max(-maxPanX, Math.min(maxPanX, newX));
-        const constrainedY = Math.max(-maxPanY, Math.min(maxPanY, newY));
-
-        setPosition({ x: constrainedX, y: constrainedY });
-      }
-    },
-    [scale, minScale, maxScale]
-  );
-
-  const onTouchEnd = useCallback(() => {
-    const state = touchStateRef.current;
-
-    // Reset pinching state
-    if (state.isPinching) {
-      state.isPinching = false;
-      state.initialDistance = null;
-      setIsPinching(false);
-    }
-
-    // Reset pan state
-    state.panStart = null;
-  }, []);
 
   return {
-    handlers: {
-      onTouchStart,
-      onTouchMove,
-      onTouchEnd,
-    },
+    setContainerRef,
     scale,
     position,
     isPinching,

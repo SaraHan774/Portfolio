@@ -2,20 +2,14 @@
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
-import { useImageZoom, useOptimizedResize, useIsTouchDevice, usePinchZoom } from '@/domain';
+import { useImageZoom, useOptimizedResize, usePinchZoom } from '@/domain';
 import {
   IMAGE_ZOOM_OVERLAY_ANIMATION,
-  ZOOMED_IMAGE_ANIMATION,
 } from '@/core/constants/animation.constants';
 import { Z_INDEX } from '@/core/constants/ui.constants';
 
 const HORIZONTAL_PADDING = 40;
 
-/**
- * Hook to track viewport dimensions with optimized resize handling
- * Uses throttling to prevent excessive re-renders during window resize
- */
 function useViewportSize() {
   const [size, setSize] = useState({ width: 0, height: 0 });
 
@@ -26,47 +20,26 @@ function useViewportSize() {
     });
   }, []);
 
-  // Initialize size on mount
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     updateSize();
   }, [updateSize]);
 
-  // Use optimized resize hook with debouncing
   useOptimizedResize(updateSize, { delay: 100 });
 
   return size;
 }
 
-/**
- * Full screen overlay that displays a zoomed image
- *
- * Features:
- * - Image fills viewport height while maintaining aspect ratio
- * - Dark dim background (rgba(0, 0, 0, 0.9))
- * - Close via: background click, X button, Escape key
- * - Smooth enter/exit animations
- */
 export default function ImageZoomOverlay() {
   const { zoomedImage, closeZoom } = useImageZoom();
   const { width: viewportWidth, height: viewportHeight } = useViewportSize();
-  const [imageLoading, setImageLoading] = useState(true);
-  const isTouchDevice = useIsTouchDevice();
   const pinchZoom = usePinchZoom({
     minScale: 1,
     maxScale: 4,
     resetOnDoubleTap: true,
   });
 
-  // Reset loading state when zoomed image changes
-  useEffect(() => {
-    if (zoomedImage) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setImageLoading(true);
-    }
-  }, [zoomedImage]);
-
-  // Reset zoom when zoomed image changes
+  // Reset zoom when image changes
   useEffect(() => {
     if (zoomedImage) {
       pinchZoom.resetZoom();
@@ -74,20 +47,18 @@ export default function ImageZoomOverlay() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zoomedImage]);
 
-  // Calculate image dimensions to fill full height while maintaining aspect ratio
   const imageDimensions = useMemo(() => {
     if (!zoomedImage || !viewportWidth || !viewportHeight) {
       return { width: 0, height: 0 };
     }
 
     const aspectRatio = zoomedImage.width / zoomedImage.height;
-    const maxHeight = viewportHeight; // Full height, no padding
+    const maxHeight = viewportHeight;
     const maxWidth = viewportWidth - HORIZONTAL_PADDING * 2;
 
     let imageHeight = maxHeight;
     let imageWidth = imageHeight * aspectRatio;
 
-    // If width exceeds viewport, scale down based on width
     if (imageWidth > maxWidth) {
       imageWidth = maxWidth;
       imageHeight = imageWidth / aspectRatio;
@@ -121,6 +92,7 @@ export default function ImageZoomOverlay() {
         alignItems: 'center',
         justifyContent: 'center',
         cursor: 'zoom-out',
+        touchAction: 'none',
       }}
     >
       {/* Close button */}
@@ -165,21 +137,14 @@ export default function ImageZoomOverlay() {
         </svg>
       </button>
 
-      {/* Zoomed image */}
-      <motion.div
-        {...ZOOMED_IMAGE_ANIMATION}
-        {...(isTouchDevice ? pinchZoom.handlers : {})}
+      {/* Touch target — plain div, callback ref attaches listeners on mount */}
+      <div
+        ref={pinchZoom.setContainerRef}
         style={{
           position: 'relative',
           width: imageDimensions.width,
           height: imageDimensions.height,
-          transform: isTouchDevice
-            ? `scale(${pinchZoom.scale}) translate(${pinchZoom.position.x}px, ${pinchZoom.position.y}px)`
-            : undefined,
-          transformOrigin: 'center center',
-          transition: pinchZoom.isPinching ? 'none' : 'transform 0.3s ease-out',
-          cursor: pinchZoom.isZoomed ? 'grab' : 'zoom-out',
-          touchAction: pinchZoom.isZoomed ? 'none' : 'auto',
+          touchAction: 'none',
           userSelect: 'none',
         }}
         onClick={() => {
@@ -188,43 +153,56 @@ export default function ImageZoomOverlay() {
           }
         }}
       >
-        {/* Loading spinner */}
-        {imageLoading && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{
+            opacity: 1,
+            scale: pinchZoom.scale,
+            x: pinchZoom.position.x,
+            y: pinchZoom.position.y,
+            transition: pinchZoom.isPinching
+              ? { duration: 0 }
+              : { duration: 0.3 },
+          }}
+          exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+          style={{
+            width: '100%',
+            height: '100%',
+            transformOrigin: 'center center',
+            cursor: pinchZoom.isZoomed ? 'grab' : 'zoom-out',
+          }}
+        >
+          {/* Subtle shimmer placeholder */}
           <div
             style={{
               position: 'absolute',
               inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              background: 'linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%)',
+              backgroundSize: '200% 100%',
+              animation: 'shimmer 1.5s infinite',
+              borderRadius: '2px',
             }}
-          >
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                border: '3px solid rgba(255, 255, 255, 0.2)',
-                borderTop: '3px solid rgba(255, 255, 255, 0.8)',
-                borderRadius: '50%',
-                animation: 'spin 0.8s linear infinite',
-              }}
-            />
-          </div>
-        )}
-        <Image
-          src={zoomedImage.src}
-          alt={zoomedImage.alt}
-          fill
-          style={{
-            objectFit: 'contain',
-            opacity: imageLoading ? 0 : 1,
-            transition: 'opacity 0.2s ease',
-          }}
-          sizes={`${Math.round(imageDimensions.width)}px`}
-          onLoad={() => setImageLoading(false)}
-          priority
-        />
-      </motion.div>
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={zoomedImage.src}
+            alt={zoomedImage.alt}
+            onLoad={(e) => {
+              e.currentTarget.style.opacity = '1';
+              const shimmer = e.currentTarget.previousElementSibling as HTMLElement;
+              if (shimmer) shimmer.style.display = 'none';
+            }}
+            style={{
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              opacity: 0,
+              transition: 'opacity 0.15s ease',
+            }}
+          />
+        </motion.div>
+      </div>
     </motion.div>
   );
 }
