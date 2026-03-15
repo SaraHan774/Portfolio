@@ -94,16 +94,3 @@ export const IMAGE_ZOOM_OVERLAY_ANIMATION = {
   exit: { opacity: 0, transition: { duration: 0.2 } },
 } as const;
 
-// Zoomed image animation
-export const ZOOMED_IMAGE_ANIMATION = {
-  initial: { opacity: 0, scale: 0.9 },
-  animate: { opacity: 1, scale: 1, transition: { duration: 0.3 } },
-  exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2 } },
-} as const;
-
-// Zoom icon animation
-export const ZOOM_ICON_ANIMATION = {
-  initial: { opacity: 0, scale: 0.8 },
-  animate: { opacity: 1, scale: 1, transition: { duration: 0.2 } },
-  exit: { opacity: 0, scale: 0.8, transition: { duration: 0.15 } },
-} as const;
