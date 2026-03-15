@@ -52,20 +52,22 @@ const validateFileExtension = (filename: string): string => {
  */
 export const uploadImage = async (
   file: File,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  options?: { compressOriginal?: boolean }
 ): Promise<WorkImage> => {
   // 파일 확장자 검증
   const extension = validateFileExtension(file.name);
+  const shouldCompress = options?.compressOriginal ?? true;
 
   const imageId = uuidv4();
   const fileName = `${imageId}.${extension}`;
   const compressedFileName = `${imageId}.${getOutputExtension()}`;
 
   try {
-    // 1회 디코딩: dimensions + thumbnail + 압축 원본 생성
+    // 1회 디코딩: dimensions + thumbnail + (선택적) 압축 원본 생성
     const { dimensions, thumbnail, original: compressedOriginal } = await processImage(file, {
       thumbnail: appConfig.image.thumbnail,
-      original: appConfig.image.original,
+      original: shouldCompress ? appConfig.image.original : undefined,
     });
 
     // 업로드할 원본 데이터 결정 (압축본이 있으면 사용, 없으면 원본 파일 그대로)
@@ -158,25 +160,34 @@ export const uploadImages = async (
 /**
  * 이미지 삭제
  */
-export const deleteImage = async (imageId: string, extension = 'jpg'): Promise<void> => {
-  const fileName = `${imageId}.${extension}`;
-
-  // 원본 삭제
-  try {
-    const originalRef = ref(storage, `${storagePaths.worksImages}/${fileName}`);
-    await deleteObject(originalRef);
-  } catch {
-    logger.warn(`원본 이미지 삭제 실패: ${fileName}`, { action: 'deleteImage', imageId });
+export const deleteImage = async (
+  imageId: string,
+  originalExtension?: string,
+  thumbnailExtension?: string
+): Promise<void> => {
+  // 원본 삭제 — 확장자가 주어지면 해당 확장자, 아니면 가능한 확장자를 모두 시도
+  const origExts = originalExtension ? [originalExtension] : ['webp', 'jpg', 'jpeg', 'png'];
+  for (const ext of origExts) {
+    try {
+      const originalRef = ref(storage, `${storagePaths.worksImages}/${imageId}.${ext}`);
+      await deleteObject(originalRef);
+      break;
+    } catch {
+      // 해당 확장자 파일이 없으면 다음 시도
+    }
   }
 
-  // 썸네일 삭제
-  try {
-    const thumbnailRef = ref(storage, `${storagePaths.worksThumbnails}/${fileName}`);
-    await deleteObject(thumbnailRef);
-  } catch {
-    logger.warn(`썸네일 이미지 삭제 실패: ${fileName}`, { action: 'deleteImage', imageId });
+  // 썸네일 삭제 — 항상 WebP 또는 JPG
+  const thumbExts = thumbnailExtension ? [thumbnailExtension] : ['webp', 'jpg'];
+  for (const ext of thumbExts) {
+    try {
+      const thumbnailRef = ref(storage, `${storagePaths.worksThumbnails}/${imageId}.${ext}`);
+      await deleteObject(thumbnailRef);
+      break;
+    } catch {
+      // 해당 확장자 파일이 없으면 다음 시도
+    }
   }
-
 };
 
 /**
@@ -192,8 +203,9 @@ export const deleteImages = async (imageIds: string[]): Promise<void> => {
 export const deleteWorkImages = async (images: WorkImage[]): Promise<void> => {
   await Promise.all(
     images.map((image) => {
-      const extension = image.url.split('.').pop()?.split('?')[0] || 'jpg';
-      return deleteImage(image.id, extension);
+      const origExt = image.url.split('.').pop()?.split('?')[0];
+      const thumbExt = image.thumbnailUrl?.split('.').pop()?.split('?')[0];
+      return deleteImage(image.id, origExt, thumbExt);
     })
   );
 };

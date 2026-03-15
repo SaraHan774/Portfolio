@@ -95,9 +95,10 @@ export const incrementViewCount = async (id: string): Promise<void> => {
  */
 export const uploadImage = async (
   file: File,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  options?: { compressOriginal?: boolean }
 ): Promise<WorkImage> => {
-  return storageApi.uploadImage(file, onProgress);
+  return storageApi.uploadImage(file, onProgress, options);
 };
 
 /**

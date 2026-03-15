@@ -198,14 +198,25 @@ export const updateWork = async (
       throw new NotFoundError('작품을 찾을 수 없습니다.', { workId: id });
     }
 
+    const existingData = existingDoc.data();
+    const wasPublished = existingData.isPublished as boolean;
+
     const updateData: Record<string, unknown> = {
       ...updates,
       updatedAt: serverTimestamp(),
     };
 
-    // 공개 상태가 변경되면 publishedAt 업데이트
+    // 공개 상태가 변경될 때만 publishedAt 업데이트
+    // 비공개 → 공개: publishedAt 설정
+    // 공개 → 비공개: publishedAt 제거
+    // 공개 → 공개 (수정만): publishedAt 유지 (건드리지 않음)
     if (updates.isPublished !== undefined) {
-      updateData.publishedAt = updates.isPublished ? serverTimestamp() : null;
+      if (updates.isPublished && !wasPublished) {
+        updateData.publishedAt = serverTimestamp();
+      } else if (!updates.isPublished && wasPublished) {
+        updateData.publishedAt = null;
+      }
+      // 이미 공개 상태에서 수정만 하는 경우 publishedAt을 건드리지 않음
     }
 
     await updateDoc(docRef, updateData);
@@ -213,7 +224,8 @@ export const updateWork = async (
     const updatedDoc = await getDoc(docRef);
     const updatedWork = mapFirestoreToWork(id, updatedDoc.data() || {});
 
-    logger.info('작품 수정 완료', { action: 'updateWork', workId: id });
+    const publishStatus = updates.isPublished ? '게시' : updates.isPublished === false ? '임시저장(비공개)' : '수정';
+    logger.info(`작품 ${publishStatus} 완료`, { action: 'updateWork', workId: id, isPublished: updates.isPublished });
     return updatedWork;
   } catch (error) {
     if (error instanceof NotFoundError) throw error;

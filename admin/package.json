@@ -6,9 +6,8 @@
   "scripts": {
     "dev": "vite",
     "dev:emulator": "VITE_USE_FIREBASE_EMULATOR=true vite",
-    "emulators": "firebase emulators:start --project portfolio-nhb",
-    "emulators:import": "firebase emulators:start --project portfolio-nhb --import=./emulator-data",
-    "emulators:export": "firebase emulators:export ./emulator-data",
+    "emulators": "firebase emulators:start --project portfolio-nhb --import=./emulator-data --export-on-exit=./emulator-data",
+    "emulators:clean": "firebase emulators:start --project portfolio-nhb",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",

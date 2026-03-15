@@ -11,7 +11,6 @@ import {
   Button,
   Space,
   message,
-  Collapse,
   Checkbox,
   Modal,
   Image,
@@ -24,9 +23,11 @@ import { useWork, useCreateWork, useUpdateWork } from '../domain';
 import { useSentenceCategories, useExhibitionCategories } from '../domain';
 import type { WorkImage, WorkVideo } from '../core/types';
 import ImageUploader from '../components/ImageUploader';
+import type { PendingImage } from '../components/ImageUploader';
 import VideoUploader from '../components/VideoUploader';
 import MediaOrderManager from '../components/MediaOrderManager';
 import CaptionEditor from '../components/CaptionEditor';
+import { deleteWorkImages, uploadImage } from '../data/repository';
 import { getErrorDisplayInfo, logErrorForDev } from '../core/utils/errorMessages';
 import './WorkForm.css';
 
@@ -55,6 +56,8 @@ const WorkForm = () => {
   const [caption, setCaption] = useState<string>('');
   const [selectedSentenceCategoryIds, setSelectedSentenceCategoryIds] = useState<string[]>([]);
   const [selectedExhibitionCategoryIds, setSelectedExhibitionCategoryIds] = useState<string[]>([]);
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+  const [pendingDeleteImages, setPendingDeleteImages] = useState<WorkImage[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -101,11 +104,19 @@ const WorkForm = () => {
     if (isEditMode && work) {
       // 폼 값이나 이미지가 변경되었는지 확인
       const formValues = form.getFieldsValue();
-      const hasFormChanges = formValues.title !== work.title;
+      const hasFormChanges =
+        formValues.title !== work.title ||
+        String(formValues.year || '') !== String(work.year || '');
+
+      const hasPendingUploads = pendingImages.length > 0;
 
       const hasImageChanges =
         images.length !== work.images.length ||
-        thumbnailImageId !== work.thumbnailImageId;
+        thumbnailImageId !== work.thumbnailImageId ||
+        hasPendingUploads;
+
+      const hasVideoChanges =
+        videos.length !== (work.videos?.length || 0);
 
       const hasCaptionChanges = caption !== (work.caption || '');
 
@@ -113,17 +124,86 @@ const WorkForm = () => {
         JSON.stringify(selectedSentenceCategoryIds.sort()) !== JSON.stringify(work.sentenceCategoryIds.sort()) ||
         JSON.stringify(selectedExhibitionCategoryIds.sort()) !== JSON.stringify(work.exhibitionCategoryIds.sort());
 
-      setHasChanges(hasFormChanges || hasImageChanges || hasCaptionChanges || hasCategoryChanges);
+      setHasChanges(hasFormChanges || hasImageChanges || hasVideoChanges || hasCaptionChanges || hasCategoryChanges);
     } else if (!isEditMode) {
       // 새 작업의 경우 입력값이 있으면 변경사항 있음
       const formValues = form.getFieldsValue();
       setHasChanges(
         !!formValues.title ||
         images.length > 0 ||
+        videos.length > 0 ||
         !!caption
       );
     }
-  }, [form, images, thumbnailImageId, caption, selectedSentenceCategoryIds, selectedExhibitionCategoryIds, work, isEditMode]);
+  }, [form, images, videos, pendingImages, thumbnailImageId, caption, selectedSentenceCategoryIds, selectedExhibitionCategoryIds, work, isEditMode]);
+
+  // 브라우저 새로고침/탭 닫기 시 경고
+  useEffect(() => {
+    if (!hasChanges) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [hasChanges]);
+
+  // 브라우저 뒤로가기 차단
+  const hasChangesRef = useRef(hasChanges);
+  hasChangesRef.current = hasChanges;
+  const pendingCountRef = useRef(pendingImages.length);
+  pendingCountRef.current = pendingImages.length;
+  const hasPushedDummy = useRef(false);
+
+  useEffect(() => {
+    if (!hasChanges) {
+      return;
+    }
+
+    // 더미 history 항목은 최초 1회만 추가
+    if (!hasPushedDummy.current) {
+      window.history.pushState({ __workFormGuard: true }, '', window.location.href);
+      hasPushedDummy.current = true;
+    }
+
+    const handlePopState = () => {
+      if (!hasChangesRef.current) return;
+
+      // 뒤로가기를 취소하고 더미 항목 다시 추가
+      window.history.pushState({ __workFormGuard: true }, '', window.location.href);
+
+      const msg = pendingCountRef.current > 0
+        ? `업로드 대기 중인 이미지 ${pendingCountRef.current}장이 있습니다. 저장하지 않으면 사라집니다.`
+        : '변경사항을 저장하지 않고 나가시겠습니까?';
+
+      modal.confirm({
+        title: '저장하지 않은 변경사항이 있습니다.',
+        icon: <ExclamationCircleOutlined />,
+        content: msg,
+        okText: '저장하지 않고 나가기',
+        okButtonProps: { danger: true },
+        cancelText: '계속 작업',
+        onOk: () => {
+          hasChangesRef.current = false;
+          hasPushedDummy.current = false;
+          window.history.go(-2);
+        },
+      });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [hasChanges, modal]);
+
+  // 더미 history 항목을 제거하고 navigate하는 헬퍼
+  const safeNavigate = (path: string) => {
+    hasChangesRef.current = false;
+    if (hasPushedDummy.current) {
+      hasPushedDummy.current = false;
+      // 더미 항목을 pop한 뒤 navigate (replaceState로 대체)
+      window.history.replaceState(null, '', window.location.href);
+    }
+    navigate(path);
+  };
 
   // 폼 초기값 설정
   useEffect(() => {
@@ -140,6 +220,95 @@ const WorkForm = () => {
       setSelectedExhibitionCategoryIds(work.exhibitionCategoryIds);
     }
   }, [work, isEditMode, form]);
+
+  // pending 파일을 Storage에 업로드하고, images 목록에서 temp 항목을 실제 결과로 교체
+  // Returns: { images, thumbnailId } — thumbnailId is updated if it was a pending image
+  // 업로드 실패 시: 성공한 파일은 반영, 실패한 파일은 pending에 남겨둠
+  const uploadPendingFiles = async (
+    currentImages: WorkImage[],
+    currentThumbnailId: string
+  ): Promise<{ images: WorkImage[]; thumbnailId: string }> => {
+    if (pendingImages.length === 0) {
+      return { images: currentImages, thumbnailId: currentThumbnailId };
+    }
+
+    const currentPending = [...pendingImages]; // 현재 pending 스냅샷
+    const uploadedMap = new Map<string, WorkImage>();
+    const failedPending: PendingImage[] = [];
+    const CONCURRENCY = 3;
+    let uploadedCount = 0;
+    let nextIndex = 0;
+
+    const uploadNext = async (): Promise<void> => {
+      while (nextIndex < currentPending.length) {
+        const idx = nextIndex++;
+        const pending = currentPending[idx];
+        uploadedCount++;
+        setSavingMessage(`이미지 업로드 중... (${uploadedCount}/${currentPending.length})`);
+        try {
+          const uploaded = await uploadImage(
+            pending.file,
+            undefined,
+            { compressOriginal: pending.compressOriginal }
+          );
+          uploadedMap.set(pending.tempId, uploaded);
+          URL.revokeObjectURL(pending.previewUrl);
+        } catch (error) {
+          console.error(`이미지 업로드 실패: ${pending.file.name}`, error);
+          failedPending.push(pending);
+        }
+      }
+    };
+
+    // 슬라이딩 윈도우 병렬 업로드
+    const workers = Array.from(
+      { length: Math.min(CONCURRENCY, currentPending.length) },
+      () => uploadNext()
+    );
+    await Promise.all(workers);
+
+    // 실패한 파일이 있으면 경고
+    if (failedPending.length > 0) {
+      notification.warning({
+        message: '일부 이미지 업로드 실패',
+        description: `${failedPending.length}장의 이미지 업로드에 실패했습니다. 해당 이미지는 제외하고 저장됩니다.`,
+        placement: 'topRight',
+        duration: 5,
+      });
+    }
+
+    // temp 이미지를 실제 업로드 결과로 교체, 실패한 것은 제거
+    const failedIds = new Set(failedPending.map((p) => p.tempId));
+    const finalImages = currentImages
+      .map((img) => {
+        const real = uploadedMap.get(img.id);
+        if (real) {
+          return { ...real, order: img.order };
+        }
+        // 실패한 pending 이미지는 제거
+        if (failedIds.has(img.id)) {
+          return null;
+        }
+        return img;
+      })
+      .filter((img): img is WorkImage => img !== null)
+      .map((img, idx) => ({ ...img, order: idx + 1 })); // order 재정렬
+
+    // 썸네일 ID가 pending이었다면 실제 ID로 교체
+    let finalThumbnailId = currentThumbnailId;
+    const realThumb = uploadedMap.get(currentThumbnailId);
+    if (realThumb) {
+      finalThumbnailId = realThumb.id;
+    }
+    // 썸네일이 실패한 이미지였다면 첫 번째 이미지로 대체
+    if (failedIds.has(currentThumbnailId) && finalImages.length > 0) {
+      finalThumbnailId = finalImages[0].id;
+    }
+
+    // 실패한 파일은 pending에 남겨둠 (재시도 가능)
+    setPendingImages(failedPending);
+    return { images: finalImages, thumbnailId: finalThumbnailId };
+  };
 
   // 저장 및 게시 핸들러 (포트폴리오에 공개)
   const handleSave = async () => {
@@ -209,17 +378,28 @@ const WorkForm = () => {
 
       const formValues = form.getFieldsValue();
 
+      // 1. pending 이미지를 Storage에 업로드
+      const { images: finalImages, thumbnailId: finalThumbnailId } =
+        await uploadPendingFiles(images, thumbnailImageId);
+      setImages(finalImages);
+      setThumbnailImageId(finalThumbnailId);
+
+      setSavingMessage('Firestore에 저장하는 중...');
+
       // Firebase에 저장할 때 undefined 값 제거
-      const sanitizedImages = images.map((img) => removeUndefinedValues(img));
+      const sanitizedImages = finalImages.map((img) => removeUndefinedValues(img));
       const sanitizedVideos = videos.map((vid) => removeUndefinedValues(vid));
+
+      // year 처리: 빈 값이면 undefined, 유효한 값이면 숫자로 변환
+      const yearValue = formValues.year ? Number(formValues.year) : undefined;
 
       const workData = {
         title: formValues.title,
-        ...(formValues.year ? { year: Number(formValues.year) } : {}),
+        ...(yearValue ? { year: yearValue } : {}),
         images: sanitizedImages,
         videos: sanitizedVideos,
-        thumbnailImageId,
-        caption,
+        thumbnailImageId: finalThumbnailId,
+        caption: DOMPurify.sanitize(caption),
         sentenceCategoryIds: selectedSentenceCategoryIds,
         exhibitionCategoryIds: selectedExhibitionCategoryIds,
         isPublished: true, // 저장 버튼은 항상 게시 (공개)
@@ -229,6 +409,16 @@ const WorkForm = () => {
         await updateWorkMutation.mutateAsync({ id, updates: workData });
       } else {
         await createWorkMutation.mutateAsync(workData);
+      }
+
+      // 저장 성공 후 삭제 대기 이미지를 Storage에서 실제 삭제
+      if (pendingDeleteImages.length > 0) {
+        try {
+          await deleteWorkImages(pendingDeleteImages);
+        } catch (error) {
+          console.error('Storage 이미지 삭제 실패 (Firestore는 정상 저장됨):', error);
+        }
+        setPendingDeleteImages([]);
       }
 
       // 로딩 상태 종료
@@ -245,7 +435,7 @@ const WorkForm = () => {
         duration: 3,
       });
 
-      navigate('/works');
+      safeNavigate('/works');
     } catch (error) {
       // 개발 환경에서 에러 로깅
       logErrorForDev(error, 'handleSave');
@@ -379,26 +569,50 @@ const WorkForm = () => {
       setIsSaving(true);
       setSavingMessage('임시 저장하는 중...');
 
+      // 1. pending 이미지를 Storage에 업로드
+      const defaultThumbnailId = thumbnailImageId || (images.length > 0 ? images[0].id : '');
+      const { images: finalImages, thumbnailId: finalThumbnailId } =
+        await uploadPendingFiles(images, defaultThumbnailId);
+      setImages(finalImages);
+      setThumbnailImageId(finalThumbnailId);
+
+      setSavingMessage('Firestore에 저장하는 중...');
+
       // Firebase에 저장할 때 undefined 값 제거
-      const sanitizedImages = images.map((img) => removeUndefinedValues(img));
+      const sanitizedImages = finalImages.map((img) => removeUndefinedValues(img));
       const sanitizedVideos = videos.map((vid) => removeUndefinedValues(vid));
+
+      // year 처리: 빈 값이면 undefined, 유효한 값이면 숫자로 변환
+      const yearValue = formValues.year ? Number(formValues.year) : undefined;
 
       const workData = {
         title: formValues.title,
-        ...(formValues.year ? { year: Number(formValues.year) } : {}),
+        ...(yearValue ? { year: yearValue } : {}),
         images: sanitizedImages,
         videos: sanitizedVideos,
-        thumbnailImageId: thumbnailImageId || (images.length > 0 ? images[0].id : ''),
-        caption,
+        thumbnailImageId: finalThumbnailId,
+        caption: DOMPurify.sanitize(caption),
         sentenceCategoryIds: selectedSentenceCategoryIds,
         exhibitionCategoryIds: selectedExhibitionCategoryIds,
         isPublished: false, // 임시저장은 항상 비공개
       };
 
+      let savedWorkId = id;
       if (isEditMode && id) {
         await updateWorkMutation.mutateAsync({ id, updates: workData });
       } else {
-        await createWorkMutation.mutateAsync(workData);
+        const created = await createWorkMutation.mutateAsync(workData);
+        savedWorkId = created.id;
+      }
+
+      // 저장 성공 후 삭제 대기 이미지를 Storage에서 실제 삭제
+      if (pendingDeleteImages.length > 0) {
+        try {
+          await deleteWorkImages(pendingDeleteImages);
+        } catch (error) {
+          console.error('Storage 이미지 삭제 실패 (Firestore는 정상 저장됨):', error);
+        }
+        setPendingDeleteImages([]);
       }
 
       // 로딩 상태 종료
@@ -409,14 +623,17 @@ const WorkForm = () => {
       // 성공 알림
       notification.success({
         message: '임시 저장 완료',
-        description: '작업이 임시 저장되었습니다. (비공개 상태)',
+        description: '작업이 임시 저장되었습니다. (비공개 상태 - 포트폴리오에 표시되지 않음)',
         icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
         placement: 'topRight',
         duration: 3,
       });
 
       if (navigateAfter) {
-        navigate('/works');
+        safeNavigate('/works');
+      } else if (!isEditMode && savedWorkId) {
+        // 새 작업 생성 후 수정 페이지로 이동
+        safeNavigate(`/works/${savedWorkId}`);
       }
     } catch (error) {
       // 개발 환경에서 에러 로깅
@@ -484,16 +701,18 @@ const WorkForm = () => {
       modal.confirm({
         title: '저장하지 않은 변경사항이 있습니다.',
         icon: <ExclamationCircleOutlined />,
-        content: '변경사항을 저장하지 않고 나가시겠습니까?',
+        content: pendingImages.length > 0
+          ? `업로드 대기 중인 이미지 ${pendingImages.length}장이 있습니다. 저장하지 않으면 사라집니다.`
+          : '변경사항을 저장하지 않고 나가시겠습니까?',
         okText: '저장하지 않고 나가기',
         okButtonProps: { danger: true },
         cancelText: '계속 작업',
         onOk: () => {
-          navigate('/works');
+          safeNavigate('/works');
         },
       });
     } else {
-      navigate('/works');
+      safeNavigate('/works');
     }
   };
 
@@ -545,220 +764,6 @@ const WorkForm = () => {
     return <div>로딩 중...</div>;
   }
 
-  // Collapse 아이템 정의
-  const collapseItems = [
-    {
-      key: '1',
-      label: (
-        <>
-          <FileTextOutlined /> 기본 정보
-        </>
-      ),
-      children: (
-        <>
-          <Form.Item
-            name="title"
-            label="제목"
-            rules={[
-              { required: true, message: '제목을 입력해주세요.' },
-              { max: 100, message: '제목은 100자 이하로 입력해주세요.' },
-            ]}
-          >
-            <Input placeholder="작업 제목을 입력하세요" maxLength={100} showCount />
-          </Form.Item>
-          <Form.Item
-            name="year"
-            label="제작 년도"
-            rules={[
-              {
-                validator: (_, value) => {
-                  if (value && (value < 1900 || value > new Date().getFullYear() + 1)) {
-                    return Promise.reject(new Error('유효한 년도를 입력해주세요.'));
-                  }
-                  return Promise.resolve();
-                },
-              },
-            ]}
-          >
-            <Input
-              type="number"
-              placeholder={`예: ${new Date().getFullYear()}`}
-              style={{ width: '150px' }}
-            />
-          </Form.Item>
-        </>
-      ),
-    },
-    {
-      key: '2',
-      label: (
-        <>
-          <PictureOutlined /> 이미지 관리
-        </>
-      ),
-      children: (
-        <>
-          <Form.Item
-            rules={[
-              {
-                validator: () => {
-                  if (images.length === 0) {
-                    return Promise.reject(new Error('최소 1장의 이미지를 업로드해주세요.'));
-                  }
-                  if (!thumbnailImageId) {
-                    return Promise.reject(new Error('대표 썸네일을 선택해주세요.'));
-                  }
-                  return Promise.resolve();
-                },
-              },
-            ]}
-          >
-            <ImageUploader
-              value={images}
-              onChange={(newImages) => {
-                setImages(newImages);
-                if (newImages.length > 0 && !newImages.find((img) => img.id === thumbnailImageId)) {
-                  setThumbnailImageId(newImages[0].id);
-                }
-              }}
-              maxCount={50}
-            />
-          </Form.Item>
-          {images.length > 0 && (
-            <div style={{ marginTop: '16px' }}>
-              <div style={{ marginBottom: '8px', fontWeight: 500 }}>대표 썸네일 선택:</div>
-              <Radio.Group
-                value={thumbnailImageId}
-                onChange={(e) => setThumbnailImageId(e.target.value)}
-              >
-                <Space wrap>
-                  {images.map((image) => (
-                    <Radio key={image.id} value={image.id}>
-                      이미지 {image.order}
-                    </Radio>
-                  ))}
-                </Space>
-              </Radio.Group>
-            </div>
-          )}
-        </>
-      ),
-    },
-    {
-      key: '3',
-      label: (
-        <>
-          <VideoCameraOutlined /> 영상 관리 (YouTube)
-        </>
-      ),
-      children: (
-        <>
-          <VideoUploader
-            value={videos}
-            onChange={(newVideos) => setVideos(newVideos)}
-            maxCount={10}
-          />
-          <div style={{ marginTop: '12px', fontSize: '12px', color: '#8c8c8c' }}>
-            * YouTube URL을 입력하여 영상을 추가할 수 있습니다.
-          </div>
-        </>
-      ),
-    },
-    {
-      key: '4',
-      label: (
-        <>
-          <HighlightOutlined /> 상세 페이지 캡션
-        </>
-      ),
-      children: (
-        <>
-          {images.length === 0 && videos.length === 0 ? (
-            <p style={{ color: '#8c8c8c' }}>먼저 이미지 또는 영상을 업로드해주세요.</p>
-          ) : (
-            <CaptionEditor
-              value={caption}
-              onChange={(html) => setCaption(html)}
-            />
-          )}
-        </>
-      ),
-    },
-    {
-      key: '5',
-      label: (
-        <>
-          <FolderOutlined /> 카테고리 선택
-        </>
-      ),
-      children: (
-        <>
-          <div style={{ marginBottom: '24px' }}>
-            <div style={{ marginBottom: '12px', fontWeight: 500 }}>문장형 카테고리</div>
-            <div style={{ marginLeft: '16px' }}>
-              {sentenceCategories.length === 0 ? (
-                <p style={{ color: '#8c8c8c' }}>등록된 문장형 카테고리가 없습니다.</p>
-              ) : (
-                sentenceCategories.map((sentenceCat) => (
-                  <div key={sentenceCat.id} style={{ marginBottom: '16px' }}>
-                    <div style={{ marginBottom: '8px', color: '#8c8c8c', fontSize: '12px' }}>
-                      "{sentenceCat.sentence}"
-                    </div>
-                    <Space direction="vertical" size="small">
-                      {sentenceCat.keywords.map((keyword) => (
-                        <Checkbox
-                          key={keyword.id}
-                          checked={selectedSentenceCategoryIds.includes(keyword.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedSentenceCategoryIds([...selectedSentenceCategoryIds, keyword.id]);
-                            } else {
-                              setSelectedSentenceCategoryIds(
-                                selectedSentenceCategoryIds.filter((id) => id !== keyword.id)
-                              );
-                            }
-                          }}
-                        >
-                          {keyword.name}{' '}
-                          <span style={{ color: '#8c8c8c' }}>({sentenceCat.sentence})</span>
-                        </Checkbox>
-                      ))}
-                    </Space>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-          <div>
-            <div style={{ marginBottom: '12px', fontWeight: 500 }}>전시명 카테고리</div>
-            <div style={{ marginLeft: '16px' }}>
-              {exhibitionCategories.length === 0 ? (
-                <p style={{ color: '#8c8c8c' }}>등록된 전시명 카테고리가 없습니다.</p>
-              ) : (
-                <Checkbox.Group
-                  value={selectedExhibitionCategoryIds}
-                  onChange={(checkedValues) =>
-                    setSelectedExhibitionCategoryIds(checkedValues as string[])
-                  }
-                >
-                  <Space direction="vertical" size="small">
-                    {exhibitionCategories.map((exhibitionCat) => (
-                      <Checkbox key={exhibitionCat.id} value={exhibitionCat.id}>
-                        <span style={{ fontWeight: 500 }}>{exhibitionCat.title}</span>
-                        <span style={{ color: '#8c8c8c', marginLeft: '8px' }}>
-                          | {exhibitionCat.description.exhibitionType}, {exhibitionCat.description.venue}, {exhibitionCat.description.year}
-                        </span>
-                      </Checkbox>
-                    ))}
-                  </Space>
-                </Checkbox.Group>
-              )}
-            </div>
-          </div>
-        </>
-      ),
-    },
-  ];
 
   // 기본 정보는 별도로 표시 (Collapse 밖에서)
   const basicInfoSection = (
@@ -849,6 +854,14 @@ const WorkForm = () => {
             if (newImages.length > 0 && !newImages.find((img) => img.id === thumbnailImageId)) {
               setThumbnailImageId(newImages[0].id);
             }
+          }}
+          onPendingFilesChange={(newPending) => setPendingImages(newPending)}
+          onPendingDeletes={(deletedImages) => {
+            setPendingDeleteImages((prev) => {
+              const existingIds = new Set(prev.map((img) => img.id));
+              const newOnes = deletedImages.filter((img) => !existingIds.has(img.id));
+              return [...prev, ...newOnes];
+            });
           }}
           maxCount={50}
         />
@@ -1009,8 +1022,7 @@ const WorkForm = () => {
         layout="vertical"
         onFinish={handleSave}
       >
-        {/* 데스크탑: Card 형식, 모바일: Collapse 형식 */}
-        <div className="desktop-sections">
+        <div>
           {basicInfoSection}
           {imageSection}
           {videoSection}
@@ -1038,10 +1050,6 @@ const WorkForm = () => {
             )}
           </Card>
           {categorySection}
-        </div>
-
-        <div className="mobile-sections">
-          <Collapse defaultActiveKey={['1', '2', '3', '4', '5']} items={collapseItems} />
         </div>
 
         {/* 하단 액션 버튼 */}

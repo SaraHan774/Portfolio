@@ -48,20 +48,17 @@ npm run dev:emulator
 
 Emulator UI(http://localhost:4000)에서 Firestore, Storage, Auth 데이터를 직접 확인/수정 가능.
 
-### 데이터 저장 & 복원
+### 데이터 자동 유지
 
-Emulator는 기본적으로 종료 시 데이터가 사라짐. 데이터를 유지하려면:
+`npm run emulators`는 종료 시 자동으로 데이터를 저장하고, 다음 시작 시 자동으로 복원함.
 
 ```bash
-# 현재 Emulator 데이터를 파일로 저장
 cd ~/Portfolio/admin
-npm run emulators:export
-
-# 저장된 데이터로 Emulator 시작
-npm run emulators:import
+npm run emulators     # 데이터 자동 저장/복원 (기본)
+npm run emulators:clean  # 빈 상태로 시작 (저장된 데이터 무시)
 ```
 
-데이터는 `admin/emulator-data/` 폴더에 저장됨.
+데이터는 `admin/emulator-data/` 폴더에 저장됨 (`.gitignore`에 포함).
 
 ## 동작 원리
 
