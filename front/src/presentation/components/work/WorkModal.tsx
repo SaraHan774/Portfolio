@@ -67,34 +67,9 @@ export default function WorkModal({
     clearHover();
   }, [workId, clearHover]);
 
-  // 모달 열릴 때 배경 스크롤 방지 (iOS Safari 및 터치 디바이스 대응)
+  // 모달 언마운트 시 body scroll lock 해제
   useEffect(() => {
-    // OverlayScrollbars의 viewport가 생성될 때까지 대기
-    const timer = setTimeout(() => {
-      if (overlayScrollbarsRef.current) {
-        const { viewport } = overlayScrollbarsRef.current.elements();
-        if (viewport) {
-          disableBodyScroll(viewport, {
-            reserveScrollBarGap: true,
-            allowTouchMove: (el) => {
-              // OverlayScrollbars viewport 내부 터치는 허용
-              while (el && el !== document.body) {
-                if (el === viewport) {
-                  return true;
-                }
-                const parent = el.parentElement;
-                if (!parent) break;
-                el = parent;
-              }
-              return false;
-            },
-          });
-        }
-      }
-    }, 100);
-
     return () => {
-      clearTimeout(timer);
       if (overlayScrollbarsRef.current) {
         const { viewport } = overlayScrollbarsRef.current.elements();
         if (viewport) {
@@ -292,9 +267,11 @@ export default function WorkModal({
         }
       }}
       onWheel={(e) => {
-        // Prevent wheel events from propagating to background page
-        e.preventDefault();
-        e.stopPropagation();
+        // Prevent wheel events from propagating to background page only if on overlay itself
+        if (e.target === e.currentTarget) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
       }}
       onTouchMove={(e) => {
         // Prevent touch scroll on modal overlay
@@ -330,7 +307,8 @@ export default function WorkModal({
           position: 'relative',
           overflow: 'visible',
           border: 'none',
-            paddingBottom: '40px',
+          paddingBottom: '40px',
+          overscrollBehavior: 'contain',
         }}
         onClick={(e) => e.stopPropagation()}
         className="modal-content"
@@ -403,6 +381,18 @@ export default function WorkModal({
             position: 'relative',
             zIndex: 1,
             borderRadius: '0 0 4px 4px',
+            overscrollBehavior: 'contain',
+          }}
+          onWheel={(e) => {
+            // 본문 영역 전체에서 wheel 이벤트 처리
+            e.stopPropagation();
+            if (overlayScrollbarsRef.current) {
+              const { viewport } = overlayScrollbarsRef.current.elements();
+              if (viewport) {
+                e.preventDefault();
+                viewport.scrollTop += e.deltaY;
+              }
+            }
           }}
         >
           {/* 좌측: 타임라인 + 미디어 영역 */}
@@ -410,6 +400,7 @@ export default function WorkModal({
             style={{
               width: '65%',
               position: 'relative',
+              overscrollBehavior: 'contain',
             }}
           >
             {/* 미디어 스크롤 영역 (이미지 + 영상) */}
@@ -430,10 +421,32 @@ export default function WorkModal({
                 initialized: (instance) => {
                   overlayScrollbarsRef.current = instance;
                   console.log('OverlayScrollbars initialized:', instance);
+
+                  // 초기화 완료 후 body scroll lock 적용
+                  const { viewport } = instance.elements();
+                  if (viewport) {
+                    disableBodyScroll(viewport, {
+                      reserveScrollBarGap: true,
+                      allowTouchMove: (el) => {
+                        // OverlayScrollbars viewport 내부 터치는 허용
+                        while (el && el !== document.body) {
+                          if (el === viewport) {
+                            return true;
+                          }
+                          const parent = el.parentElement;
+                          if (!parent) break;
+                          el = parent;
+                        }
+                        return false;
+                      },
+                    });
+                  }
                 },
               }}
               style={{
                 height: 'calc(70vh - 80px)',
+                overscrollBehavior: 'contain',
+                touchAction: 'pan-y',
               }}
             >
               <div style={{
@@ -477,16 +490,7 @@ export default function WorkModal({
               top: 0,
               alignSelf: 'flex-start',
               height: 'calc(70vh - 100px)',
-            }}
-            onWheel={(e) => {
-              // 캡션 영역에서 스크롤 시 이미지 영역으로 전달
-              e.preventDefault(); // Prevent scroll from propagating to background
-              if (overlayScrollbarsRef.current) {
-                const { viewport } = overlayScrollbarsRef.current.elements();
-                if (viewport) {
-                  viewport.scrollTop += e.deltaY;
-                }
-              }
+              overscrollBehavior: 'contain',
             }}
           >
             {modalWork.caption && (

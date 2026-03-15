@@ -165,7 +165,8 @@ const WorkOrderManager = ({
       setHasChanges(false);
     } catch (error) {
       console.error('작업 순서 저장 실패:', error);
-      // 에러는 부모에서 처리
+      // 에러를 부모로 전파하여 처리하도록 함
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -213,7 +214,14 @@ const WorkOrderManager = ({
     <div>
       {/* 안내 메시지 */}
       <div style={{ marginBottom: '16px', fontSize: '13px', color: '#595959' }}>
-        드래그하여 작업의 표시 순서를 조정하세요. 또는 화살표 버튼을 사용할 수 있습니다.
+        <div style={{ marginBottom: '8px' }}>
+          드래그하여 작업의 표시 순서를 조정하세요. 또는 화살표 버튼을 사용할 수 있습니다.
+        </div>
+        <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
+          {categoryType === 'exhibition'
+            ? '💡 순서가 높을수록 포트폴리오 화면에서 오른쪽에서 왼쪽으로 배치됩니다.'
+            : '💡 순서대로 포트폴리오 화면에서 왼쪽에서 오른쪽으로 배치됩니다.'}
+        </div>
       </div>
 
       {/* 삭제된 작업 경고 */}

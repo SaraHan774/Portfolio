@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useFloatingPosition } from '@/domain';
 import { FLOATING_WINDOW_ANIMATION } from '@/core/constants';
-import type { Work } from '@/types';
+import type { Work, WorkVideo } from '@/types';
 
 interface FloatingWorkWindowProps {
   work: Work;
@@ -28,12 +28,19 @@ export default function FloatingWorkWindow({ work, position, onClick }: Floating
     edgePadding: 20,
   });
 
-  // Get thumbnail image with width/height info
+  // Get thumbnail - try image first, then fall back to video thumbnail
   const thumbnailImage =
     work.images?.find((img) => img.id === work.thumbnailImageId) ||
     work.images?.[0];
 
-  const hasThumbnail = !!thumbnailImage;
+  // If no image thumbnail, try to get YouTube video thumbnail
+  const firstVideo: WorkVideo | undefined = !thumbnailImage ? work.videos?.[0] : undefined;
+  const videoThumbnailUrl = firstVideo
+    ? `https://img.youtube.com/vi/${firstVideo.youtubeVideoId}/hqdefault.jpg`
+    : null;
+
+  const hasThumbnail = !!thumbnailImage || !!videoThumbnailUrl;
+  const thumbnailUrl = thumbnailImage?.url || videoThumbnailUrl;
 
   return (
     <motion.div
@@ -89,7 +96,7 @@ export default function FloatingWorkWindow({ work, position, onClick }: Floating
         </span>
 
         {/* 썸네일 */}
-        {hasThumbnail && thumbnailImage && (
+        {hasThumbnail && thumbnailUrl && (
           <div
             style={{
               width: '80px',
@@ -115,7 +122,7 @@ export default function FloatingWorkWindow({ work, position, onClick }: Floating
               />
             )}
             <img
-              src={thumbnailImage.url}
+              src={thumbnailUrl}
               alt={work.title}
               onLoad={() => setIsLoaded(true)}
               style={{
