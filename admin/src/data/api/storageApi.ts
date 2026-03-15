@@ -12,7 +12,7 @@ import {
 import { storage } from './client';
 import { storagePaths, appConfig } from '../../core/constants';
 import { ValidationError, UploadError } from '../../core/errors';
-import { processImage, createLogger } from '../../core/utils';
+import { processImage, getOutputExtension, createLogger } from '../../core/utils';
 import { v4 as uuidv4 } from 'uuid';
 import type { WorkImage } from '../../core/types';
 
@@ -59,6 +59,7 @@ export const uploadImage = async (
 
   const imageId = uuidv4();
   const fileName = `${imageId}.${extension}`;
+  const compressedFileName = `${imageId}.${getOutputExtension()}`;
 
   try {
     // 1회 디코딩: dimensions + thumbnail + medium + 압축 원본 생성
@@ -71,41 +72,45 @@ export const uploadImage = async (
     // 업로드할 원본 데이터 결정 (압축본이 있으면 사용, 없으면 원본 파일 그대로)
     const originalData = compressedOriginal ?? file;
 
-    // 원본 업로드
-    const originalRef = ref(storage, `${storagePaths.worksImages}/${fileName}`);
+    // 압축 원본이 있으면 WebP/JPEG 확장자, 없으면 원본 확장자
+    const originalFileName = compressedOriginal ? compressedFileName : fileName;
 
-    if (onProgress) {
-      const uploadTask = uploadBytesResumable(originalRef, originalData);
+    const originalRef = ref(storage, `${storagePaths.worksImages}/${originalFileName}`);
+    const thumbnailRef = ref(storage, `${storagePaths.worksThumbnails}/${compressedFileName}`);
 
-      await new Promise<void>((resolve, reject) => {
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            onProgress(progress);
-          },
-          reject,
-          () => resolve()
-        );
-      });
-    } else {
-      await uploadBytes(originalRef, originalData);
-    }
+    const originalUpload = onProgress
+      ? new Promise<void>((resolve, reject) => {
+          const uploadTask = uploadBytesResumable(originalRef, originalData);
+          uploadTask.on('state_changed',
+            (snapshot) => onProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100),
+            reject,
+            () => resolve()
+          );
+        })
+      : uploadBytes(originalRef, originalData);
 
-    const originalUrl = await getDownloadURL(originalRef);
+    // 원본 + 썸네일 + medium 동시 업로드
+    const uploads: Promise<unknown>[] = [
+      originalUpload,
+      uploadBytes(thumbnailRef, thumbnail),
+    ];
 
-    // 썸네일 업로드
-    const thumbnailRef = ref(storage, `${storagePaths.worksThumbnails}/${fileName}`);
-    await uploadBytes(thumbnailRef, thumbnail);
-    const thumbnailUrl = await getDownloadURL(thumbnailRef);
-
-    // Medium 변형 업로드
-    let mediumUrl: string | undefined;
+    let mediumRef;
     if (medium) {
-      const mediumRef = ref(storage, `${storagePaths.worksMedium}/${fileName}`);
-      await uploadBytes(mediumRef, medium);
-      mediumUrl = await getDownloadURL(mediumRef);
+      mediumRef = ref(storage, `${storagePaths.worksMedium}/${compressedFileName}`);
+      uploads.push(uploadBytes(mediumRef, medium));
     }
+
+    await Promise.all(uploads);
+
+    // 다운로드 URL 동시 획득
+    const urlPromises: [Promise<string>, Promise<string>, Promise<string | undefined>] = [
+      getDownloadURL(originalRef),
+      getDownloadURL(thumbnailRef),
+      mediumRef ? getDownloadURL(mediumRef) : Promise.resolve(undefined),
+    ];
+
+    const [originalUrl, thumbnailUrl, mediumUrl] = await Promise.all(urlPromises);
 
     logger.info('이미지 업로드 성공', { action: 'uploadImage', imageId, fileName });
 
