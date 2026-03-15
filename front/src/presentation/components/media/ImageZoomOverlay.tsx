@@ -5,16 +5,11 @@ import { motion } from 'framer-motion';
 import { useImageZoom, useOptimizedResize, usePinchZoom } from '@/domain';
 import {
   IMAGE_ZOOM_OVERLAY_ANIMATION,
-  ZOOMED_IMAGE_ANIMATION,
 } from '@/core/constants/animation.constants';
 import { Z_INDEX } from '@/core/constants/ui.constants';
 
 const HORIZONTAL_PADDING = 40;
 
-/**
- * Hook to track viewport dimensions with optimized resize handling
- * Uses throttling to prevent excessive re-renders during window resize
- */
 function useViewportSize() {
   const [size, setSize] = useState({ width: 0, height: 0 });
 
@@ -25,27 +20,16 @@ function useViewportSize() {
     });
   }, []);
 
-  // Initialize size on mount
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     updateSize();
   }, [updateSize]);
 
-  // Use optimized resize hook with debouncing
   useOptimizedResize(updateSize, { delay: 100 });
 
   return size;
 }
 
-/**
- * Full screen overlay that displays a zoomed image
- *
- * Features:
- * - Image fills viewport height while maintaining aspect ratio
- * - Dark dim background (rgba(0, 0, 0, 0.9))
- * - Close via: background click, X button, Escape key
- * - Smooth enter/exit animations
- */
 export default function ImageZoomOverlay() {
   const { zoomedImage, closeZoom } = useImageZoom();
   const { width: viewportWidth, height: viewportHeight } = useViewportSize();
@@ -55,7 +39,7 @@ export default function ImageZoomOverlay() {
     resetOnDoubleTap: true,
   });
 
-  // Reset zoom when zoomed image changes
+  // Reset zoom when image changes
   useEffect(() => {
     if (zoomedImage) {
       pinchZoom.resetZoom();
@@ -63,20 +47,18 @@ export default function ImageZoomOverlay() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zoomedImage]);
 
-  // Calculate image dimensions to fill full height while maintaining aspect ratio
   const imageDimensions = useMemo(() => {
     if (!zoomedImage || !viewportWidth || !viewportHeight) {
       return { width: 0, height: 0 };
     }
 
     const aspectRatio = zoomedImage.width / zoomedImage.height;
-    const maxHeight = viewportHeight; // Full height, no padding
+    const maxHeight = viewportHeight;
     const maxWidth = viewportWidth - HORIZONTAL_PADDING * 2;
 
     let imageHeight = maxHeight;
     let imageWidth = imageHeight * aspectRatio;
 
-    // If width exceeds viewport, scale down based on width
     if (imageWidth > maxWidth) {
       imageWidth = maxWidth;
       imageHeight = imageWidth / aspectRatio;
@@ -155,28 +137,9 @@ export default function ImageZoomOverlay() {
         </svg>
       </button>
 
-      {/* Debug indicator */}
+      {/* Touch target — plain div, callback ref attaches listeners on mount */}
       <div
-        style={{
-          position: 'absolute',
-          top: '20px',
-          left: '20px',
-          color: 'white',
-          fontSize: '12px',
-          zIndex: Z_INDEX.IMAGE_ZOOM_OVERLAY + 2,
-          background: 'rgba(0,0,0,0.5)',
-          padding: '4px 8px',
-          borderRadius: '4px',
-          fontFamily: 'monospace',
-        }}
-      >
-        touches: {pinchZoom.debugTouchCount} | scale: {pinchZoom.scale.toFixed(2)} | ref: {pinchZoom.containerRef.current ? 'OK' : 'NULL'}
-      </div>
-
-      {/* Touch target — plain div with regular ref */}
-      <div
-        ref={pinchZoom.containerRef}
-        className="pinch-zoom-target"
+        ref={pinchZoom.setContainerRef}
         style={{
           position: 'relative',
           width: imageDimensions.width,
@@ -190,7 +153,6 @@ export default function ImageZoomOverlay() {
           }
         }}
       >
-        {/* Animated inner wrapper */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{
