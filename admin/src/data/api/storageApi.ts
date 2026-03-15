@@ -47,7 +47,7 @@ const validateFileExtension = (filename: string): string => {
 
 /**
  * 이미지 업로드 (진행률 콜백 포함)
- * - 1회 디코딩으로 dimensions, thumbnail, medium, 압축 원본을 모두 생성
+ * - 1회 디코딩으로 dimensions, thumbnail, 압축 원본을 모두 생성
  * - 압축 원본(max 1920px)을 업로드하여 전송 크기 대폭 감소
  */
 export const uploadImage = async (
@@ -62,10 +62,9 @@ export const uploadImage = async (
   const compressedFileName = `${imageId}.${getOutputExtension()}`;
 
   try {
-    // 1회 디코딩: dimensions + thumbnail + medium + 압축 원본 생성
-    const { dimensions, thumbnail, medium, original: compressedOriginal } = await processImage(file, {
+    // 1회 디코딩: dimensions + thumbnail + 압축 원본 생성
+    const { dimensions, thumbnail, original: compressedOriginal } = await processImage(file, {
       thumbnail: appConfig.image.thumbnail,
-      medium: appConfig.image.medium,
       original: appConfig.image.original,
     });
 
@@ -89,28 +88,17 @@ export const uploadImage = async (
         })
       : uploadBytes(originalRef, originalData);
 
-    // 원본 + 썸네일 + medium 동시 업로드
-    const uploads: Promise<unknown>[] = [
+    // 원본 + 썸네일 동시 업로드
+    await Promise.all([
       originalUpload,
       uploadBytes(thumbnailRef, thumbnail),
-    ];
-
-    let mediumRef;
-    if (medium) {
-      mediumRef = ref(storage, `${storagePaths.worksMedium}/${compressedFileName}`);
-      uploads.push(uploadBytes(mediumRef, medium));
-    }
-
-    await Promise.all(uploads);
+    ]);
 
     // 다운로드 URL 동시 획득
-    const urlPromises: [Promise<string>, Promise<string>, Promise<string | undefined>] = [
+    const [originalUrl, thumbnailUrl] = await Promise.all([
       getDownloadURL(originalRef),
       getDownloadURL(thumbnailRef),
-      mediumRef ? getDownloadURL(mediumRef) : Promise.resolve(undefined),
-    ];
-
-    const [originalUrl, thumbnailUrl, mediumUrl] = await Promise.all(urlPromises);
+    ]);
 
     logger.info('이미지 업로드 성공', { action: 'uploadImage', imageId, fileName });
 
@@ -118,7 +106,6 @@ export const uploadImage = async (
       id: imageId,
       url: originalUrl,
       thumbnailUrl,
-      mediumUrl,
       order: 0,
       width: dimensions.width,
       height: dimensions.height,
@@ -190,13 +177,6 @@ export const deleteImage = async (imageId: string, extension = 'jpg'): Promise<v
     logger.warn(`썸네일 이미지 삭제 실패: ${fileName}`, { action: 'deleteImage', imageId });
   }
 
-  // Medium 변형 삭제
-  try {
-    const mediumRef = ref(storage, `${storagePaths.worksMedium}/${fileName}`);
-    await deleteObject(mediumRef);
-  } catch {
-    // Medium이 없을 수 있으므로 무시
-  }
 };
 
 /**

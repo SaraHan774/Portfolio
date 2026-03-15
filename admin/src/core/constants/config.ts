@@ -33,11 +33,6 @@ export const appConfig = {
       maxHeight: 300,
       quality: 0.7,
     },
-    medium: {
-      maxWidth: 800,
-      maxHeight: 800,
-      quality: 0.8,
-    },
     original: {
       maxWidth: 1920,
       maxHeight: 1920,
