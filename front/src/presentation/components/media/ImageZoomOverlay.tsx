@@ -155,26 +155,13 @@ export default function ImageZoomOverlay() {
         </svg>
       </button>
 
-      {/* Zoomed image */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{
-          opacity: 1,
-          scale: pinchZoom.scale,
-          x: pinchZoom.position.x,
-          y: pinchZoom.position.y,
-          transition: pinchZoom.isPinching
-            ? { duration: 0 }
-            : { duration: 0.3 },
-        }}
-        exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+      {/* Touch target — plain div so callback ref always works */}
+      <div
         ref={pinchZoom.containerRef}
         style={{
           position: 'relative',
           width: imageDimensions.width,
           height: imageDimensions.height,
-          transformOrigin: 'center center',
-          cursor: pinchZoom.isZoomed ? 'grab' : 'zoom-out',
           touchAction: 'none',
           userSelect: 'none',
         }}
@@ -184,37 +171,57 @@ export default function ImageZoomOverlay() {
           }
         }}
       >
-        {/* Subtle shimmer placeholder */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%)',
-            backgroundSize: '200% 100%',
-            animation: 'shimmer 1.5s infinite',
-            borderRadius: '2px',
+        {/* Animated inner wrapper */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{
+            opacity: 1,
+            scale: pinchZoom.scale,
+            x: pinchZoom.position.x,
+            y: pinchZoom.position.y,
+            transition: pinchZoom.isPinching
+              ? { duration: 0 }
+              : { duration: 0.3 },
           }}
-        />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={zoomedImage.src}
-          alt={zoomedImage.alt}
-          onLoad={(e) => {
-            e.currentTarget.style.opacity = '1';
-            // Hide shimmer once loaded
-            const shimmer = e.currentTarget.previousElementSibling as HTMLElement;
-            if (shimmer) shimmer.style.display = 'none';
-          }}
+          exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
           style={{
-            position: 'relative',
             width: '100%',
             height: '100%',
-            objectFit: 'contain',
-            opacity: 0,
-            transition: 'opacity 0.15s ease',
+            transformOrigin: 'center center',
+            cursor: pinchZoom.isZoomed ? 'grab' : 'zoom-out',
           }}
-        />
-      </motion.div>
+        >
+          {/* Subtle shimmer placeholder */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%)',
+              backgroundSize: '200% 100%',
+              animation: 'shimmer 1.5s infinite',
+              borderRadius: '2px',
+            }}
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={zoomedImage.src}
+            alt={zoomedImage.alt}
+            onLoad={(e) => {
+              e.currentTarget.style.opacity = '1';
+              const shimmer = e.currentTarget.previousElementSibling as HTMLElement;
+              if (shimmer) shimmer.style.display = 'none';
+            }}
+            style={{
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              opacity: 0,
+              transition: 'opacity 0.15s ease',
+            }}
+          />
+        </motion.div>
+      </div>
     </motion.div>
   );
 }
