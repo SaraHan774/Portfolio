@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useImageZoom, useOptimizedResize, useIsTouchDevice, usePinchZoom } from '@/domain';
+import { useImageZoom, useOptimizedResize, usePinchZoom } from '@/domain';
 import {
   IMAGE_ZOOM_OVERLAY_ANIMATION,
   ZOOMED_IMAGE_ANIMATION,
@@ -49,7 +49,6 @@ function useViewportSize() {
 export default function ImageZoomOverlay() {
   const { zoomedImage, closeZoom } = useImageZoom();
   const { width: viewportWidth, height: viewportHeight } = useViewportSize();
-  const isTouchDevice = useIsTouchDevice();
   const pinchZoom = usePinchZoom({
     minScale: 1,
     maxScale: 4,
@@ -161,15 +160,15 @@ export default function ImageZoomOverlay() {
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{
           opacity: 1,
-          scale: isTouchDevice ? pinchZoom.scale : 1,
-          x: isTouchDevice ? pinchZoom.position.x : 0,
-          y: isTouchDevice ? pinchZoom.position.y : 0,
+          scale: pinchZoom.scale,
+          x: pinchZoom.position.x,
+          y: pinchZoom.position.y,
           transition: pinchZoom.isPinching
             ? { duration: 0 }
             : { duration: 0.3 },
         }}
         exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-        ref={isTouchDevice ? pinchZoom.containerRef : undefined}
+        ref={pinchZoom.containerRef}
         style={{
           position: 'relative',
           width: imageDimensions.width,
