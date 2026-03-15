@@ -184,14 +184,29 @@ export default function ImageZoomOverlay() {
           }
         }}
       >
+        {/* Subtle shimmer placeholder */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%)',
+            backgroundSize: '200% 100%',
+            animation: 'shimmer 1.5s infinite',
+            borderRadius: '2px',
+          }}
+        />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={zoomedImage.src}
           alt={zoomedImage.alt}
           onLoad={(e) => {
             e.currentTarget.style.opacity = '1';
+            // Hide shimmer once loaded
+            const shimmer = e.currentTarget.previousElementSibling as HTMLElement;
+            if (shimmer) shimmer.style.display = 'none';
           }}
           style={{
+            position: 'relative',
             width: '100%',
             height: '100%',
             objectFit: 'contain',
