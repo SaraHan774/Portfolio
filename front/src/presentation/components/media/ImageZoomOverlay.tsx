@@ -188,10 +188,15 @@ export default function ImageZoomOverlay() {
         <img
           src={zoomedImage.src}
           alt={zoomedImage.alt}
+          onLoad={(e) => {
+            e.currentTarget.style.opacity = '1';
+          }}
           style={{
             width: '100%',
             height: '100%',
             objectFit: 'contain',
+            opacity: 0,
+            transition: 'opacity 0.15s ease',
           }}
         />
       </motion.div>
