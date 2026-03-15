@@ -167,19 +167,25 @@ export default function ImageZoomOverlay() {
 
       {/* Zoomed image */}
       <motion.div
-        {...ZOOMED_IMAGE_ANIMATION}
-        {...(isTouchDevice ? pinchZoom.handlers : {})}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{
+          opacity: 1,
+          scale: isTouchDevice ? pinchZoom.scale : 1,
+          x: isTouchDevice ? pinchZoom.position.x : 0,
+          y: isTouchDevice ? pinchZoom.position.y : 0,
+          transition: pinchZoom.isPinching
+            ? { duration: 0 }
+            : { duration: 0.3 },
+        }}
+        exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+        ref={isTouchDevice ? pinchZoom.containerRef : undefined}
         style={{
           position: 'relative',
           width: imageDimensions.width,
           height: imageDimensions.height,
-          transform: isTouchDevice
-            ? `scale(${pinchZoom.scale}) translate(${pinchZoom.position.x}px, ${pinchZoom.position.y}px)`
-            : undefined,
           transformOrigin: 'center center',
-          transition: pinchZoom.isPinching ? 'none' : 'transform 0.3s ease-out',
           cursor: pinchZoom.isZoomed ? 'grab' : 'zoom-out',
-          touchAction: pinchZoom.isZoomed ? 'none' : 'auto',
+          touchAction: 'none',
           userSelect: 'none',
         }}
         onClick={() => {
