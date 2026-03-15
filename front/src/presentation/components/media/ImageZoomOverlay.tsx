@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 import { useImageZoom, useOptimizedResize, useIsTouchDevice, usePinchZoom } from '@/domain';
 import {
   IMAGE_ZOOM_OVERLAY_ANIMATION,
@@ -50,21 +49,12 @@ function useViewportSize() {
 export default function ImageZoomOverlay() {
   const { zoomedImage, closeZoom } = useImageZoom();
   const { width: viewportWidth, height: viewportHeight } = useViewportSize();
-  const [imageLoading, setImageLoading] = useState(true);
   const isTouchDevice = useIsTouchDevice();
   const pinchZoom = usePinchZoom({
     minScale: 1,
     maxScale: 4,
     resetOnDoubleTap: true,
   });
-
-  // Reset loading state when zoomed image changes
-  useEffect(() => {
-    if (zoomedImage) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setImageLoading(true);
-    }
-  }, [zoomedImage]);
 
   // Reset zoom when zoomed image changes
   useEffect(() => {
@@ -194,41 +184,15 @@ export default function ImageZoomOverlay() {
           }
         }}
       >
-        {/* Loading spinner */}
-        {imageLoading && (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                border: '3px solid rgba(255, 255, 255, 0.2)',
-                borderTop: '3px solid rgba(255, 255, 255, 0.8)',
-                borderRadius: '50%',
-                animation: 'spin 0.8s linear infinite',
-              }}
-            />
-          </div>
-        )}
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={zoomedImage.src}
           alt={zoomedImage.alt}
-          fill
           style={{
+            width: '100%',
+            height: '100%',
             objectFit: 'contain',
-            opacity: imageLoading ? 0 : 1,
-            transition: 'opacity 0.2s ease',
           }}
-          sizes={`${Math.round(imageDimensions.width)}px`}
-          onLoad={() => setImageLoading(false)}
-          priority
         />
       </motion.div>
     </motion.div>
