@@ -17,6 +17,7 @@ export const collections = {
 export const storagePaths = {
   worksImages: 'works/images',
   worksThumbnails: 'works/thumbnails',
+  worksMedium: 'works/medium',
   favicon: 'settings/favicon',
   homeIcon: 'settings/homeIcon',
 } as const;

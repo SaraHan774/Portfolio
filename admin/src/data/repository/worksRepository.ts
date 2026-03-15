@@ -5,7 +5,7 @@
 import * as worksApi from '../api/worksApi';
 import * as storageApi from '../api/storageApi';
 import { cacheKeys, cacheConfig } from './cacheKeys';
-import type { Work, WorkImage } from '../../core/types';
+import type { Work, WorkImage, PaginatedResult } from '../../core/types';
 
 /**
  * 캐시 키 및 설정 export (React Query에서 사용)
@@ -18,6 +18,16 @@ export const worksCacheConfig = cacheConfig.dynamic;
  */
 export const getWorks = async (): Promise<Work[]> => {
   return worksApi.fetchAllWorks();
+};
+
+/**
+ * 페이지네이션으로 작품 조회
+ */
+export const getWorksPaginated = async (
+  pageSize: number,
+  cursor?: unknown
+): Promise<PaginatedResult<Work>> => {
+  return worksApi.fetchWorksPaginated(pageSize, cursor as Parameters<typeof worksApi.fetchWorksPaginated>[1]);
 };
 
 /**

@@ -394,6 +394,7 @@ const ImageUploader = ({ value = [], onChange, maxCount = 50 }: ImageUploaderPro
                   alt={`이미지 ${index + 1}`}
                   width="100%"
                   height={150}
+                  loading="lazy"
                   style={{ objectFit: 'cover', borderRadius: '4px' }}
                 />
               </div>

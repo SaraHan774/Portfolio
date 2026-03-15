@@ -38,6 +38,11 @@ export const appConfig = {
       maxHeight: 800,
       quality: 0.8,
     },
+    original: {
+      maxWidth: 1920,
+      maxHeight: 1920,
+      quality: 0.9,
+    },
   },
   // 텍스트 제한
   text: {

@@ -12,14 +12,18 @@ import {
   query,
   orderBy,
   where,
+  limit,
+  startAfter,
   serverTimestamp,
+  type DocumentSnapshot,
+  type QueryConstraint,
 } from 'firebase/firestore';
 import { db } from './client';
 import { collections, appConfig } from '../../core/constants';
 import { ValidationError, NetworkError, NotFoundError } from '../../core/errors';
 import { createLogger } from '../../core/utils';
 import { mapFirestoreToWork } from '../mappers';
-import type { Work, WorkImage } from '../../core/types';
+import type { Work, WorkImage, PaginatedResult } from '../../core/types';
 
 const logger = createLogger('worksApi');
 const worksCollection = collection(db, collections.works);
@@ -70,6 +74,34 @@ export const fetchAllWorks = async (): Promise<Work[]> => {
     return snapshot.docs.map((doc) => mapFirestoreToWork(doc.id, doc.data()));
   } catch (error) {
     logger.error('작품 목록 조회 실패', error, { action: 'fetchAllWorks' });
+    throw new NetworkError('작품 목록을 불러오는데 실패했습니다.');
+  }
+};
+
+/**
+ * 커서 기반 페이지네이션으로 작업 조회
+ */
+export const fetchWorksPaginated = async (
+  pageSize: number,
+  cursor?: DocumentSnapshot
+): Promise<PaginatedResult<Work>> => {
+  try {
+    const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc'), limit(pageSize + 1)];
+    if (cursor) {
+      constraints.push(startAfter(cursor));
+    }
+
+    const q = query(worksCollection, ...constraints);
+    const snapshot = await getDocs(q);
+
+    const hasMore = snapshot.docs.length > pageSize;
+    const docs = hasMore ? snapshot.docs.slice(0, pageSize) : snapshot.docs;
+    const items = docs.map((doc) => mapFirestoreToWork(doc.id, doc.data()));
+    const lastCursor = docs.length > 0 ? docs[docs.length - 1] : undefined;
+
+    return { items, hasMore, lastCursor };
+  } catch (error) {
+    logger.error('작품 목록 페이지네이션 조회 실패', error, { action: 'fetchWorksPaginated' });
     throw new NetworkError('작품 목록을 불러오는데 실패했습니다.');
   }
 };

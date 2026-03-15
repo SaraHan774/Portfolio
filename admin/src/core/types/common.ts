@@ -79,3 +79,12 @@ export interface UploadProgress {
   progress: number;
   fileName?: string;
 }
+
+/**
+ * 커서 기반 페이지네이션 결과
+ */
+export interface PaginatedResult<T> {
+  items: T[];
+  hasMore: boolean;
+  lastCursor: unknown;
+}

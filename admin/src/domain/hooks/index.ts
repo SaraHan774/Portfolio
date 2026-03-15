@@ -16,6 +16,7 @@ export {
 // Works Hooks
 export {
   useWorks,
+  usePaginatedWorks,
   useWork,
   usePublishedWorks,
   useCreateWork,

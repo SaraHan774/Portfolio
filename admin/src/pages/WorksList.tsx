@@ -33,7 +33,7 @@ import {
   CheckCircleOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { useWorks, useUpdateWork, useDeleteWork } from '../domain';
+import { useWorks, usePaginatedWorks, useUpdateWork, useDeleteWork } from '../domain';
 import { useSentenceCategories, useExhibitionCategories } from '../domain';
 import type { Work } from '../core/types';
 import './WorksList.css';
@@ -72,8 +72,18 @@ const WorksList = () => {
     return () => clearTimeout(timer);
   }, [searchText]);
 
-  // 작업 목록 조회 (Firebase)
-  const { data: works = [], isLoading: isWorksLoading } = useWorks();
+  // 필터/검색이 활성화되면 전체 조회로 폴백
+  const hasActiveFilters = debouncedSearchText.trim() !== '' || statusFilter !== 'all' || categoryFilter.length > 0;
+
+  // 페이지네이션 조회 (필터 없을 때)
+  const paginated = usePaginatedWorks(pageSize);
+
+  // 전체 조회 (필터 있을 때 폴백)
+  const allWorks = useWorks();
+
+  // 현재 사용할 데이터 소스 결정
+  const works = hasActiveFilters ? (allWorks.data ?? []) : (paginated.data?.items ?? []);
+  const isWorksLoading = hasActiveFilters ? allWorks.isLoading : paginated.isLoading;
 
   // 카테고리 목록 조회 (Firebase)
   const { data: sentenceCategories = [] } = useSentenceCategories();
@@ -301,6 +311,7 @@ const WorksList = () => {
             alt={record.title}
             width={80}
             height={80}
+            loading="lazy"
             style={{ objectFit: 'cover', borderRadius: '4px' }}
             fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSIjOGM4YzhjIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+SW1hZ2U8L3RleHQ+PC9zdmc+"
           />
@@ -601,7 +612,7 @@ const WorksList = () => {
           columns={columns}
           dataSource={filteredAndSortedWorks}
           rowKey="id"
-          pagination={{
+          pagination={hasActiveFilters ? {
             pageSize: pageSize,
             showSizeChanger: true,
             showTotal: (total) => `총 ${total}개`,
@@ -609,8 +620,27 @@ const WorksList = () => {
             onChange: (_page, size) => {
               if (size !== pageSize) {
                 setPageSize(size);
+                paginated.resetPagination();
               }
             },
+          } : {
+            pageSize: pageSize,
+            current: paginated.currentPage,
+            showSizeChanger: true,
+            showTotal: () => `페이지 ${paginated.currentPage}`,
+            pageSizeOptions: ['10', '20', '50', '100'],
+            onChange: (page, size) => {
+              if (size !== pageSize) {
+                setPageSize(size);
+                paginated.resetPagination();
+              } else if (page > paginated.currentPage && paginated.hasNextPage) {
+                paginated.goToNextPage();
+              } else if (page < paginated.currentPage && paginated.hasPrevPage) {
+                paginated.goToPrevPage();
+              }
+            },
+            // Disable page jump for cursor-based pagination
+            simple: !hasActiveFilters,
           }}
           scroll={{ x: 1200 }}
         />
@@ -771,7 +801,7 @@ const WorksList = () => {
               </Card>
             );
           }}
-          pagination={{
+          pagination={hasActiveFilters ? {
             pageSize: pageSize,
             showSizeChanger: true,
             showTotal: (total) => `총 ${total}개`,
@@ -779,8 +809,26 @@ const WorksList = () => {
             onChange: (_page, size) => {
               if (size !== pageSize) {
                 setPageSize(size);
+                paginated.resetPagination();
               }
             },
+          } : {
+            pageSize: pageSize,
+            current: paginated.currentPage,
+            showSizeChanger: true,
+            showTotal: () => `페이지 ${paginated.currentPage}`,
+            pageSizeOptions: ['10', '20', '50', '100'],
+            onChange: (page, size) => {
+              if (size !== pageSize) {
+                setPageSize(size);
+                paginated.resetPagination();
+              } else if (page > paginated.currentPage && paginated.hasNextPage) {
+                paginated.goToNextPage();
+              } else if (page < paginated.currentPage && paginated.hasPrevPage) {
+                paginated.goToPrevPage();
+              }
+            },
+            simple: !hasActiveFilters,
           }}
         />
       )}

@@ -10,9 +10,9 @@ import {
   listAll,
 } from 'firebase/storage';
 import { storage } from './client';
-import { storagePaths } from '../../core/constants';
+import { storagePaths, appConfig } from '../../core/constants';
 import { ValidationError, UploadError } from '../../core/errors';
-import { resizeImage, getImageDimensions, createLogger } from '../../core/utils';
+import { processImage, createLogger } from '../../core/utils';
 import { v4 as uuidv4 } from 'uuid';
 import type { WorkImage } from '../../core/types';
 
@@ -47,6 +47,8 @@ const validateFileExtension = (filename: string): string => {
 
 /**
  * 이미지 업로드 (진행률 콜백 포함)
+ * - 1회 디코딩으로 dimensions, thumbnail, medium, 압축 원본을 모두 생성
+ * - 압축 원본(max 1920px)을 업로드하여 전송 크기 대폭 감소
  */
 export const uploadImage = async (
   file: File,
@@ -58,15 +60,22 @@ export const uploadImage = async (
   const imageId = uuidv4();
   const fileName = `${imageId}.${extension}`;
 
-  // 원본 이미지 업로드
-  const originalRef = ref(storage, `${storagePaths.worksImages}/${fileName}`);
-
   try {
-    // 이미지 크기 정보 가져오기
-    const dimensions = await getImageDimensions(file);
+    // 1회 디코딩: dimensions + thumbnail + medium + 압축 원본 생성
+    const { dimensions, thumbnail, medium, original: compressedOriginal } = await processImage(file, {
+      thumbnail: appConfig.image.thumbnail,
+      medium: appConfig.image.medium,
+      original: appConfig.image.original,
+    });
+
+    // 업로드할 원본 데이터 결정 (압축본이 있으면 사용, 없으면 원본 파일 그대로)
+    const originalData = compressedOriginal ?? file;
+
+    // 원본 업로드
+    const originalRef = ref(storage, `${storagePaths.worksImages}/${fileName}`);
 
     if (onProgress) {
-      const uploadTask = uploadBytesResumable(originalRef, file);
+      const uploadTask = uploadBytesResumable(originalRef, originalData);
 
       await new Promise<void>((resolve, reject) => {
         uploadTask.on(
@@ -80,20 +89,23 @@ export const uploadImage = async (
         );
       });
     } else {
-      await uploadBytes(originalRef, file);
+      await uploadBytes(originalRef, originalData);
     }
 
     const originalUrl = await getDownloadURL(originalRef);
 
-    // 썸네일 생성 및 업로드
-    const thumbnailBlob = await resizeImage(file, {
-      maxWidth: 300,
-      maxHeight: 300,
-      quality: 0.7,
-    });
+    // 썸네일 업로드
     const thumbnailRef = ref(storage, `${storagePaths.worksThumbnails}/${fileName}`);
-    await uploadBytes(thumbnailRef, thumbnailBlob);
+    await uploadBytes(thumbnailRef, thumbnail);
     const thumbnailUrl = await getDownloadURL(thumbnailRef);
+
+    // Medium 변형 업로드
+    let mediumUrl: string | undefined;
+    if (medium) {
+      const mediumRef = ref(storage, `${storagePaths.worksMedium}/${fileName}`);
+      await uploadBytes(mediumRef, medium);
+      mediumUrl = await getDownloadURL(mediumRef);
+    }
 
     logger.info('이미지 업로드 성공', { action: 'uploadImage', imageId, fileName });
 
@@ -101,6 +113,7 @@ export const uploadImage = async (
       id: imageId,
       url: originalUrl,
       thumbnailUrl,
+      mediumUrl,
       order: 0,
       width: dimensions.width,
       height: dimensions.height,
@@ -114,41 +127,40 @@ export const uploadImage = async (
 };
 
 /**
- * 여러 이미지 병렬 업로드 (동시성 제한)
+ * 여러 이미지 병렬 업로드 (슬라이딩 윈도우 동시성 제한)
+ * 하나의 업로드가 끝나면 즉시 다음 파일이 시작됨
  */
 export const uploadImages = async (
   files: File[],
   onProgress?: (fileIndex: number, progress: number) => void
 ): Promise<WorkImage[]> => {
-  const results: WorkImage[] = [];
+  const results: (WorkImage | null)[] = new Array(files.length).fill(null);
+  let nextIndex = 0;
 
-  // 동시성 제한을 두고 병렬 업로드
-  for (let i = 0; i < files.length; i += UPLOAD_CONCURRENCY) {
-    const batch = files.slice(i, i + UPLOAD_CONCURRENCY);
+  const uploadNext = async (): Promise<void> => {
+    while (nextIndex < files.length) {
+      const currentIndex = nextIndex++;
+      const img = await uploadImage(files[currentIndex], (progress) => {
+        onProgress?.(currentIndex, progress);
+      });
+      results[currentIndex] = { ...img, order: currentIndex };
+    }
+  };
 
-    const batchResults = await Promise.all(
-      batch.map((file, batchIndex) =>
-        uploadImage(file, (progress) => {
-          onProgress?.(i + batchIndex, progress);
-        })
-      )
-    );
+  // 동시에 UPLOAD_CONCURRENCY개의 워커 시작
+  const workers = Array.from(
+    { length: Math.min(UPLOAD_CONCURRENCY, files.length) },
+    () => uploadNext()
+  );
 
-    // 순서 할당
-    results.push(
-      ...batchResults.map((img, batchIndex) => ({
-        ...img,
-        order: i + batchIndex,
-      }))
-    );
-  }
+  await Promise.all(workers);
 
   logger.info('다중 이미지 업로드 완료', {
     action: 'uploadImages',
     count: files.length,
   });
 
-  return results;
+  return results.filter((r): r is WorkImage => r !== null);
 };
 
 /**
@@ -171,6 +183,14 @@ export const deleteImage = async (imageId: string, extension = 'jpg'): Promise<v
     await deleteObject(thumbnailRef);
   } catch {
     logger.warn(`썸네일 이미지 삭제 실패: ${fileName}`, { action: 'deleteImage', imageId });
+  }
+
+  // Medium 변형 삭제
+  try {
+    const mediumRef = ref(storage, `${storagePaths.worksMedium}/${fileName}`);
+    await deleteObject(mediumRef);
+  } catch {
+    // Medium이 없을 수 있으므로 무시
   }
 };
 
