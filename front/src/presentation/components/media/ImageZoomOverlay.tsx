@@ -111,6 +111,7 @@ export default function ImageZoomOverlay() {
         alignItems: 'center',
         justifyContent: 'center',
         cursor: 'zoom-out',
+        touchAction: 'none',
       }}
     >
       {/* Close button */}
