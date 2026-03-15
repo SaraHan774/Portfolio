@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { useImageZoom, useOptimizedResize } from '@/domain';
+import { useImageZoom, useOptimizedResize, useIsTouchDevice, usePinchZoom } from '@/domain';
 import {
   IMAGE_ZOOM_OVERLAY_ANIMATION,
   ZOOMED_IMAGE_ANIMATION,
@@ -51,6 +51,12 @@ export default function ImageZoomOverlay() {
   const { zoomedImage, closeZoom } = useImageZoom();
   const { width: viewportWidth, height: viewportHeight } = useViewportSize();
   const [imageLoading, setImageLoading] = useState(true);
+  const isTouchDevice = useIsTouchDevice();
+  const pinchZoom = usePinchZoom({
+    minScale: 1,
+    maxScale: 4,
+    resetOnDoubleTap: true,
+  });
 
   // Reset loading state when zoomed image changes
   useEffect(() => {
@@ -58,6 +64,14 @@ export default function ImageZoomOverlay() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setImageLoading(true);
     }
+  }, [zoomedImage]);
+
+  // Reset zoom when zoomed image changes
+  useEffect(() => {
+    if (zoomedImage) {
+      pinchZoom.resetZoom();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zoomedImage]);
 
   // Calculate image dimensions to fill full height while maintaining aspect ratio
@@ -86,7 +100,11 @@ export default function ImageZoomOverlay() {
 
   const handleBackgroundClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
-      closeZoom();
+      if (pinchZoom.isZoomed) {
+        pinchZoom.resetZoom();
+      } else {
+        closeZoom();
+      }
     }
   };
 
@@ -150,13 +168,25 @@ export default function ImageZoomOverlay() {
       {/* Zoomed image */}
       <motion.div
         {...ZOOMED_IMAGE_ANIMATION}
+        {...(isTouchDevice ? pinchZoom.handlers : {})}
         style={{
           position: 'relative',
           width: imageDimensions.width,
           height: imageDimensions.height,
-          cursor: 'zoom-out',
+          transform: isTouchDevice
+            ? `scale(${pinchZoom.scale}) translate(${pinchZoom.position.x}px, ${pinchZoom.position.y}px)`
+            : undefined,
+          transformOrigin: 'center center',
+          transition: pinchZoom.isPinching ? 'none' : 'transform 0.3s ease-out',
+          cursor: pinchZoom.isZoomed ? 'grab' : 'zoom-out',
+          touchAction: pinchZoom.isZoomed ? 'none' : 'auto',
+          userSelect: 'none',
         }}
-        onClick={closeZoom}
+        onClick={() => {
+          if (!pinchZoom.isZoomed) {
+            closeZoom();
+          }
+        }}
       >
         {/* Loading spinner */}
         {imageLoading && (

@@ -40,7 +40,7 @@ export default function FloatingWorkWindow({ work, position, onClick }: Floating
     : null;
 
   const hasThumbnail = !!thumbnailImage || !!videoThumbnailUrl;
-  const thumbnailUrl = thumbnailImage?.url || videoThumbnailUrl;
+  const thumbnailUrl = thumbnailImage?.thumbnailUrl || thumbnailImage?.mediumUrl || thumbnailImage?.url || videoThumbnailUrl;
 
   return (
     <motion.div
@@ -92,7 +92,7 @@ export default function FloatingWorkWindow({ work, position, onClick }: Floating
             whiteSpace: 'nowrap',
           }}
         >
-          {`「‘${work.title}’」${work.year ? `,\u00A0${work.year}` : ''}`}
+          {`${work.title}${work.year ? `,\u00A0${work.year}` : ''}`}
         </span>
 
         {/* 썸네일 */}

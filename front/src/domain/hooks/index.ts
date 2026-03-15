@@ -26,3 +26,4 @@ export * from './useImageZoom';
 // Mobile hooks
 export * from './useMobileDetection';
 export * from './useSwipeGesture';
+export * from './usePinchZoom';

@@ -55,6 +55,14 @@ export const TYPOGRAPHY = {
   CATEGORY_FONT_SIZE: '14px',
 } as const;
 
+// Pinch zoom configuration
+export const PINCH_ZOOM = {
+  MIN_SCALE: 1,
+  MAX_SCALE: 4,
+  DOUBLE_TAP_DELAY: 300,
+  MIN_PINCH_DISTANCE: 30,
+} as const;
+
 // Z-index layers
 export const Z_INDEX = {
   HOME_ICON: 200,
