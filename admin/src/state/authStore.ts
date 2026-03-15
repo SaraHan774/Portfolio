@@ -6,6 +6,7 @@ import { create } from 'zustand';
 import type { User } from '../core/types';
 import {
   loginWithGoogle,
+  loginWithEmulator,
   logout as firebaseLogout,
   getCurrentUser,
   onAuthChange,
@@ -22,6 +23,7 @@ interface AuthState {
 
 interface AuthActions {
   login: () => Promise<void>;
+  loginEmulator: () => Promise<void>;
   logout: () => Promise<void>;
   initializeAuth: () => Promise<void>;
   clearError: () => void;
@@ -46,6 +48,19 @@ export const useAuthStore = create<AuthStore>((set) => ({
       set({ user, isAuthenticated: true, isLoading: false });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '로그인 실패';
+      set({ error: errorMessage, isLoading: false });
+      throw error;
+    }
+  },
+
+  // Emulator 테스트 로그인
+  loginEmulator: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const user = await loginWithEmulator();
+      set({ user, isAuthenticated: true, isLoading: false });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Emulator 로그인 실패';
       set({ error: errorMessage, isLoading: false });
       throw error;
     }

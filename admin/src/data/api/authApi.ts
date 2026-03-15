@@ -3,6 +3,8 @@
  */
 import {
   signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   type User as FirebaseUser,
@@ -43,7 +45,7 @@ const saveUserData = async (user: User, isNew: boolean): Promise<void> => {
         email: user.email,
         googleId: user.googleId,
         displayName: user.displayName,
-        profileImage: user.profileImage,
+        ...(user.profileImage !== undefined && { profileImage: user.profileImage }),
         role: 'viewer',
         createdAt: serverTimestamp(),
         lastLoginAt: serverTimestamp(),
@@ -55,7 +57,7 @@ const saveUserData = async (user: User, isNew: boolean): Promise<void> => {
         {
           lastLoginAt: serverTimestamp(),
           displayName: user.displayName,
-          profileImage: user.profileImage,
+          ...(user.profileImage !== undefined && { profileImage: user.profileImage }),
         },
         { merge: true }
       );
@@ -81,6 +83,46 @@ export const loginWithGoogle = async (): Promise<User> => {
   } catch (error) {
     logger.error('로그인 실패', error, { action: 'loginWithGoogle' });
     throw new AuthError('로그인에 실패했습니다. 다시 시도해주세요.', 'LOGIN_ERROR');
+  }
+};
+
+/**
+ * Emulator 전용 테스트 로그인
+ * Email/Password 방식으로 테스트 계정 자동 생성 후 로그인
+ */
+export const loginWithEmulator = async (): Promise<User> => {
+  const testEmail = 'admin@test.com';
+  const testPassword = 'test123456';
+
+  try {
+    let result;
+    try {
+      result = await signInWithEmailAndPassword(auth, testEmail, testPassword);
+    } catch {
+      // 계정이 없으면 생성
+      result = await createUserWithEmailAndPassword(auth, testEmail, testPassword);
+    }
+
+    const firestoreData = await fetchUserData(result.user.uid);
+    const isNew = !firestoreData;
+    const user = mapFirebaseUserToUser(result.user, firestoreData || undefined);
+
+    // 테스트 유저는 항상 admin 역할로 저장
+    if (isNew) {
+      const adminUser = { ...user, role: 'admin' as const, displayName: '테스트 관리자' };
+      await saveUserData(adminUser, true);
+      // role을 admin으로 명시적 업데이트
+      const userDocRef = doc(db, collections.users, user.id);
+      await setDoc(userDocRef, { role: 'admin' }, { merge: true });
+      logger.info('Emulator 테스트 계정 생성', { action: 'loginWithEmulator', userId: user.id });
+      return adminUser;
+    }
+
+    logger.info('Emulator 로그인 성공', { action: 'loginWithEmulator', userId: user.id });
+    return { ...user, role: (firestoreData?.role as 'admin' | 'viewer') || 'admin' };
+  } catch (error) {
+    logger.error('Emulator 로그인 실패', error, { action: 'loginWithEmulator' });
+    throw new AuthError('Emulator 로그인에 실패했습니다.', 'EMULATOR_LOGIN_ERROR');
   }
 };
 

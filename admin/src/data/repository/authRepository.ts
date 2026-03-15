@@ -20,6 +20,13 @@ export const loginWithGoogle = async (): Promise<User> => {
 };
 
 /**
+ * Emulator 전용 테스트 로그인
+ */
+export const loginWithEmulator = async (): Promise<User> => {
+  return authApi.loginWithEmulator();
+};
+
+/**
  * 로그아웃
  */
 export const logout = async (): Promise<void> => {

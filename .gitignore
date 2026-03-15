@@ -40,6 +40,13 @@ Thumbs.db
 
 *.pdf
 
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+storage-debug.log
+ui-debug.log
+
 # Firebase Service Account Keys (CRITICAL: Never commit!)
 *serviceAccountKey*.json
 oval-replica-*.json

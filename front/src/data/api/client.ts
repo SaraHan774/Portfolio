@@ -1,8 +1,8 @@
 // Firebase client initialization for data layer
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
-import { getStorage, FirebaseStorage } from 'firebase/storage';
+import { getFirestore, connectFirestoreEmulator, Firestore } from 'firebase/firestore';
+import { getStorage, connectStorageEmulator, FirebaseStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -51,12 +51,37 @@ export const getFirebaseApp = (): FirebaseApp => {
   return app;
 };
 
+// Emulator 연결 여부 추적 (중복 연결 방지)
+let emulatorsConnected = false;
+
+/**
+ * 개발 환경에서 Firebase Emulator 연결
+ */
+const connectEmulators = (firestoreDb: Firestore, storageInstance: FirebaseStorage): void => {
+  if (emulatorsConnected) return;
+  if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR !== 'true') return;
+
+  try {
+    connectFirestoreEmulator(firestoreDb, 'localhost', 8080);
+    connectStorageEmulator(storageInstance, 'localhost', 9199);
+    emulatorsConnected = true;
+    console.log('🔧 [Front] Firebase Emulator에 연결되었습니다 (localhost:8080, 9199)');
+  } catch (e) {
+    console.warn('⚠️ Firebase Emulator 연결 실패', e);
+  }
+};
+
 /**
  * Get Firestore instance
  */
 export const getDb = (): Firestore => {
   if (!db) {
     db = getFirestore(getFirebaseApp());
+    // Storage도 미리 초기화해서 emulator 연결을 한 번에 처리
+    if (!storage) {
+      storage = getStorage(getFirebaseApp());
+    }
+    connectEmulators(db, storage);
   }
   return db;
 };
@@ -67,6 +92,11 @@ export const getDb = (): Firestore => {
 export const getStorageInstance = (): FirebaseStorage => {
   if (!storage) {
     storage = getStorage(getFirebaseApp());
+    // Firestore도 미리 초기화해서 emulator 연결을 한 번에 처리
+    if (!db) {
+      db = getFirestore(getFirebaseApp());
+    }
+    connectEmulators(db, storage);
   }
   return storage;
 };

@@ -5,9 +5,9 @@
  * API 모듈들은 이 클라이언트를 import하여 사용합니다.
  */
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { getAuth, connectAuthEmulator, GoogleAuthProvider } from 'firebase/auth';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 import { firebaseConfig, isFirebaseConfigValid } from '../../core/constants';
 
@@ -23,6 +23,21 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+
+// 개발 환경에서 Firebase Emulator 연결
+if (import.meta.env.DEV) {
+  const emulatorFlag = import.meta.env.VITE_USE_FIREBASE_EMULATOR;
+  console.log(`[Firebase] DEV 모드 | VITE_USE_FIREBASE_EMULATOR=${emulatorFlag}`);
+
+  if (emulatorFlag === 'true') {
+    connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+    connectFirestoreEmulator(db, 'localhost', 8080);
+    connectStorageEmulator(storage, 'localhost', 9199);
+    console.log('🔧 Firebase Emulator에 연결되었습니다 (localhost:8080, 9099, 9199)');
+  } else {
+    console.warn('⚠️ DEV 모드에서 프로덕션 Firebase에 연결 중입니다. Emulator를 사용하려면 npm run dev:emulator 를 실행하세요.');
+  }
+}
 
 // Google Auth Provider 설정
 export const googleProvider = new GoogleAuthProvider();
