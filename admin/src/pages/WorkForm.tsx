@@ -197,11 +197,7 @@ const WorkForm = () => {
   // 더미 history 항목을 제거하고 navigate하는 헬퍼
   const safeNavigate = (path: string) => {
     hasChangesRef.current = false;
-    if (hasPushedDummy.current) {
-      hasPushedDummy.current = false;
-      // 더미 항목을 pop한 뒤 navigate (replaceState로 대체)
-      window.history.replaceState(null, '', window.location.href);
-    }
+    hasPushedDummy.current = false;
     navigate(path);
   };
 
@@ -243,7 +239,6 @@ const WorkForm = () => {
       while (nextIndex < currentPending.length) {
         const idx = nextIndex++;
         const pending = currentPending[idx];
-        uploadedCount++;
         setSavingMessage(`이미지 업로드 중... (${uploadedCount}/${currentPending.length})`);
         try {
           const uploaded = await uploadImage(
@@ -257,6 +252,8 @@ const WorkForm = () => {
           console.error(`이미지 업로드 실패: ${pending.file.name}`, error);
           failedPending.push(pending);
         }
+        uploadedCount++;
+        setSavingMessage(`이미지 업로드 중... (${uploadedCount}/${currentPending.length})`);
       }
     };
 

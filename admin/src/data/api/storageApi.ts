@@ -172,8 +172,9 @@ export const deleteImage = async (
       const originalRef = ref(storage, `${storagePaths.worksImages}/${imageId}.${ext}`);
       await deleteObject(originalRef);
       break;
-    } catch {
-      // 해당 확장자 파일이 없으면 다음 시도
+    } catch (error: unknown) {
+      const code = (error as { code?: string }).code;
+      if (code !== 'storage/object-not-found') throw error;
     }
   }
 
@@ -184,8 +185,9 @@ export const deleteImage = async (
       const thumbnailRef = ref(storage, `${storagePaths.worksThumbnails}/${imageId}.${ext}`);
       await deleteObject(thumbnailRef);
       break;
-    } catch {
-      // 해당 확장자 파일이 없으면 다음 시도
+    } catch (error: unknown) {
+      const code = (error as { code?: string }).code;
+      if (code !== 'storage/object-not-found') throw error;
     }
   }
 };
