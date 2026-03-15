@@ -155,9 +155,28 @@ export default function ImageZoomOverlay() {
         </svg>
       </button>
 
-      {/* Touch target — plain div so callback ref always works */}
+      {/* Debug indicator */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '20px',
+          left: '20px',
+          color: 'white',
+          fontSize: '12px',
+          zIndex: Z_INDEX.IMAGE_ZOOM_OVERLAY + 2,
+          background: 'rgba(0,0,0,0.5)',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          fontFamily: 'monospace',
+        }}
+      >
+        touches: {pinchZoom.debugTouchCount} | scale: {pinchZoom.scale.toFixed(2)} | ref: {pinchZoom.containerRef.current ? 'OK' : 'NULL'}
+      </div>
+
+      {/* Touch target — plain div with regular ref */}
       <div
         ref={pinchZoom.containerRef}
+        className="pinch-zoom-target"
         style={{
           position: 'relative',
           width: imageDimensions.width,
