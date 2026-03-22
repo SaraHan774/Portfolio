@@ -46,7 +46,7 @@ const sanitizeWork = (work: Work): Work => {
   return {
     ...work,
     title: DOMPurify.sanitize(work.title, { ALLOWED_TAGS: [] }), // 순수 텍스트만
-    caption: work.caption ? DOMPurify.sanitize(work.caption) : undefined,
+    caption: work.caption ? DOMPurify.sanitize(work.caption) : '',
     images: (work.images || []).slice(0, 50), // 배열 크기 제한
     videos: (work.videos || []).slice(0, 10),
     sentenceCategoryIds: (work.sentenceCategoryIds || []).slice(0, 20),

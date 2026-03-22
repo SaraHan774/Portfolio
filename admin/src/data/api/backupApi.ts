@@ -93,6 +93,9 @@ const fetchSettingsForBackup = async (): Promise<SiteSettings> => {
     browserTitle: data.browserTitle,
     browserDescription: data.browserDescription,
     faviconUrl: data.faviconUrl,
+    homeIconUrl: data.homeIconUrl,
+    homeIconHoverUrl: data.homeIconHoverUrl,
+    homeIconSize: data.homeIconSize,
     footerText: data.footerText,
     updatedAt: data.updatedAt?.toDate() || new Date(),
   } as SiteSettings;
