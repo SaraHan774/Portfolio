@@ -1,561 +1,269 @@
 # TESTING.md: 테스트 전략
 
+두 앱 모두 **Vitest + Testing Library** 사용. 테스트 파일은 `src/**/__tests__/` 디렉토리에 위치합니다.
+
+---
+
 ## 테스트 피라미드
 
 ```
         ╱╲
-       ╱  ╲      E2E (사용자 시나리오)
-      ╱    ╲     10-15% 테스트
-     ╱──────╲
-    ╱        ╲
-   ╱          ╲   통합 (Hook, 컴포넌트)
-  ╱            ╲  30-40% 테스트
- ╱──────────────╲
-╱                ╲
-╱──────────────────╲ 유닛 (함수, 로직)
-                    45-60% 테스트
+       ╱  ╲      E2E (Playwright — 주요 사용자 시나리오)
+      ╱────╲
+     ╱      ╲    통합 (Hook, Context, Repository)
+    ╱────────╲
+   ╱          ╲  유닛 (순수 함수, 유틸, 에러 클래스)
+  ╱────────────╲
 ```
 
-## 1. 유닛 테스트 (함수/로직)
+---
 
-### 1.1 순수 함수 테스트
+## 테스트 명령어
+
+```bash
+# front
+cd front
+npm run test          # watch 모드
+npm run test:run      # 1회 실행
+npm run test:coverage # 커버리지
+
+# admin
+cd admin
+npm run test          # watch 모드
+npm run test:coverage # 커버리지
+```
+
+---
+
+## 1. 유닛 테스트 (순수 함수, 유틸)
 
 ```typescript
-// core/utils/wineScore.ts
-export function calculateWineScore(
-  rating: number,
-  vintage: number,
-  ageYears: number
-): number {
-  if (rating < 1 || rating > 10) {
-    throw new RangeError('Rating must be between 1-10');
-  }
-  return rating + (ageYears * 0.1);
-}
-
-// core/utils/wineScore.test.ts
+// core/utils/formatDate.test.ts
 import { describe, it, expect } from 'vitest';
-import { calculateWineScore } from './wineScore';
+import { formatDate } from '../formatDate';
 
-describe('calculateWineScore', () => {
-  it('should calculate score correctly', () => {
-    const score = calculateWineScore(8, 2015, 8);
-    expect(score).toBe(8.8); // 8 + (8 * 0.1)
+describe('formatDate', () => {
+  it('Firestore Timestamp를 "YYYY.MM.DD" 형식으로 변환', () => {
+    const ts = { seconds: 1700000000, nanoseconds: 0 };
+    expect(formatDate(ts)).toBe('2023.11.14');
   });
 
-  it('should throw error for invalid rating', () => {
-    expect(() => calculateWineScore(11, 2015, 8))
-      .toThrow(RangeError);
-  });
-
-  it('should handle edge cases', () => {
-    expect(calculateWineScore(1, 2015, 0)).toBe(1);
-    expect(calculateWineScore(10, 2015, 0)).toBe(10);
+  it('null이면 빈 문자열 반환', () => {
+    expect(formatDate(null)).toBe('');
   });
 });
 ```
 
-### 1.2 에러 클래스 테스트
+---
+
+## 2. Hook 테스트 (통합)
+
+Firebase 의존성은 항상 모킹합니다.
+
+### 2.1 TanStack Query Hook (front)
 
 ```typescript
-// core/errors/CustomError.ts
-export class ValidationError extends Error {
-  constructor(message: string, public field: string) {
-    super(message);
-    this.name = 'ValidationError';
-  }
-}
-
-// core/errors/CustomError.test.ts
-import { describe, it, expect } from 'vitest';
-import { ValidationError } from './CustomError';
-
-describe('ValidationError', () => {
-  it('should create error with field', () => {
-    const error = new ValidationError('Invalid email', 'email');
-    expect(error.message).toBe('Invalid email');
-    expect(error.field).toBe('email');
-    expect(error.name).toBe('ValidationError');
-  });
-});
-```
-
-## 2. 통합 테스트
-
-### 2.1 Custom Hook 테스트
-
-```typescript
-// domain/hooks/useUserManagement.ts
-export function useUserManagement(userId: string) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await userRepository.getById(userId);
-        setUser(data);
-      } catch (err) {
-        setError(err as Error);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [userId]);
-
-  return { user, loading, error };
-}
-
-// domain/hooks/useUserManagement.test.ts
+// domain/__tests__/hooks/useWorks.test.ts
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useUserManagement } from './useUserManagement';
-import * as userRepository from '../../data/repository/userRepository';
+import { useWorks } from '../../hooks/useWorks';
+import * as workRepository from '../../../data/repository/WorkRepository';
 
-vi.mock('../../data/repository/userRepository');
+vi.mock('../../../data/repository/WorkRepository');
 
-describe('useUserManagement', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+const wrapper = createQueryWrapper(); // QueryClientProvider 래퍼
+
+describe('useWorks', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('작품 목록을 불러온다', async () => {
+    const mockWorks = [{ id: '1', title: '작품1' }];
+    vi.spyOn(workRepository, 'getPublished').mockResolvedValue(mockWorks);
+
+    const { result } = renderHook(() => useWorks(), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(mockWorks);
   });
 
-  it('should fetch user on mount', async () => {
-    const mockUser = { id: '1', name: 'John Doe', email: 'john@example.com' };
-    vi.spyOn(userRepository, 'getById').mockResolvedValue(mockUser);
+  it('에러 상태를 처리한다', async () => {
+    vi.spyOn(workRepository, 'getPublished').mockRejectedValue(new Error('fetch failed'));
 
-    const { result } = renderHook(() => useUserManagement('1'));
+    const { result } = renderHook(() => useWorks(), { wrapper });
 
-    // 초기 상태
-    expect(result.current.loading).toBe(true);
-    expect(result.current.user).toBeNull();
-
-    // 로드 완료 후
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
-
-    expect(result.current.user).toEqual(mockUser);
-    expect(result.current.error).toBeNull();
-  });
-
-  it('should handle error', async () => {
-    const mockError = new Error('Network error');
-    vi.spyOn(userRepository, 'getById').mockRejectedValue(mockError);
-
-    const { result } = renderHook(() => useUserManagement('1'));
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
-
-    expect(result.current.user).toBeNull();
-    expect(result.current.error).toEqual(mockError);
+    await waitFor(() => expect(result.current.isError).toBe(true));
   });
 });
 ```
 
-### 2.2 Repository 테스트 (Mock API)
+### 2.2 Zustand 스토어 Hook (admin)
 
 ```typescript
-// data/repository/userRepository.ts
-export const userRepository = {
-  async getById(id: string): Promise<User> {
-    const cached = cacheManager.get(`user:${id}`);
-    if (cached) return cached;
-
-    const user = await userApi.getUser(id);
-    cacheManager.set(`user:${id}`, user, 5 * 60 * 1000);
-    return user;
-  },
-};
-
-// data/repository/userRepository.test.ts
+// state/__tests__/authStore.test.ts
+import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { userRepository } from './userRepository';
-import * as userApi from '../api/userApi';
-import * as cacheManager from '../cache/cacheManager';
+import { useAuth } from '../../state/authStore';
+import * as authApi from '../../data/api/authApi';
 
-vi.mock('../api/userApi');
-vi.mock('../cache/cacheManager');
+vi.mock('../../data/api/authApi');
+vi.mock('../../config/firebase');
 
-describe('userRepository', () => {
+describe('useAuth', () => {
   beforeEach(() => {
+    // 스토어 초기화
+    useAuth.getState().reset?.();
     vi.clearAllMocks();
   });
 
-  it('should get user from API and cache', async () => {
-    const mockUser = { id: '1', name: 'John' };
-    vi.mocked(cacheManager.get).mockReturnValue(null);
-    vi.mocked(userApi.getUser).mockResolvedValue(mockUser);
+  it('로그인 성공 시 isAuthenticated가 true가 된다', async () => {
+    vi.spyOn(authApi, 'loginWithGoogle').mockResolvedValue({ uid: 'u1', email: 'a@b.com' });
 
-    const result = await userRepository.getById('1');
+    const { result } = renderHook(() => useAuth());
+    await act(() => result.current.login());
 
-    expect(result).toEqual(mockUser);
-    expect(userApi.getUser).toHaveBeenCalledWith('1');
-    expect(cacheManager.set).toHaveBeenCalledWith(
-      'user:1',
-      mockUser,
-      5 * 60 * 1000
-    );
-  });
-
-  it('should return cached user', async () => {
-    const cachedUser = { id: '1', name: 'John' };
-    vi.mocked(cacheManager.get).mockReturnValue(cachedUser);
-
-    const result = await userRepository.getById('1');
-
-    expect(result).toEqual(cachedUser);
-    expect(userApi.getUser).not.toHaveBeenCalled();
+    expect(result.current.isAuthenticated).toBe(true);
   });
 });
 ```
+
+### 2.3 모달 링크 Handler Hook (front)
+
+```typescript
+// domain/__tests__/hooks/useModalLinkHandler.test.ts
+import { renderHook } from '@testing-library/react';
+import { useModalLinkHandler } from '../../hooks/useModalLinkHandler';
+
+describe('useModalLinkHandler', () => {
+  it('외부 링크를 새 탭에서 열도록 처리한다', () => {
+    const { result } = renderHook(() => useModalLinkHandler());
+    // ...
+  });
+});
+```
+
+---
 
 ## 3. 컴포넌트 테스트
 
-### 3.1 Presentational Component
-
 ```typescript
-// presentation/components/UserCard.tsx
-interface UserCardProps {
-  user: User;
-  onSelect: (id: string) => void;
-}
-
-const UserCard: React.FC<UserCardProps> = ({ user, onSelect }) => (
-  <div className="user-card" onClick={() => onSelect(user.id)}>
-    <h3>{user.name}</h3>
-    <p>{user.email}</p>
-    <button>Select</button>
-  </div>
-);
-
-// presentation/components/UserCard.test.tsx
+// presentation/__tests__/components/WorkCard.test.tsx
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import UserCard from './UserCard';
+import WorkCard from '../../components/work/WorkCard';
 
-describe('UserCard', () => {
-  const mockUser = { id: '1', name: 'John Doe', email: 'john@example.com' };
+const mockWork: Work = {
+  id: '1',
+  title: '테스트 작품',
+  thumbnailUrl: 'https://example.com/img.jpg',
+  published: true,
+};
 
-  it('should render user info', () => {
-    const handleSelect = vi.fn();
-    render(<UserCard user={mockUser} onSelect={handleSelect} />);
-
-    expect(screen.getByText('John Doe')).toBeInTheDocument();
-    expect(screen.getByText('john@example.com')).toBeInTheDocument();
+describe('WorkCard', () => {
+  it('작품 제목을 렌더링한다', () => {
+    render(<WorkCard work={mockWork} onSelect={vi.fn()} />);
+    expect(screen.getByText('테스트 작품')).toBeInTheDocument();
   });
 
-  it('should call onSelect when clicked', () => {
+  it('클릭 시 onSelect를 id와 함께 호출한다', () => {
     const handleSelect = vi.fn();
-    render(<UserCard user={mockUser} onSelect={handleSelect} />);
-
-    fireEvent.click(screen.getByText('Select'));
-
+    render(<WorkCard work={mockWork} onSelect={handleSelect} />);
+    fireEvent.click(screen.getByRole('button'));
     expect(handleSelect).toHaveBeenCalledWith('1');
   });
 });
 ```
 
-### 3.2 Container Component
+---
+
+## 4. Firebase 모킹
+
+Firebase SDK는 직접 모킹하지 않고, Repository 계층을 모킹합니다.
 
 ```typescript
-// presentation/pages/UserListPage.tsx
-function UserListPage() {
-  const { users, isLoading, error } = useUserManagement('all');
-
-  if (isLoading) return <Skeleton />;
-  if (error) return <ErrorMessage error={error} />;
-
-  return (
-    <div>
-      {users?.map(user => (
-        <UserCard key={user.id} user={user} onSelect={() => {}} />
-      ))}
-    </div>
-  );
-}
-
-// presentation/pages/UserListPage.test.tsx
-import { render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { describe, it, expect, vi } from 'vitest';
-import UserListPage from './UserListPage';
-import * as useUserManagement from '../../domain/hooks/useUserManagement';
-
-vi.mock('../../domain/hooks/useUserManagement');
-
-describe('UserListPage', () => {
-  it('should render loading state', () => {
-    vi.mocked(useUserManagement.useUserManagement).mockReturnValue({
-      users: null,
-      isLoading: true,
-      error: null,
-    });
-
-    render(<UserListPage />);
-    expect(screen.getByTestId('skeleton')).toBeInTheDocument();
-  });
-
-  it('should render users', async () => {
-    const mockUsers = [
-      { id: '1', name: 'John' },
-      { id: '2', name: 'Jane' },
-    ];
-
-    vi.mocked(useUserManagement.useUserManagement).mockReturnValue({
-      users: mockUsers,
-      isLoading: false,
-      error: null,
-    });
-
-    render(<UserListPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('John')).toBeInTheDocument();
-      expect(screen.getByText('Jane')).toBeInTheDocument();
-    });
-  });
-});
-```
-
-## 4. E2E 테스트 (Playwright)
-
-### 4.1 기본 시나리오
-
-```typescript
-// e2e/user-management.spec.ts
-import { test, expect } from '@playwright/test';
-
-test.describe('User Management Flow', () => {
-  test.beforeEach(async ({ page }) => {
-    // 로그인
-    await page.goto('http://localhost:5173/login');
-    await page.fill('input[name="email"]', 'test@example.com');
-    await page.fill('input[name="password"]', 'password123');
-    await page.click('button:has-text("Login")');
-    await page.waitForURL('/dashboard');
-  });
-
-  test('should create and edit user', async ({ page }) => {
-    // 사용자 생성 페이지로 이동
-    await page.click('a:has-text("New User")');
-    await page.waitForURL('/users/new');
-
-    // 폼 작성
-    await page.fill('input[name="name"]', 'Jane Doe');
-    await page.fill('input[name="email"]', 'jane@example.com');
-
-    // 제출
-    await page.click('button:has-text("Create")');
-
-    // 성공 메시지 확인
-    await expect(page.locator('text=User created')).toBeVisible();
-
-    // 사용자 목록에서 확인
-    await page.goto('/users');
-    await expect(page.locator('text=Jane Doe')).toBeVisible();
-  });
-
-  test('should delete user', async ({ page }) => {
-    await page.goto('/users');
-
-    // 사용자 찾기 및 삭제
-    const userRow = page.locator('text=Jane Doe').first();
-    await userRow.hover();
-    await userRow.locator('button:has-text("Delete")').click();
-
-    // 확인 다이얼로그
-    await page.click('button:has-text("Confirm")');
-
-    // 삭제 확인
-    await expect(page.locator('text=User deleted')).toBeVisible();
-    await expect(page.locator('text=Jane Doe')).not.toBeVisible();
-  });
-});
-```
-
-### 4.2 시각 회귀 테스트
-
-```typescript
-// e2e/visual.spec.ts
-import { test, expect } from '@playwright/test';
-
-test('should match snapshot', async ({ page }) => {
-  await page.goto('http://localhost:5173/wines');
-  
-  // 페이지 전체 스크린샷
-  await expect(page).toHaveScreenshot('wines-page.png');
-
-  // 특정 요소만
-  const wineCard = page.locator('.wine-card').first();
-  await expect(wineCard).toHaveScreenshot('wine-card.png');
-});
-```
-
-## 5. 성능 테스트
-
-### 5.1 Lighthouse CI
-
-```bash
-# .lighthouserc.json
-{
-  "ci": {
-    "collect": {
-      "url": ["http://localhost:5173"],
-      "numberOfRuns": 3
-    },
-    "assert": {
-      "preset": "lighthouse:recommended",
-      "assertions": {
-        "categories:performance": ["error", { "minScore": 0.9 }],
-        "categories:accessibility": ["error", { "minScore": 0.9 }]
-      }
-    }
-  }
-}
-
-# package.json
-"scripts": {
-  "lighthouse": "lhci autorun"
-}
-```
-
-### 5.2 성능 벤치마크
-
-```typescript
-// core/utils/wineScore.benchmark.ts
-import { bench, describe } from 'vitest';
-import { calculateWineScore } from './wineScore';
-
-describe('calculateWineScore performance', () => {
-  bench('should calculate quickly', () => {
-    calculateWineScore(8, 2015, 8);
-  });
-});
-
-// 실행
-npm run bench
-```
-
-## 6. 테스트 설정
-
-### 6.1 Vitest 설정
-
-```typescript
-// vitest.config.ts
-import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
-import path from 'path';
-
-export default defineConfig({
-  plugins: [react()],
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./src/test/setup.ts'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        'src/test/',
-      ],
-      lines: 80,
-      functions: 80,
-      branches: 75,
-    },
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-});
-```
-
-### 6.2 테스트 유틸리티
-
-```typescript
-// src/test/setup.ts
-import { cleanup } from '@testing-library/react';
-import { afterEach, vi } from 'vitest';
-
-// 각 테스트 후 cleanup
-afterEach(() => {
-  cleanup();
-});
-
-// Mock 설정
-vi.mock('../../api/userApi', () => ({
-  userApi: {
-    getUser: vi.fn(),
+// ✅ Repository 모킹 (권장)
+vi.mock('@/data/repository/WorkRepository', () => ({
+  workRepository: {
+    getAll: vi.fn(),
+    getPublished: vi.fn(),
+    update: vi.fn(),
   },
 }));
 
-// src/test/render.tsx
-import { ReactElement } from 'react';
+// ❌ Firebase SDK 직접 모킹 (복잡하고 유지보수 어려움)
+vi.mock('firebase/firestore', () => ({ ... }));
+```
+
+---
+
+## 5. 테스트 유틸리티
+
+### 5.1 QueryClient 래퍼
+
+```typescript
+// src/__tests__/utils/renderWithProviders.tsx (front)
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, RenderOptions } from '@testing-library/react';
-import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 
-const createTestQueryClient = () =>
-  new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-    },
+export function createQueryWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
   });
-
-interface ExtendedRenderOptions extends Omit<RenderOptions, 'wrapper'> {
-  queryClient?: QueryClient;
-}
-
-const renderWithProviders = (
-  ui: ReactElement,
-  { queryClient = createTestQueryClient(), ...renderOptions }: ExtendedRenderOptions = {}
-) =>
-  render(
-    <QueryClientProvider client={queryClient}>
-      {ui}
-    </QueryClientProvider>,
-    renderOptions
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
-
-export { renderWithProviders as render };
+}
 ```
 
-## 테스트 커맨드
+### 5.2 Work/Category 픽스처
 
-```bash
-# 모든 테스트 실행
-npm run test
-
-# Watch 모드
-npm run test:watch
-
-# 커버리지
-npm run test:coverage
-
-# 특정 파일만
-npm run test src/domain
-
-# E2E 테스트
-npm run test:e2e
-
-# Lighthouse
-npm run lighthouse
+```typescript
+// src/__tests__/fixtures/work.ts
+export const mockWork: Work = {
+  id: 'work-1',
+  title: '테스트 작품',
+  description: '',
+  categoryId: 'cat-1',
+  thumbnailUrl: 'https://picsum.photos/400/300',
+  mediaUrls: [],
+  published: true,
+  order: 0,
+  createdAt: null,
+  updatedAt: null,
+};
 ```
+
+---
+
+## 6. E2E 테스트 (Playwright)
+
+```typescript
+// admin e2e: 작품 생성 흐름
+import { test, expect } from '@playwright/test';
+
+test('관리자가 작품을 생성한다', async ({ page }) => {
+  await page.goto('http://localhost:5173/login');
+  // Google OAuth는 Emulator 계정으로 로그인
+  await page.click('[data-testid="login-button"]');
+  await page.waitForURL('/dashboard');
+
+  await page.click('a[href="/works/new"]');
+  await page.fill('input[name="title"]', '새 작품');
+  await page.click('button:has-text("저장")');
+
+  await expect(page.locator('text=작품이 저장되었습니다')).toBeVisible();
+});
+```
+
+---
 
 ## 테스트 체크리스트
 
-- [ ] 순수 함수 테스트 (유닛)
-- [ ] Hook 테스트 (통합)
-- [ ] Repository 테스트 (Mock API)
-- [ ] 컴포넌트 테스트
-- [ ] 주요 사용자 시나리오 E2E
-- [ ] 에러 케이스 테스트
-- [ ] 커버리지 80% 이상
-- [ ] CI/CD에 테스트 자동화
+- [ ] 순수 함수 유닛 테스트 (core/utils)
+- [ ] Custom Hook 테스트 (domain/hooks)
+- [ ] 주요 컴포넌트 렌더링 + 인터랙션 테스트
+- [ ] 에러 케이스 테스트 (네트워크 실패, 권한 없음)
+- [ ] Firebase 의존성은 Repository 계층에서 모킹
+- [ ] 커버리지 80% 이상 유지
 
 ---
 

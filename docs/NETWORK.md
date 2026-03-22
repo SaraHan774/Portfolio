@@ -1,519 +1,280 @@
 # NETWORK.md: 네트워크 I/O 효율화
 
-## 1. API 설계
+이 프로젝트는 REST API 없이 **Firebase SDK**로 직접 Firestore/Storage에 접근합니다.
 
-### 1.1 REST API 설계 원칙
+---
 
-```typescript
-// ✅ 좋은 API 설계
-GET    /api/wines              // 목록 조회 (페이징)
-GET    /api/wines/:id          // 상세 조회
-POST   /api/wines              // 생성
-PUT    /api/wines/:id          // 전체 수정
-PATCH  /api/wines/:id          // 부분 수정
-DELETE /api/wines/:id          // 삭제
+## 1. Firebase 데이터 접근
 
-// 쿼리 파라미터
-GET /api/wines?page=1&limit=20&sort=name&type=red
-
-// 응답 구조
-{
-  success: true,
-  data: { ... },
-  error: null,
-  meta: {
-    timestamp: "2024-01-15T10:30:00Z",
-    version: "1.0"
-  }
-}
-```
-
-### 1.2 GraphQL로 필요한 데이터만 요청
+### 1.1 Firestore 읽기
 
 ```typescript
-// ❌ REST: 불필요한 필드까지 받음
-GET /api/users/123      // name, email, avatar, bio, ...
-GET /api/users/123/posts // id, title, content, likes, ...
+// data/api/worksApi.ts
+import { collection, getDocs, doc, getDoc, query, where, orderBy } from 'firebase/firestore';
+import { getDb } from './client';
 
-// ✅ GraphQL: 필요한 필드만
-query GetUserWithPosts($id: ID!) {
-  user(id: $id) {
-    id
-    name
-    posts {
-      id
-      title
-    }
-  }
-}
-```
-
-## 2. 요청 최적화
-
-### 2.1 배치 요청
-
-```typescript
-// ❌ 나쁜 예: N+1 문제 (여러 API 호출)
-const userIds = ['1', '2', '3', '4', '5'];
-userIds.forEach(id => {
-  fetchUser(id); // 5번의 API 호출 + 네트워크 오버헤드
-});
-
-// ✅ 좋은 예: 배치 요청
-async function getUsersBatch(userIds: string[]): Promise<User[]> {
-  const response = await apiClient.post('/api/users/batch', {
-    ids: userIds,
-  });
-  return response.data;
-}
-
-// 또는 병렬 요청 (동시성 제한)
-async function getUsersParallel(
-  userIds: string[],
-  maxConcurrent = 5
-): Promise<User[]> {
-  const results: User[] = [];
-  
-  for (let i = 0; i < userIds.length; i += maxConcurrent) {
-    const batch = userIds.slice(i, i + maxConcurrent);
-    const users = await Promise.all(
-      batch.map(id => userRepository.getById(id))
+export const worksApi = {
+  async getAll(): Promise<WorkDocument[]> {
+    const db = getDb();
+    const snapshot = await getDocs(
+      query(collection(db, 'works'), orderBy('order', 'asc'))
     );
-    results.push(...users);
-  }
-  
-  return results;
-}
-```
-
-### 2.2 요청 중복 제거 (Deduplication)
-
-```typescript
-// ✅ React Query가 자동으로 처리
-// queryKey가 같으면 동시 요청을 1번으로 통합
-
-function useUser(userId: string) {
-  return useQuery({
-    queryKey: ['user', userId],
-    queryFn: () => userRepository.getById(userId),
-  });
-}
-
-// 여러 곳에서 동시에 호출해도 API는 1번만 호출됨
-const user1 = useUser('123'); // API 호출
-const user2 = useUser('123'); // 캐시 사용
-const user3 = useUser('123'); // 캐시 사용
-
-// 명시적 중복 제거
-const requestCache = new Map<string, Promise<any>>();
-
-async function fetchWithDedup<T>(
-  key: string,
-  fetcher: () => Promise<T>
-): Promise<T> {
-  if (requestCache.has(key)) {
-    return requestCache.get(key)!;
-  }
-
-  const promise = fetcher();
-  requestCache.set(key, promise);
-
-  try {
-    return await promise;
-  } finally {
-    // 요청 완료 후 캐시 제거
-    requestCache.delete(key);
-  }
-}
-```
-
-### 2.3 Request/Response 압축
-
-```typescript
-// ✅ Axios 설정 (gzip 자동)
-import axios from 'axios';
-
-const apiClient = axios.create({
-  baseURL: process.env.VITE_API_URL,
-  timeout: 5000,
-  headers: {
-    'Accept-Encoding': 'gzip, deflate', // 자동으로 처리됨
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as WorkDocument));
   },
-});
 
-// 서버에서도 설정:
-// Content-Encoding: gzip
-```
-
-### 2.4 요청 취소 (중복/불필요한 요청)
-
-```typescript
-// ✅ 컴포넌트 언마운트 시 요청 취소
-function useUserSearch(query: string) {
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-
-    if (query) {
-      fetchUsers(query, abortController.signal)
-        .then(setResults)
-        .catch(err => {
-          if (err.name !== 'AbortError') {
-            setError(err);
-          }
-        });
-    }
-
-    return () => abortController.abort(); // 언마운트 시 취소
-  }, [query]);
-
-  return results;
-}
-
-// React Query에서는 자동 처리됨
-```
-
-## 3. 캐싱 전략
-
-### 3.1 HTTP 캐시 헤더
-
-```typescript
-// 서버 응답 헤더
-Cache-Control: public, max-age=3600              // 1시간
-Cache-Control: private, max-age=1800             // 비공개, 30분
-Cache-Control: no-cache, must-revalidate        // 매번 검증
-Cache-Control: no-store                          // 캐싱 금지
-
-// React Query와 함께
-const query = useQuery({
-  queryKey: ['wines'],
-  queryFn: () => wineRepository.getAll(),
-  staleTime: 60 * 1000,      // 60초: 캐시 재검증 안 함
-  gcTime: 5 * 60 * 1000,     // 5분: 메모리 유지
-});
-```
-
-### 3.2 로컬 스토리지 캐싱
-
-```typescript
-// ✅ 간단한 캐시 매니저
-const cacheManager = {
-  set<T>(key: string, value: T, ttl: number) {
-    localStorage.setItem(
-      key,
-      JSON.stringify({
-        value,
-        expiresAt: Date.now() + ttl,
-      })
+  async getPublished(): Promise<WorkDocument[]> {
+    const db = getDb();
+    const snapshot = await getDocs(
+      query(collection(db, 'works'), where('published', '==', true))
     );
-  },
-
-  get<T>(key: string): T | null {
-    const item = localStorage.getItem(key);
-    if (!item) return null;
-
-    const parsed = JSON.parse(item);
-    if (Date.now() > parsed.expiresAt) {
-      localStorage.removeItem(key);
-      return null;
-    }
-
-    return parsed.value;
-  },
-
-  remove(key: string) {
-    localStorage.removeItem(key);
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as WorkDocument));
   },
 };
-
-// 사용
-cacheManager.set('wines', winesData, 5 * 60 * 1000);
-const cached = cacheManager.get('wines');
 ```
 
-### 3.3 IndexedDB (큰 데이터)
+### 1.2 Firestore 쓰기 (admin)
 
 ```typescript
-// ✅ 대량 데이터는 IndexedDB 사용
-import Dexie from 'dexie';
-
-class WineDatabase extends Dexie {
-  wines!: Dexie.Table<Wine, number>;
-
-  constructor() {
-    super('WineDB');
-    this.version(1).stores({
-      wines: '++id, type, vintage',
+// data/api/worksApi.ts (admin)
+export const worksApi = {
+  async create(payload: CreateWorkPayload): Promise<string> {
+    const db = getDb();
+    const ref = await addDoc(collection(db, 'works'), {
+      ...payload,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     });
-  }
-}
+    return ref.id;
+  },
 
-const db = new WineDatabase();
+  async update(id: string, payload: Partial<WorkDocument>): Promise<void> {
+    const db = getDb();
+    await updateDoc(doc(db, 'works', id), {
+      ...payload,
+      updatedAt: serverTimestamp(),
+    });
+  },
 
-// 저장
-await db.wines.bulkAdd(winesData);
-
-// 조회
-const reds = await db.wines
-  .where('type')
-  .equals('red')
-  .toArray();
-
-// 업데이트
-await db.wines.update(1, { rating: 8.5 });
+  async delete(id: string): Promise<void> {
+    await deleteDoc(doc(db, 'works', id));
+  },
+};
 ```
 
-## 4. 실시간 통신
-
-### 4.1 WebSocket (양방향)
+### 1.3 Firebase Storage 업로드 (admin)
 
 ```typescript
-// ✅ 실시간 채팅, 알림 등
-function useRealtimeMessages(roomId: string) {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const wsRef = useRef<WebSocket | null>(null);
+// data/api/storageApi.ts
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
-  useEffect(() => {
-    const ws = new WebSocket(
-      `wss://${import.meta.env.VITE_API_HOST}/messages/${roomId}`
-    );
+export const storageApi = {
+  async upload(path: string, file: File): Promise<string> {
+    const storageRef = ref(storage, path);
+    await uploadBytes(storageRef, file);
+    return getDownloadURL(storageRef);
+  },
 
-    ws.onopen = () => {
-      console.log('Connected');
-    };
-
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      setMessages(prev => [...prev, message]);
-    };
-
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-
-    wsRef.current = ws;
-
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-    };
-  }, [roomId]);
-
-  return messages;
-}
+  async delete(url: string): Promise<void> {
+    const storageRef = ref(storage, url);
+    await deleteObject(storageRef);
+  },
+};
 ```
 
-### 4.2 Server-Sent Events (SSE)
+---
+
+## 2. TanStack Query 캐싱 전략
+
+### 2.1 Query Key 중앙 관리
 
 ```typescript
-// ✅ 서버에서 클라이언트로 단방향 스트리밍
-function useServerEvents(eventType: string) {
-  const [events, setEvents] = useState<any[]>([]);
+// data/cache/queryKeys.ts
+export const queryKeys = {
+  works: {
+    all: ['works'] as const,
+    byId: (id: string) => ['works', id] as const,
+    published: ['works', 'published'] as const,
+  },
+  categories: {
+    all: ['categories'] as const,
+    sentences: ['categories', 'sentences'] as const,
+    exhibitions: ['categories', 'exhibitions'] as const,
+  },
+  settings: {
+    site: ['settings', 'site'] as const,
+  },
+};
+```
 
-  useEffect(() => {
-    const eventSource = new EventSource(
-      `/api/events?type=${eventType}`
-    );
+### 2.2 staleTime / gcTime 기준
 
-    eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      setEvents(prev => [...prev, data]);
-    };
+| 데이터 | staleTime | gcTime | 이유 |
+|--------|-----------|--------|------|
+| Works (front) | 5분 | 10분 | 자주 안 바뀜 |
+| Categories | 10분 | 20분 | 거의 안 바뀜 |
+| Site Settings | 10분 | 20분 | 거의 안 바뀜 |
+| Works (admin) | 0~1분 | 5분 | 편집 중이므로 최신 유지 |
+| Analytics | 1분 | 3분 | 실시간성 필요 |
 
-    eventSource.onerror = () => {
-      eventSource.close();
-    };
-
-    return () => eventSource.close();
-  }, [eventType]);
-
-  return events;
+```typescript
+// ✅ 예시: 변경 빈도에 따라 설정
+export function useWorks() {
+  return useQuery({
+    queryKey: queryKeys.works.published,
+    queryFn: () => workRepository.getPublished(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 }
 ```
 
-### 4.3 폴링 (최후의 수단)
+### 2.3 요청 중복 제거
+
+TanStack Query는 동일한 `queryKey`에 대해 동시 요청을 자동으로 1개로 통합합니다.
 
 ```typescript
-// ❌ 나쁜 예: 과도한 폴링
-setInterval(() => {
-  fetchLatestMessages(); // 매초 요청 (매우 비효율)
-}, 1000);
-
-// ✅ 적절한 폴링
-function useAdaptivePolling<T>(
-  fetcher: () => Promise<T>,
-  interval: number = 5000
-) {
-  const [data, setData] = useState<T | null>(null);
-  const timerRef = useRef<NodeJS.Timeout>();
-
-  useEffect(() => {
-    const poll = async () => {
-      try {
-        const result = await fetcher();
-        setData(result);
-      } catch (error) {
-        console.error('Polling error:', error);
-      }
-    };
-
-    poll(); // 즉시 첫 요청
-
-    timerRef.current = setInterval(poll, interval);
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, [fetcher, interval]);
-
-  return data;
-}
-
-// 사용
-const latestWines = useAdaptivePolling(
-  () => wineRepository.getLatest(),
-  30 * 1000 // 30초마다
-);
+// 여러 컴포넌트에서 동시 호출해도 Firestore 요청은 1번만
+const a = useWorks(); // Firestore 호출
+const b = useWorks(); // 캐시 사용
 ```
 
-## 5. 오류 처리 및 재시도
-
-### 5.1 Exponential Backoff
+### 2.4 Mutation 후 캐시 무효화
 
 ```typescript
-// ✅ 실패 시 점진적으로 대기 시간 증가
-async function fetchWithRetry<T>(
-  fetcher: () => Promise<T>,
-  maxRetries = 3
-): Promise<T> {
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fetcher();
-    } catch (error) {
-      if (attempt === maxRetries) throw error;
+export function useDeleteWork() {
+  const queryClient = useQueryClient();
 
-      // 지수 백오프: 1s, 2s, 4s, 8s ...
-      const delay = Math.min(
-        1000 * Math.pow(2, attempt),
-        30000 // 최대 30초
+  return useMutation({
+    mutationFn: (id: string) => workRepository.delete(id),
+    onSuccess: () => {
+      // 관련 캐시 무효화 → 자동 재조회
+      queryClient.invalidateQueries({ queryKey: queryKeys.works.all });
+    },
+  });
+}
+```
+
+---
+
+## 3. 이미지/파일 업로드 최적화 (admin)
+
+### 3.1 병렬 업로드
+
+```typescript
+// domain/hooks/useUploadImages.ts
+export function useUploadImages() {
+  return useMutation({
+    mutationFn: async (files: File[]) => {
+      // 병렬 업로드 (Promise.all)
+      const urls = await Promise.all(
+        files.map((file, i) =>
+          storageApi.upload(`works/${Date.now()}_${i}`, file)
+        )
       );
-
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-  }
+      return urls;
+    },
+  });
 }
+```
 
-// React Query에서는 자동 처리됨
+### 3.2 업로드 진행률 추적
+
+```typescript
+import { uploadBytesResumable } from 'firebase/storage';
+
+export function uploadWithProgress(
+  path: string,
+  file: File,
+  onProgress: (percent: number) => void
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const storageRef = ref(storage, path);
+    const task = uploadBytesResumable(storageRef, file);
+
+    task.on(
+      'state_changed',
+      snapshot => {
+        const percent = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        onProgress(Math.round(percent));
+      },
+      reject,
+      async () => resolve(await getDownloadURL(task.snapshot.ref))
+    );
+  });
+}
+```
+
+---
+
+## 4. 오류 처리 및 재시도
+
+### 4.1 TanStack Query 자동 재시도
+
+```typescript
+// ✅ Firestore 일시적 오류에 대한 재시도
 const query = useQuery({
-  queryKey: ['wines'],
-  queryFn: () => wineRepository.getAll(),
-  retry: 3,
-  retryDelay: (attemptIndex) =>
-    Math.min(1000 * Math.pow(2, attemptIndex), 30000),
+  queryKey: queryKeys.works.all,
+  queryFn: () => workRepository.getAll(),
+  retry: 2,
+  retryDelay: attempt => Math.min(1000 * 2 ** attempt, 10000),
 });
 ```
 
-### 5.2 Circuit Breaker 패턴
+### 4.2 Firestore 에러 처리
 
 ```typescript
-// ✅ 반복된 실패 시 요청 중단
-class CircuitBreaker {
-  private failureCount = 0;
-  private lastFailureTime = 0;
-  private state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' = 'CLOSED';
+import { FirebaseError } from 'firebase/app';
 
-  async execute<T>(fn: () => Promise<T>): Promise<T> {
-    if (this.state === 'OPEN') {
-      if (Date.now() - this.lastFailureTime > 60000) {
-        // 1분 후 HALF_OPEN으로 시도
-        this.state = 'HALF_OPEN';
-      } else {
-        throw new Error('Circuit breaker is OPEN');
+export async function safeFirestoreCall<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (error instanceof FirebaseError) {
+      switch (error.code) {
+        case 'permission-denied':
+          throw new AppError('권한이 없습니다.', error.code);
+        case 'unavailable':
+          throw new AppError('서버에 연결할 수 없습니다. 다시 시도해주세요.', error.code);
+        default:
+          throw new AppError(`Firebase 오류: ${error.message}`, error.code);
       }
     }
-
-    try {
-      const result = await fn();
-      this.onSuccess();
-      return result;
-    } catch (error) {
-      this.onFailure();
-      throw error;
-    }
-  }
-
-  private onSuccess() {
-    this.failureCount = 0;
-    this.state = 'CLOSED';
-  }
-
-  private onFailure() {
-    this.failureCount++;
-    this.lastFailureTime = Date.now();
-    if (this.failureCount >= 5) {
-      this.state = 'OPEN';
-    }
+    throw error;
   }
 }
-
-const breaker = new CircuitBreaker();
-const data = await breaker.execute(() => fetchWines());
 ```
 
-## 6. 네트워크 상태 감지
+---
+
+## 5. Firebase Emulator 연결
+
+로컬 개발 시 실제 Firebase 대신 Emulator 사용.
 
 ```typescript
-// ✅ 온라인/오프라인 감지
-function useNetworkStatus() {
-  const [isOnline, setIsOnline] = useState(
-    typeof navigator !== 'undefined' && navigator.onLine
-  );
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  return isOnline;
+// front: data/api/client.ts
+if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
+  connectFirestoreEmulator(db, 'localhost', 8080);
+  connectStorageEmulator(storage, 'localhost', 9199);
 }
 
-// 사용
-function App() {
-  const isOnline = useNetworkStatus();
-
-  if (!isOnline) {
-    return <OfflinePage />;
-  }
-
-  return <MainApp />;
+// admin: config/firebase.ts
+if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
+  connectAuthEmulator(auth, 'http://localhost:9099');
+  connectFirestoreEmulator(db, 'localhost', 8080);
+  connectStorageEmulator(storage, 'localhost', 9199);
 }
 ```
+
+---
 
 ## 체크리스트
 
-네트워크 효율화:
-
-- [ ] GraphQL 검토 (불필요한 필드 제거 가능한지)
-- [ ] 배치 요청 구현 (N+1 문제)
-- [ ] React Query 캐싱 설정
-- [ ] 요청 중복 제거 확인
-- [ ] gzip 압축 활성화
-- [ ] WebSocket 사용 (실시간 필요할 때)
-- [ ] Circuit breaker 패턴 (중요 API)
-- [ ] 오프라인 대응 검토
+- [ ] `queryKeys.ts`에 키 중앙화 (중복 방지)
+- [ ] `staleTime` / `gcTime` 데이터 특성에 맞게 설정
+- [ ] Mutation 후 `invalidateQueries` 호출
+- [ ] 이미지 업로드 병렬화 (Promise.all)
+- [ ] FirebaseError 코드별 사용자 메시지 처리
+- [ ] 로컬 개발 시 Emulator 사용
 
 ---
 
