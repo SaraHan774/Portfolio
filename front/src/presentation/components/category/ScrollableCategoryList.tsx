@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect, useCallback, ReactNode } from 'react';
+import { useRef, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 
 // 뷰포트 높이 대비 스크롤 가능 영역의 최대 높이 비율 (기본값: 20%)
@@ -9,6 +9,9 @@ const DEFAULT_VIEWPORT_HEIGHT_RATIO = 0.20;
 const DEFAULT_FADE_HEIGHT = 24;
 // 상단 패딩 - 카테고리 선택 시 나타나는 점(˙)이 잘리지 않도록 여유 공간 확보 (px)
 const TOP_PADDING_FOR_SELECTION_INDICATOR = 20;
+// 스크롤 모드 활성화에 필요한 최소 스크롤 거리 (px)
+// - updateScrollPosition의 10px 임계값보다 크고, TOP_PADDING_FOR_SELECTION_INDICATOR(20px)보다 커야 함
+const MIN_SCROLL_DISTANCE = 24;
 
 interface ScrollableCategoryListProps {
   children: ReactNode;
@@ -59,8 +62,9 @@ export default function ScrollableCategoryList({
     const thresholdHeight = viewportHeight * viewportHeightRatio;
     const contentHeight = content.scrollHeight;
     
-    // 컨텐츠 높이가 임계값을 초과하면 스크롤 모드 활성화
-    if (contentHeight > thresholdHeight) {
+    // 컨텐츠 높이가 임계값을 MIN_SCROLL_DISTANCE 이상 초과할 때만 스크롤 모드 활성화
+    // (경계값 근처에서 스크롤바가 보이지만 움직이지 않는 현상 방지)
+    if (contentHeight > thresholdHeight + MIN_SCROLL_DISTANCE) {
       setIsScrollable(true);
       setMaxHeight(thresholdHeight);
     } else {
@@ -72,13 +76,13 @@ export default function ScrollableCategoryList({
   // 스크롤 위치 업데이트 함수
   const updateScrollPosition = useCallback(() => {
     const container = scrollContainerRef.current;
-    if (!container || !isScrollable) return;
+    if (!container) return;
 
     const { scrollTop, scrollHeight, clientHeight } = container;
     const scrollableDistance = scrollHeight - clientHeight;
 
-    // 스크롤 가능 거리가 거의 없으면 스크롤 불필요
-    if (scrollableDistance <= 10) {
+    // 실제로 스크롤이 불가능한 경우만 early return
+    if (scrollableDistance <= 0) {
       setScrollPosition('top');
       setScrollProgress(0);
       return;
@@ -88,15 +92,15 @@ export default function ScrollableCategoryList({
     const progress = Math.max(0, Math.min(100, (scrollTop / scrollableDistance) * 100));
     setScrollProgress(progress);
 
-    // 스크롤 위치 판단 - threshold를 10px로 증가 (소수점 픽셀 및 브라우저 차이 대응)
-    if (scrollTop <= 10) {
+    // 스크롤 위치 판단
+    if (scrollTop <= 0) {
       setScrollPosition('top');
-    } else if (scrollTop >= scrollableDistance - 10) {
+    } else if (scrollTop >= scrollableDistance - 1) {
       setScrollPosition('bottom');
     } else {
       setScrollPosition('middle');
     }
-  }, [isScrollable]);
+  }, []);
   
   // 뷰포트 리사이즈 및 컨텐츠 변경 감지
   useEffect(() => {
@@ -104,11 +108,7 @@ export default function ScrollableCategoryList({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     checkScrollability();
 
-    // 뷰포트 리사이즈 시 재계산
-    const handleResize = () => {
-      checkScrollability();
-    };
-    window.addEventListener('resize', handleResize, { passive: true });
+    window.addEventListener('resize', checkScrollability, { passive: true });
 
     // 컨텐츠 변경 시 재계산
     const content = contentRef.current;
@@ -123,7 +123,7 @@ export default function ScrollableCategoryList({
 
     // 항상 window event listener와 ResizeObserver를 정리
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', checkScrollability);
       if (resizeObserver) {
         resizeObserver.disconnect();
       }
@@ -147,38 +147,22 @@ export default function ScrollableCategoryList({
   }, [isScrollable, updateScrollPosition]);
   
   // mask-image 생성 - 스크롤 위치에 따라 다른 마스크 적용
-  const getMaskImage = () => {
+  const maskImage = useMemo(() => {
     if (!isScrollable) return 'none';
-    
+
     switch (scrollPosition) {
       case 'top':
         // 맨 위: 하단만 fade
-        return `linear-gradient(
-          to bottom,
-          black 0%,
-          black calc(100% - ${fadeHeight}px),
-          transparent 100%
-        )`;
+        return `linear-gradient(to bottom, black 0%, black calc(100% - ${fadeHeight}px), transparent 100%)`;
       case 'bottom':
         // 맨 아래: 상단만 fade
-        return `linear-gradient(
-          to bottom,
-          transparent 0%,
-          black ${fadeHeight}px,
-          black 100%
-        )`;
+        return `linear-gradient(to bottom, transparent 0%, black ${fadeHeight}px, black 100%)`;
       case 'middle':
       default:
         // 중간: 상하 모두 fade
-        return `linear-gradient(
-          to bottom,
-          transparent 0%,
-          black ${fadeHeight}px,
-          black calc(100% - ${fadeHeight}px),
-          transparent 100%
-        )`;
+        return `linear-gradient(to bottom, transparent 0%, black ${fadeHeight}px, black calc(100% - ${fadeHeight}px), transparent 100%)`;
     }
-  };
+  }, [isScrollable, scrollPosition, fadeHeight]);
   
   // 스크롤 가능하지 않으면 컨텐츠만 렌더링 (높이 측정용 div는 유지)
   if (!isScrollable) {
@@ -210,10 +194,10 @@ export default function ScrollableCategoryList({
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           // mask로 fade 효과 적용 - 스크롤 가능함을 시각적으로 표시
-          maskImage: getMaskImage(),
-          WebkitMaskImage: getMaskImage(),
-          // 스크롤바와 겹치지 않도록 패딩 추가 (스크롤바 표시 시에만)
-          ...(isScrollable && !hideScrollbar ? {
+          maskImage,
+          WebkitMaskImage: maskImage,
+          // 스크롤바와 겹치지 않도록 패딩 추가
+          ...(!hideScrollbar ? {
             [scrollbarPosition === 'left' ? 'paddingLeft' : 'paddingRight']: '28px', // 20px(스크롤바) + 8px(여유)
           } : {}),
           ...(isDebugMode ? {
