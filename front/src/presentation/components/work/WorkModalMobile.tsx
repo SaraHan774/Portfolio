@@ -6,10 +6,10 @@
  * 모바일에서는 작품명 - 작품 리스트 - 캡션 순으로 세로 배치
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { disableBodyScroll, enableBodyScroll, clearAllBodyScrollLocks } from 'body-scroll-lock';
-import { useWork, useCaptionHoverEvents } from '@/domain';
+import { useWork, useCaptionHoverEvents, useModalLinkHandler, useImageTracker } from '@/domain';
 import { getMediaItems } from '@/core/utils';
 import { Spinner } from '@/presentation';
 import { YouTubeEmbed } from '../media';
@@ -37,10 +37,8 @@ export default function WorkModalMobile({
   onWorkClick,
   renderCaption,
 }: WorkModalMobileProps) {
-  // Fetch work data using domain hook
-  const { data: modalWork, isLoading, isError, error } = useWork(workId);
+  const { data: modalWork, isLoading, isError } = useWork(workId);
 
-  // Caption hover events 설정
   const { hoveredWorkId, hoverPosition, clearHover } = useCaptionHoverEvents({
     containerSelector: '[data-is-modal="true"]',
     hoverDelay: 400,
@@ -49,14 +47,22 @@ export default function WorkModalMobile({
     dependencies: [modalWork],
   });
 
-  // Hover 중인 작업 데이터
   const { data: hoveredWork } = useWork(hoveredWorkId || '');
 
-  const [modalCurrentImageId, setModalCurrentImageId] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const touchStartY = useRef<number>(0);
 
-  // 모달 작품이 변경될 때 hover 상태 초기화
+  // 현재 표시 중인 미디어 추적
+  const { currentImageId: modalCurrentImageId } = useImageTracker(
+    scrollContainerRef as React.RefObject<HTMLElement | null>,
+    modalWork,
+    workId
+  );
+
+  // 모달 캡션 내 작품 링크 클릭 처리
+  useModalLinkHandler(onWorkClick, clearHover);
+
+  // workId 변경 시 hover 상태 초기화
   useEffect(() => {
     clearHover();
   }, [workId, clearHover]);
@@ -66,16 +72,11 @@ export default function WorkModalMobile({
     const scrollContainer = scrollContainerRef.current;
 
     if (scrollContainer) {
-      // iOS Safari에서 동작하는 body scroll lock
       disableBodyScroll(scrollContainer, {
         reserveScrollBarGap: true,
-        // iOS에서 스크롤 컨테이너 내부 터치는 허용
         allowTouchMove: (el) => {
-          // 스크롤 컨테이너 또는 그 자식 요소의 터치는 허용
           while (el && el !== document.body) {
-            if (el === scrollContainer) {
-              return true;
-            }
+            if (el === scrollContainer) return true;
             const parent = el.parentElement;
             if (!parent) break;
             el = parent;
@@ -89,145 +90,24 @@ export default function WorkModalMobile({
       if (scrollContainer) {
         enableBodyScroll(scrollContainer);
       }
-      // 모든 body scroll lock 정리 (안전장치)
       clearAllBodyScrollLocks();
     };
   }, []);
 
-  // 첫 번째 미디어 ID 설정 및 스크롤 초기화
+  // workId 변경 시 스크롤 초기화
   useEffect(() => {
-    if (modalWork) {
-      const mediaItems = getMediaItems(modalWork);
-      if (mediaItems.length > 0) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setModalCurrentImageId(mediaItems[0].data.id);
-      }
-      // 스크롤 초기화 (다른 작품으로 이동 시)
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTop = 0;
-      }
+    if (modalWork && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
     }
   }, [modalWork, workId]);
 
-  // 모달 내 이미지 Intersection Observer + 스크롤 끝 감지
-  useEffect(() => {
-    if (!modalWork || !modalCurrentImageId || !scrollContainerRef.current) return;
-
-    const container = scrollContainerRef.current;
-    const imageElements = container.querySelectorAll('[data-image-id]');
-    const sortedMedia = getMediaItems(modalWork);
-    let lastTrackedImageId: string | null = null;
-
-    // 스크롤 끝 감지 및 미디어 위치 기반 활성화
-    const updateCurrentImage = () => {
-      const scrollTop = container.scrollTop;
-      const scrollHeight = container.scrollHeight;
-      const clientHeight = container.clientHeight;
-      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 30; // 30px 여유
-
-      // 맨 끝에 도달하면 마지막 미디어 활성화
-      if (isAtBottom && sortedMedia.length > 0) {
-        const lastMedia = sortedMedia[sortedMedia.length - 1];
-        if (lastMedia.data.id !== lastTrackedImageId) {
-          lastTrackedImageId = lastMedia.data.id;
-          setModalCurrentImageId(lastMedia.data.id);
-        }
-        return;
-      }
-
-      // 화면 중앙에 가장 가까운 이미지 찾기
-      const allImages = Array.from(container.querySelectorAll('[data-image-id]')) as HTMLElement[];
-      let bestImage: HTMLElement | null = null;
-      let bestScore = -Infinity;
-      const containerRect = container.getBoundingClientRect();
-      const containerCenter = containerRect.top + containerRect.height / 2;
-
-      allImages.forEach((img) => {
-        const rect = img.getBoundingClientRect();
-        const imageCenter = rect.top + rect.height / 2;
-
-        // 컨테이너 내에 보이는지 확인
-        const isVisible = rect.bottom > containerRect.top && rect.top < containerRect.bottom;
-
-        if (isVisible) {
-          const distanceFromCenter = Math.abs(imageCenter - containerCenter);
-          const score = 1000 - distanceFromCenter;
-
-          if (score > bestScore) {
-            bestScore = score;
-            bestImage = img as HTMLElement;
-          }
-        }
-      });
-
-      if (bestImage !== null) {
-        const imageId = (bestImage as HTMLElement).getAttribute('data-image-id');
-        if (imageId && imageId !== lastTrackedImageId) {
-          lastTrackedImageId = imageId;
-          setModalCurrentImageId(imageId);
-        }
-      }
-    };
-
-    const observer = new IntersectionObserver(
-      () => {
-        updateCurrentImage();
-      },
-      {
-        root: container,
-        rootMargin: '-20% 0px -60% 0px',
-        threshold: [0, 0.25, 0.5, 0.75, 1],
-      }
-    );
-
-    imageElements.forEach((el) => observer.observe(el));
-
-    // 스크롤 이벤트로도 체크 (맨 끝 도달 감지용)
-    const handleScroll = () => {
-      updateCurrentImage();
-    };
-    container.addEventListener('scroll', handleScroll, { passive: true });
-
-    return () => {
-      imageElements.forEach((el) => observer.unobserve(el));
-      container.removeEventListener('scroll', handleScroll);
-    };
-  }, [modalWork, modalCurrentImageId]);
-
-  // 모달 내 링크 클릭 이벤트 처리 (이벤트 위임)
-  useEffect(() => {
-    const handleLinkClick = (e: Event) => {
-      const target = e.target as HTMLElement;
-      const link = target.closest('a[data-work-id]') as HTMLElement;
-
-      // 모달 내부 캡션의 링크만 처리
-      const modalCaptionContainer = link?.closest('[data-is-modal="true"]');
-      if (link && modalCaptionContainer) {
-        e.preventDefault();
-        const clickedWorkId = link.getAttribute('data-work-id');
-        if (clickedWorkId) {
-          clearHover(); // Hover 상태 초기화
-          onWorkClick(clickedWorkId);
-        }
-      }
-    };
-
-    // document.body에 이벤트 위임으로 부착 (동적 링크 포함)
-    document.body.addEventListener('click', handleLinkClick);
-
-    return () => {
-      document.body.removeEventListener('click', handleLinkClick);
-    };
-  }, [onWorkClick, clearHover]);
-
-  // 에러 상태 - 자동으로 모달 닫기 (전역 Toast가 에러 메시지 표시)
+  // 에러 시 자동으로 모달 닫기
   useEffect(() => {
     if (isError) {
       onClose();
     }
   }, [isError, onClose]);
 
-  // 로딩 상태
   if (isLoading || !modalWork) {
     return (
       <div
@@ -282,13 +162,10 @@ export default function WorkModalMobile({
           }
         }}
         onWheel={(e) => {
-          // Prevent wheel events from propagating to background page
           e.preventDefault();
           e.stopPropagation();
         }}
         onTouchMove={(e) => {
-          // Prevent touch scroll ONLY on the overlay itself, not its children
-          // body-scroll-lock handles the rest
           if (e.target === e.currentTarget) {
             e.preventDefault();
             e.stopPropagation();
@@ -296,206 +173,183 @@ export default function WorkModalMobile({
         }}
         className="modal-overlay"
       >
-      <motion.div
-        initial={{ opacity: 0.8, scale: 0.4 }}
-        animate={{
-          opacity: 1,
-          scale: 1,
-          transition: {
-            duration: 0.3,
-            ease: [0.25, 0.1, 0.25, 1],
-          },
-        }}
-        exit={{
-          opacity: 0,
-          scale: 0.95,
-          transition: {
-            duration: 0.2,
-            ease: [0.4, 0, 0.2, 1],
-          },
-        }}
-        style={{
-          width: '100%',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative',
-          overflow: 'hidden',
-          border: 'none',
-        }}
-        onClick={(e) => e.stopPropagation()}
-        className="modal-content"
-      >
-        {/* Soft edge blur background */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'rgba(240,240,240,0.97)',
-            filter: 'blur(10px)',
-            zIndex: 0,
+        <motion.div
+          initial={{ opacity: 0.8, scale: 0.4 }}
+          animate={{
+            opacity: 1,
+            scale: 1,
+            transition: { duration: 0.3, ease: [0.25, 0.1, 0.25, 1] },
           }}
-        />
-
-        {/* 전체 스크롤 영역 */}
-        <div
-          ref={scrollContainerRef}
-          className="mobile-modal-scroll"
+          exit={{
+            opacity: 0,
+            scale: 0.95,
+            transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] },
+          }}
           style={{
-            height: '100%',
+            width: '100%',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
             position: 'relative',
-            zIndex: 1,
-            overflowX: 'hidden',
-            overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch',
-            scrollbarWidth: 'none', // Firefox
-            msOverflowStyle: 'none', // IE and Edge
-          } as React.CSSProperties}
-          onTouchStart={(e) => {
-            // 터치 시작 위치 기록 (iOS 스크롤 경계 감지용)
-            touchStartY.current = e.touches[0].clientY;
+            overflow: 'hidden',
+            border: 'none',
           }}
-          onTouchMove={(e) => {
-            // iOS Safari: 스크롤 경계에서 배경 스크롤 방지
-            const container = scrollContainerRef.current;
-            if (!container) return;
-
-            const scrollTop = container.scrollTop;
-            const scrollHeight = container.scrollHeight;
-            const clientHeight = container.clientHeight;
-            const touchY = e.touches[0].clientY;
-            const deltaY = touchStartY.current - touchY;
-
-            // 위쪽 경계: 맨 위에서 아래로 스크롤 시도
-            const isAtTop = scrollTop <= 0 && deltaY < 0;
-            // 아래쪽 경계: 맨 아래에서 위로 스크롤 시도
-            const isAtBottom = scrollTop + clientHeight >= scrollHeight && deltaY > 0;
-
-            // 경계에 도달했을 때만 이벤트 전파 차단
-            if (isAtTop || isAtBottom) {
-              e.preventDefault();
-            }
-          }}
+          onClick={(e) => e.stopPropagation()}
+          className="modal-content"
         >
+          {/* Soft edge blur background */}
           <div
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              padding: 'var(--space-2)',
-              gap: 'var(--space-3)',
+              position: 'absolute',
+              inset: 0,
+              background: 'rgba(240,240,240,0.97)',
+              filter: 'blur(10px)',
+              zIndex: 0,
+            }}
+          />
+
+          {/* 전체 스크롤 영역 */}
+          <div
+            ref={scrollContainerRef}
+            className="mobile-modal-scroll"
+            style={{
+              height: '100%',
               position: 'relative',
+              zIndex: 1,
+              overflowX: 'hidden',
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            } as React.CSSProperties}
+            onTouchStart={(e) => {
+              touchStartY.current = e.touches[0].clientY;
+            }}
+            onTouchMove={(e) => {
+              const container = scrollContainerRef.current;
+              if (!container) return;
+
+              const scrollTop = container.scrollTop;
+              const scrollHeight = container.scrollHeight;
+              const clientHeight = container.clientHeight;
+              const touchY = e.touches[0].clientY;
+              const deltaY = touchStartY.current - touchY;
+
+              const isAtTop = scrollTop <= 0 && deltaY < 0;
+              const isAtBottom = scrollTop + clientHeight >= scrollHeight && deltaY > 0;
+
+              if (isAtTop || isAtBottom) {
+                e.preventDefault();
+              }
             }}
           >
-            {/* 닫기 버튼 */}
-            <button
-              onClick={onClose}
-              style={{
-                position: 'absolute',
-                top: 0,
-                right: 0,
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '24px',
-                color: 'var(--color-text-primary)',
-                width: '32px',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '4px',
-                transition: 'background-color 0.2s ease',
-                zIndex: 10,
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-gray-100)')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              ×
-            </button>
-
-            {/* 1. 작품명 */}
-            <div>
-              <h2
-                style={{
-                  fontSize: 'var(--font-size-lg)',
-                  color: 'var(--color-text-primary)',
-                  margin: 0,
-                  textAlign: 'center',
-                }}
-              >
-                {`${modalWork.title}${modalWork.year ? `,\u00A0${modalWork.year}` : ''}`}
-              </h2>
-            </div>
-
-            {/* 2. 작품 리스트 (미디어) */}
             <div
               style={{
                 display: 'flex',
                 flexDirection: 'column',
+                padding: 'var(--space-2)',
+                gap: 'var(--space-3)',
+                position: 'relative',
               }}
             >
-              {modalMediaItems.map((item, index) => {
-                const isLast = index === modalMediaItems.length - 1;
-
-                // 영상인 경우
-                if (item.type === 'video') {
-                  return <YouTubeEmbed key={item.data.id} video={item.data} isLast={isLast} />;
-                }
-
-                // 이미지인 경우
-                return (
-                  <ModalImage
-                    key={item.data.id}
-                    image={item.data}
-                    alt={modalWork.title}
-                    isLast={isLast}
-                    marginBottom='var(--space-2)'
-                  />
-                );
-              })}
-            </div>
-
-            {/* 3. 캡션 */}
-            {modalWork.caption && (
-              <div
+              {/* 닫기 버튼 */}
+              <button
+                onClick={onClose}
                 style={{
+                  position: 'absolute',
+                  top: 0,
+                  right: 0,
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '24px',
+                  color: 'var(--color-text-primary)',
+                  width: '32px',
+                  height: '32px',
                   display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
-                  padding: '0 0 var(--space-2) 0',
+                  borderRadius: '4px',
+                  transition: 'background-color 0.2s ease',
+                  zIndex: 10,
                 }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-gray-100)')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
-                <div
-                  className="work-caption"
-                  data-is-modal="true"
+                ×
+              </button>
+
+              {/* 1. 작품명 */}
+              <div>
+                <h2
                   style={{
-                    maxWidth: '600px',
-                    width: '100%',
+                    fontSize: 'var(--font-size-lg)',
+                    color: 'var(--color-text-primary)',
+                    margin: 0,
+                    textAlign: 'center',
                   }}
                 >
-                  {renderCaption(modalWork.caption, `modal-${modalWork.id}`, true)}
+                  {`${modalWork.title}${modalWork.year ? `,\u00A0${modalWork.year}` : ''}`}
+                </h2>
+              </div>
+
+              {/* 2. 작품 리스트 (미디어) */}
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {modalMediaItems.map((item, index) => {
+                  const isLast = index === modalMediaItems.length - 1;
+                  if (item.type === 'video') {
+                    return <YouTubeEmbed key={item.data.id} video={item.data} isLast={isLast} />;
+                  }
+                  return (
+                    <ModalImage
+                      key={item.data.id}
+                      image={item.data}
+                      alt={modalWork.title}
+                      isLast={isLast}
+                      marginBottom='var(--space-2)'
+                    />
+                  );
+                })}
+              </div>
+
+              {/* 3. 캡션 */}
+              {modalWork.caption && (
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    padding: '0 0 var(--space-2) 0',
+                  }}
+                >
+                  <div
+                    className="work-caption"
+                    data-is-modal="true"
+                    style={{ maxWidth: '600px', width: '100%' }}
+                  >
+                    {renderCaption(modalWork.caption, `modal-${modalWork.id}`, true)}
+                  </div>
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* FloatingWorkWindow - Caption hover */}
+          <AnimatePresence>
+            {hoveredWork && hoverPosition && (
+              <div data-floating-window="true" style={{ zIndex: 1100, position: 'absolute' }}>
+                <FloatingWorkWindow
+                  work={hoveredWork}
+                  position={hoverPosition}
+                  onClick={(clickedWorkId) => {
+                    onWorkClick(clickedWorkId);
+                    clearHover();
+                  }}
+                />
               </div>
             )}
-          </div>
-        </div>
-
-        {/* FloatingWorkWindow - Caption hover */}
-        <AnimatePresence>
-          {hoveredWork && hoverPosition && (
-            <div data-floating-window="true" style={{ zIndex: 1100, position: 'absolute' }}>
-              <FloatingWorkWindow
-                work={hoveredWork}
-                position={hoverPosition}
-                onClick={(clickedWorkId) => {
-                  onWorkClick(clickedWorkId);
-                  clearHover();
-                }}
-              />
-            </div>
-          )}
-        </AnimatePresence>
+          </AnimatePresence>
+        </motion.div>
       </motion.div>
-    </motion.div>
     </>
   );
 }

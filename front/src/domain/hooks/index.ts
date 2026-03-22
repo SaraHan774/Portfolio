@@ -19,6 +19,8 @@ export * from './useKeywordStyle';
 export * from './useClickAnimationTracking';
 export * from './useCaptionHoverEvents';
 export * from './useScrollLock';
+export * from './useModalLinkHandler';
+export * from './useImageTracker';
 export * from './useOptimizedResize';
 export * from './useImageZoom';
 
