@@ -167,11 +167,13 @@
 > ℹ️ 메인 인라인 렌더는 `isMobile` 분기가 없어 PC·모바일 공용. `ModalImage`도 WorkModal/WorkModalMobile 공유. → 모바일 별도 작업 불필요.
 
 ### Phase 6 — 테스트
-- [ ] Mapper 통과 테스트: 이미지 `caption` 있음/없음 라운드트립 (필드 추가만으로 흐르는지 확인)
-- [ ] 🔴 **회귀 테스트(필수)**: 신규 업로드 이미지에 캡션 입력 → `uploadPendingFiles` 병합 후에도 caption 보존 (Phase 3 검증)
-- [ ] `ImageUploader` 테스트: 캡션 입력 시 `images` 상태/`onChange` 반영
-- [ ] `ModalImage` 테스트: 캡션 있으면 표시, 없으면 미표시
-- [ ] `worksApi` 검증 테스트: 길이 초과 시 `ValidationError`
+- [x] Mapper 통과 테스트: 이미지 `caption` 라운드트립 (front/admin `workMapper.test.ts`, 각 9개)
+- [x] 🔴 **회귀 테스트(필수)**: 병합 로직을 순수 함수 `mergeUploadedImages`로 추출 후 caption 보존 검증 (`imageUploadMerge.test.ts`, 5개)
+- [x] `ImageUploader` 테스트: 모달 캡션 입력/취소/미리보기 (`ImageUploader.caption.test.tsx`, 4개)
+- [x] `ModalImage` 테스트: 캡션 있으면 표시, 없으면/빈 값이면 미표시 (`ModalImage.test.tsx`, 3개)
+- [x] `worksApi` 검증 테스트: 200자 초과 시 `ValidationError(IMAGE_CAPTION_TOO_LONG)` (`worksApi.imageCaption.test.ts`, 4개)
+
+> Phase 6 완료. `uploadPendingFiles`의 병합 로직은 컴포넌트 클로저라 단위 테스트가 어려워, 순수 함수 `core/utils/imageUploadMerge.ts`로 추출하고 `WorkForm`이 이를 사용하도록 리팩터하여 회귀 테스트를 추가함.
 
 ---
 

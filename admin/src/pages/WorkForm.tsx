@@ -29,6 +29,7 @@ import MediaOrderManager from '../components/MediaOrderManager';
 import CaptionEditor from '../components/CaptionEditor';
 import { deleteWorkImages, uploadImage } from '../data/repository';
 import { getErrorDisplayInfo, logErrorForDev } from '../core/utils/errorMessages';
+import { mergeUploadedImages } from '../core/utils/imageUploadMerge';
 import './WorkForm.css';
 
 const { Title } = Typography;
@@ -274,34 +275,14 @@ const WorkForm = () => {
       });
     }
 
-    // temp 이미지를 실제 업로드 결과로 교체, 실패한 것은 제거
+    // temp 이미지를 실제 업로드 결과로 교체(caption/order 승계), 실패한 것은 제거, 썸네일 보정
     const failedIds = new Set(failedPending.map((p) => p.tempId));
-    const finalImages = currentImages
-      .map((img) => {
-        const real = uploadedMap.get(img.id);
-        if (real) {
-          // 업로드 결과(real)로 교체하되, 사용자가 입력한 order/caption은 임시 이미지(img)에서 승계
-          return { ...real, order: img.order, caption: img.caption };
-        }
-        // 실패한 pending 이미지는 제거
-        if (failedIds.has(img.id)) {
-          return null;
-        }
-        return img;
-      })
-      .filter((img): img is WorkImage => img !== null)
-      .map((img, idx) => ({ ...img, order: idx + 1 })); // order 재정렬
-
-    // 썸네일 ID가 pending이었다면 실제 ID로 교체
-    let finalThumbnailId = currentThumbnailId;
-    const realThumb = uploadedMap.get(currentThumbnailId);
-    if (realThumb) {
-      finalThumbnailId = realThumb.id;
-    }
-    // 썸네일이 실패한 이미지였다면 첫 번째 이미지로 대체
-    if (failedIds.has(currentThumbnailId) && finalImages.length > 0) {
-      finalThumbnailId = finalImages[0].id;
-    }
+    const { images: finalImages, thumbnailId: finalThumbnailId } = mergeUploadedImages(
+      currentImages,
+      uploadedMap,
+      failedIds,
+      currentThumbnailId
+    );
 
     // 실패한 파일은 pending에 남겨둠 (재시도 가능)
     setPendingImages(failedPending);

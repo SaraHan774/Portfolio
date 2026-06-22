@@ -429,7 +429,7 @@ const ImageUploader = ({
         onCancel={closeCaptionEditor}
         okText="확인"
         cancelText="취소"
-        destroyOnClose
+        destroyOnHidden
       >
         <Input.TextArea
           autoFocus
