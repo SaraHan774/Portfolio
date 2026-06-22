@@ -54,8 +54,8 @@ front는 **Vercel에 배포**되어(`vercel.json` + `next start`, `output: expor
   - 80×80 컨테이너에 `next/image`(`fill` + `sizes="80px"`) 사용 → Next 최적화/포맷 변환 적용.
   - 기존 스켈레톤·fade-in·`objectFit: contain` 동작 유지.
 
-- [ ] **Phase 5 — 최종 검증**
-  - `npm run lint` + `npm run build` 통과 확인.
+- [x] **Phase 5 — 최종 검증**
+  - `npm run lint` (변경 파일 0 errors) + `npm run build` (Compiled successfully) 통과 확인.
 
 ---
 
