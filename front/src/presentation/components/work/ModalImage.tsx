@@ -25,9 +25,13 @@ interface ModalImageProps {
   sizes?: string;
   /** 우선 로딩 여부 (모달 첫 이미지 등 LCP 후보에 사용) */
   priority?: boolean;
+  /** 이미지 품질 (next/image quality). 미지정 시 모달 기본값(72) */
+  quality?: number;
 }
 
 const DEFAULT_MODAL_IMAGE_SIZES = '(max-width: 768px) 100vw, 60vw';
+/** 모달 본문 이미지 품질 — 화질 보존 우선의 보수적 값. 줌(원본)에는 영향 없음 */
+const DEFAULT_MODAL_IMAGE_QUALITY = 72;
 
 export default function ModalImage({
   image,
@@ -36,6 +40,7 @@ export default function ModalImage({
   marginBottom = 'var(--space-8)',
   sizes = DEFAULT_MODAL_IMAGE_SIZES,
   priority = false,
+  quality = DEFAULT_MODAL_IMAGE_QUALITY,
 }: ModalImageProps) {
   return (
     <div
@@ -61,6 +66,7 @@ export default function ModalImage({
           height={image.height}
           sizes={sizes}
           priority={priority}
+          quality={quality}
           style={{
             width: '100%',
             height: 'auto',

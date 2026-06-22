@@ -21,6 +21,8 @@ interface FadeInImageProps {
   priority?: boolean;
   /** 반응형 이미지 크기 힌트 (next/image sizes). 화면 크기에 맞는 변형 선택에 사용 */
   sizes?: string;
+  /** 이미지 품질 (next/image quality). 미지정 시 Next 기본값(75) */
+  quality?: number;
   /** 추가 스타일 */
   style?: React.CSSProperties;
 }
@@ -35,6 +37,7 @@ export default function FadeInImage({
   height,
   priority = false,
   sizes,
+  quality,
   style = {},
 }: FadeInImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -86,6 +89,7 @@ export default function FadeInImage({
         height={height}
         priority={priority}
         sizes={sizes}
+        quality={quality}
         onLoad={() => setIsLoaded(true)}
         style={{
           position: 'absolute',
