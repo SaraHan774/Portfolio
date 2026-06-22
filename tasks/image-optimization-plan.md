@@ -40,7 +40,7 @@ front는 **Vercel에 배포**되어(`vercel.json` + `next start`, `output: expor
   - `deviceSizes` / `imageSizes`를 실제 브레이크포인트에 맞춰 명시 → 불필요한 대형 변형 생성 억제.
   - 기존 `remotePatterns`, `dangerouslyAllowSVG`, `unoptimized`(emulator) 그대로 유지.
 
-- [ ] **Phase 2 — `FadeInImage` + `ModalImage`에 `sizes` 전달** (최대 효과)
+- [x] **Phase 2 — `FadeInImage` + `ModalImage`에 `sizes` 전달** (최대 효과)
   - `FadeInImage`에 `sizes?: string` prop 추가 → 내부 `<Image>`에 전달(없으면 기존 동작 유지).
   - `ModalImage`에 `sizes?: string` prop 추가, 기본값 `(max-width: 768px) 100vw, 60vw`.
   - 모바일은 viewport 폭 기준(~640~750px), 데스크톱은 이미지 컬럼 폭 기준 변형을 수신.

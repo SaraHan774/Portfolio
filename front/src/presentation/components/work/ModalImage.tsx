@@ -18,9 +18,22 @@ interface ModalImageProps {
   isLast: boolean;
   /** 커스텀 하단 마진 (optional, 기본값: var(--space-8)) */
   marginBottom?: string;
+  /**
+   * 반응형 이미지 크기 힌트 (next/image sizes).
+   * 모바일은 viewport 전체 폭, 데스크톱은 이미지 컬럼 폭(~60vw) 기준 변형을 수신
+   */
+  sizes?: string;
 }
 
-export default function ModalImage({ image, alt, isLast, marginBottom = 'var(--space-8)' }: ModalImageProps) {
+const DEFAULT_MODAL_IMAGE_SIZES = '(max-width: 768px) 100vw, 60vw';
+
+export default function ModalImage({
+  image,
+  alt,
+  isLast,
+  marginBottom = 'var(--space-8)',
+  sizes = DEFAULT_MODAL_IMAGE_SIZES,
+}: ModalImageProps) {
   return (
     <div
       data-image-id={image.id}
@@ -43,6 +56,7 @@ export default function ModalImage({ image, alt, isLast, marginBottom = 'var(--s
           alt={alt}
           width={image.width}
           height={image.height}
+          sizes={sizes}
           style={{
             width: '100%',
             height: 'auto',
