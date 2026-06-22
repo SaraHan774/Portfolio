@@ -280,7 +280,8 @@ const WorkForm = () => {
       .map((img) => {
         const real = uploadedMap.get(img.id);
         if (real) {
-          return { ...real, order: img.order };
+          // 업로드 결과(real)로 교체하되, 사용자가 입력한 order/caption은 임시 이미지(img)에서 승계
+          return { ...real, order: img.order, caption: img.caption };
         }
         // 실패한 pending 이미지는 제거
         if (failedIds.has(img.id)) {

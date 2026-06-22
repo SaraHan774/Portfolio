@@ -65,6 +65,23 @@ describe('workMapper', () => {
       expect(result.videos).toEqual([]);
     });
 
+    it('should preserve per-image caption through mapping', () => {
+      const firestoreData = {
+        title: 'Test Work',
+        images: [
+          { id: 'img-1', url: 'a.jpg', thumbnailUrl: 'a-t.jpg', order: 0, width: 800, height: 600, caption: '사진_나혜빈' },
+          { id: 'img-2', url: 'b.jpg', thumbnailUrl: 'b-t.jpg', order: 1, width: 800, height: 600 },
+        ],
+        createdAt: Timestamp.fromDate(new Date()),
+        updatedAt: Timestamp.fromDate(new Date()),
+      };
+
+      const result = mapFirestoreToWork('work-caption', firestoreData);
+
+      expect(result.images[0].caption).toBe('사진_나혜빈');
+      expect(result.images[1].caption).toBeUndefined();
+    });
+
     it('should handle empty or malformed data', () => {
       const id = 'work-3';
       const firestoreData = {};

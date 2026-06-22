@@ -25,9 +25,12 @@ export default function ModalImage({ image, alt, isLast, marginBottom = 'var(--s
     <div
       data-image-id={image.id}
       style={{
-        marginBottom: isLast ? 0 : marginBottom,
+        // 캡션은 absolute로 간격 안에 그리므로 간격이 늘지 않음. 마지막 이미지만 캡션 공간 확보.
+        marginBottom: isLast ? (image.caption ? 'var(--space-6)' : 0) : marginBottom,
         position: 'relative',
         width: '100%',
+        // inline-block 이미지 아래 descender 공백 제거 → 캡션이 이미지에 밀착
+        lineHeight: 0,
       }}
     >
       <ZoomableImage
@@ -50,6 +53,28 @@ export default function ModalImage({ image, alt, isLast, marginBottom = 'var(--s
           }}
         />
       </ZoomableImage>
+
+      {/* 이미지 단위 캡션 — 기존 이미지 간격 안에 absolute로 표시(간격 유지), 빈 값이면 미출력 */}
+      {image.caption && (
+        <p
+          style={{
+            position: 'absolute',
+            top: '100%',
+            right: 0,
+            marginTop: '13px',
+            marginBottom: 0,
+            maxWidth: '100%',
+            fontSize: 'var(--font-size-xs)',
+            color: 'var(--color-gray-700)',
+            lineHeight: 'var(--line-height-normal)',
+            textAlign: 'right',
+            whiteSpace: 'pre-wrap',
+            pointerEvents: 'none',
+          }}
+        >
+          {image.caption}
+        </p>
+      )}
     </div>
   );
 }

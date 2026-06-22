@@ -28,6 +28,8 @@ export interface WorkImage {
   height: number;
   fileSize?: number;
   uploadedFrom?: 'desktop' | 'mobile' | 'camera';
+  /** 이미지 단위 캡션 (상세 화면에서 이미지 아래 한 줄로 표시, 선택값) */
+  caption?: string;
 }
 
 /**
