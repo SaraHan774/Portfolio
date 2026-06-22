@@ -446,6 +446,8 @@ const ImageUploader = ({
           }}
         />
         <p style={{ marginTop: 8, marginBottom: 0, color: '#8c8c8c', fontSize: 12 }}>
+          <strong>Enter</strong>로 저장, 줄바꿈은 <strong>Shift+Enter</strong>를 사용하세요.
+          <br />
           상세 화면에서 이미지 아래 우측에 표시됩니다. 비워두면 표시되지 않습니다.
         </p>
       </Modal>
