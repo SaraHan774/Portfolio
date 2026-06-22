@@ -22,6 +22,7 @@ import {
   WorkModal,
   WorkModalMobile,
   CaptionWithBoundary,
+  ImageCaption,
   MediaTimeline,
   AnimatedCharacterText,
   ZoomableImage,
@@ -525,9 +526,15 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
                             data-image-id={item.data.id}
                             className="work-image-container"
                             style={{
-                              marginBottom: isLast ? 0 : 'var(--space-8)',
+                              // 캡션은 absolute로 간격 안에 그리므로 간격이 늘지 않음.
+                              // 마지막 이미지만 캡션 공간을 살짝 확보.
+                              marginBottom: isLast
+                                ? (item.data.caption ? 'var(--space-6)' : 0)
+                                : 'var(--space-8)',
                               position: 'relative',
                               width: '100%',
+                              // inline-block 이미지 아래 descender 공백 제거 → 캡션이 이미지에 밀착
+                              lineHeight: 0,
                               scrollSnapAlign: 'start',
                               scrollMarginTop: '280px',
                             }}
@@ -554,6 +561,9 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
                                 }}
                               />
                             </ZoomableImage>
+
+                            {/* 이미지 단위 캡션 (간격 유지·우측 하단, 빈 값이면 미출력) */}
+                            <ImageCaption caption={item.data.caption} />
                           </div>
                         );
                       })}

@@ -55,6 +55,21 @@ const validateWorkData = (
     );
   }
 
+  // 이미지 캡션 길이 검사 (이미지별 한 줄 캡션)
+  if (work.images !== undefined) {
+    const tooLong = work.images.some(
+      (img) =>
+        img.caption !== undefined &&
+        img.caption.length > appConfig.text.imageCaptionMaxLength
+    );
+    if (tooLong) {
+      throw new ValidationError(
+        `이미지 캡션은 ${appConfig.text.imageCaptionMaxLength}자를 초과할 수 없습니다.`,
+        'IMAGE_CAPTION_TOO_LONG'
+      );
+    }
+  }
+
   // 연도 유효성 검사
   if (work.year !== undefined && work.year !== null) {
     const currentYear = new Date().getFullYear();

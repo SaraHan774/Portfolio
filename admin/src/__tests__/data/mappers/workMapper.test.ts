@@ -126,6 +126,23 @@ describe('workMapper', () => {
       expect(result.images[2].order).toBe(1);
     });
 
+    it('should preserve per-image caption through mapping', () => {
+      const dataWithImageCaptions = {
+        title: 'Test',
+        images: [
+          { id: 'img-1', url: 'url1', thumbnailUrl: 'thumb1', order: 0, caption: '사진_XXX' },
+          { id: 'img-2', url: 'url2', thumbnailUrl: 'thumb2', order: 1 },
+        ],
+        createdAt: mockTimestamp,
+        updatedAt: mockTimestamp,
+      };
+
+      const result = mapFirestoreToWork('work-caption', dataWithImageCaptions);
+
+      expect(result.images[0].caption).toBe('사진_XXX');
+      expect(result.images[1].caption).toBeUndefined();
+    });
+
     it('should handle boolean isPublished correctly', () => {
       const publishedData = {
         title: 'Published Work',

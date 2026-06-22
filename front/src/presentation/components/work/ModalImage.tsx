@@ -7,6 +7,7 @@
 
 import { FadeInImage } from '@/presentation/ui';
 import { ZoomableImage } from '@/presentation/components/media';
+import ImageCaption from './ImageCaption';
 import type { WorkImage } from '@/types';
 
 interface ModalImageProps {
@@ -46,9 +47,12 @@ export default function ModalImage({
     <div
       data-image-id={image.id}
       style={{
-        marginBottom: isLast ? 0 : marginBottom,
+        // 캡션은 absolute로 간격 안에 그리므로 간격이 늘지 않음. 마지막 이미지만 캡션 공간 확보.
+        marginBottom: isLast ? (image.caption ? 'var(--space-6)' : 0) : marginBottom,
         position: 'relative',
         width: '100%',
+        // inline-block 이미지 아래 descender 공백 제거 → 캡션이 이미지에 밀착
+        lineHeight: 0,
       }}
     >
       <ZoomableImage
@@ -74,6 +78,9 @@ export default function ModalImage({
           }}
         />
       </ZoomableImage>
+
+      {/* 이미지 단위 캡션 (간격 유지·우측 하단, 빈 값이면 미출력) */}
+      <ImageCaption caption={image.caption} />
     </div>
   );
 }

@@ -48,6 +48,23 @@
   overflow: hidden;
 }
 
+.image-caption-area {
+  margin-bottom: 12px;
+}
+
+.image-caption-preview.ant-typography {
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #595959;
+}
+
+.image-caption-empty {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #bfbfbf;
+}
+
 .image-actions {
   display: flex;
   flex-direction: column;
