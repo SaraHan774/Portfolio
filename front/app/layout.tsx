@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query';
-import { queryKeys, CategoryRepository, WorkRepository } from '@/src/data';
+import { queryKeys, CategoryRepository } from '@/src/data';
 import { ErrorBoundary, PortfolioLayoutSimple, DebugGrid, ColorPaletteDebugger } from '@/presentation';
 import ImageZoomProvider from '@/presentation/components/layout/ImageZoomProvider';
 import { AnalyticsProvider } from '@/presentation/components/analytics/AnalyticsProvider';
@@ -23,11 +23,12 @@ export const dynamic = 'force-dynamic';
 const SSR_PREFETCH_TIMEOUT_MS = 2000;
 
 /**
- * 레이아웃에 항상 필요한 전역 데이터(카테고리 네비 + 작품 목록)를 서버에서 미리 읽어
- * dehydrate한다. 카테고리 네비는 layout에서 렌더되므로 여기서 하이드레이션해야
- * 초기 HTML에 콘텐츠가 담겨 JS+Firestore 왕복 없이 즉시 표시된다(CSR waterfall 단축).
+ * 레이아웃에 항상 필요한 전역 데이터(카테고리 네비)를 서버에서 미리 읽어 dehydrate한다.
+ * 카테고리 네비는 layout에서 렌더되므로 여기서 하이드레이션해야 초기 HTML에 담겨
+ * JS+Firestore 왕복 없이 즉시 표시된다(CSR waterfall 단축).
  * searchParams와 무관한 전역 데이터라 클라이언트 탐색 시 서버 왕복을 유발하지 않는다.
  * 서버 페칭이 지연/실패해도 SSR을 막지 않도록 타임아웃을 두고, 미완료분은 클라이언트가 페칭.
+ * (작품 목록은 카테고리별/searchParams 의존이라 layout이 아닌 page에서 별도 처리.)
  */
 async function prefetchGlobalData() {
   const queryClient = new QueryClient();
@@ -39,10 +40,6 @@ async function prefetchGlobalData() {
     queryClient.prefetchQuery({
       queryKey: queryKeys.categories.exhibition.all(),
       queryFn: () => CategoryRepository.getExhibitionCategories(),
-    }),
-    queryClient.prefetchQuery({
-      queryKey: queryKeys.works.published(),
-      queryFn: () => WorkRepository.getPublishedWorks(),
     }),
   ]);
   await Promise.race([
