@@ -130,6 +130,8 @@ export default function WorkModalMobile({
   }
 
   const modalMediaItems = getMediaItems(modalWork);
+  // LCP 후보는 첫 '이미지' — 첫 미디어가 영상일 수 있으므로 영상은 건너뜀
+  const firstImageIndex = modalMediaItems.findIndex((m) => m.type === 'image');
 
   return (
     <>
@@ -307,7 +309,7 @@ export default function WorkModalMobile({
                       alt={modalWork.title}
                       isLast={isLast}
                       marginBottom='var(--space-2)'
-                      priority={index === 0}
+                      priority={index === firstImageIndex}
                     />
                   );
                 })}
