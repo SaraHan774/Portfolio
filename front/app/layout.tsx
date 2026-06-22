@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Nanum_Myeongjo } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { ErrorBoundary, PortfolioLayoutSimple, DebugGrid, ColorPaletteDebugger } from '@/presentation';
 import ImageZoomProvider from '@/presentation/components/layout/ImageZoomProvider';
@@ -14,10 +14,17 @@ import {
 import React, { Suspense } from "react";
 import { LoadingContainer } from '@/presentation/ui';
 
-const nanumMyeongjo = Nanum_Myeongjo({
-  weight: ['400', '700'],
-  subsets: ["latin"],
+// 나눔명조(OFL)를 KS X 1001 상용 한글 2,350자 + ASCII로 직접 서브셋해 self-host.
+// next/font/google가 한글 unicode-range 청크 100여 개(=1.66MB)를 온디맨드로 받던 것을
+// weight당 단일 woff2(합 ~0.69MB)로 대체. preload는 끄고(swap 폴백 즉시 표시) LCP 이미지에
+// 대역폭을 양보한다. 2,350자에 없는 드문 글자는 시스템 세리프로 폴백.
+const nanumMyeongjo = localFont({
+  src: [
+    { path: "./fonts/NanumMyeongjo-Regular.subset.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/NanumMyeongjo-Bold.subset.woff2", weight: "700", style: "normal" },
+  ],
   display: "swap",
+  preload: false,
   variable: "--font-nanum-myeongjo",
 });
 
