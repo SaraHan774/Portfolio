@@ -437,16 +437,9 @@ const ImageUploader = ({
           autoSize={{ minRows: 3, maxRows: 8 }}
           value={captionDraft}
           onChange={(e) => setCaptionDraft(e.target.value)}
-          onPressEnter={(e) => {
-            // Enter=저장, Shift+Enter=줄바꿈
-            if (!e.shiftKey) {
-              e.preventDefault();
-              submitCaptionEditor();
-            }
-          }}
         />
         <p style={{ marginTop: 8, marginBottom: 0, color: '#8c8c8c', fontSize: 12 }}>
-          <strong>Enter</strong>로 저장, 줄바꿈은 <strong>Shift+Enter</strong>를 사용하세요.
+          줄바꿈은 <strong>Enter</strong>, 저장은 아래 <strong>확인</strong> 버튼을 누르세요.
           <br />
           상세 화면에서 이미지 아래 우측에 표시됩니다. 비워두면 표시되지 않습니다.
         </p>
