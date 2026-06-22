@@ -38,6 +38,7 @@
 | 컴포넌트 | 소스 | URL 필드 | sizes | priority | 비고 |
 |---|---|---|---|---|---|
 | `ModalImage`→`FadeInImage`(ui) | next/image | `url`(원본 1920px) | ✅ | ✅(첫 이미지) | PR #50 완료 |
+| `WorkDetailPage` 인라인→`FadeInImage`(ui) | next/image | `url`(원본 1920px) | ❌→✅ | ✅(첫 이미지) | **Phase 12에서 `sizes`/`quality` 누락 발견·수정** (이중 렌더 경로) |
 | `WorkTitleButton`(메인 리스트) | next/image fill | `thumbnailUrl`(300px) | ✅`80px` | ❌ | 홈 첫 썸네일 priority 필요 |
 | `FloatingWorkWindow` | next/image fill | `thumbnailUrl` | ✅`80px` | ❌ | 호버 즉시표시용 priority |
 | `HomeIcon` | next/image fill | icon url | ❌ | ✅ | `sizes="48px"` 필요 |
@@ -90,6 +91,10 @@
 - [x] **Phase 11 — 측정·검증**
   - 로컬 검증 완료: 전 Phase `npm run build` 통과(변경 파일 lint 0 error), preconnect/dns-prefetch가 prerender HTML·서버 응답에 정상 포함 확인.
   - AVIF 변환·`Cache-Control`(minimumCacheTTL) 실측은 **Vercel 프로덕션 배포 후** 수행(로컬 옵티마이저 upstream이 sandbox로 차단됨). 아래 체크리스트 참조.
+- [x] **Phase 12 — 상세 페이지 인라인 이미지 `sizes`/`quality` 누락 수정** (Track 1 보강)
+  - Phase 2의 `sizes` 추가가 `ModalImage` 경로에만 적용되고 **`WorkDetailPage` 인라인 경로(`app/works/WorkDetailPage.tsx`)는 누락**돼 있던 이중 렌더 경로 버그 발견.
+  - 인라인 `FadeInImage`에 `--media-width` 브레이크포인트에 맞춘 `sizes='(max-width: 767px) 100vw, (max-width: 1199px) 60vw, 50vw'` + `quality={72}` 적용. 모바일 상세 스크롤 뷰가 원본(~1920px) 대신 화면 폭 변형을 받도록 함.
+  - 줌은 `ZoomableImage`가 원본 URL을 직접 사용하므로 제약 ③(확대=원본) 영향 없음.
 
 ---
 
