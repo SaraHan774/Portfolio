@@ -24,6 +24,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      // tsconfig의 `@/*` → `./*`(루트 기준) 매핑과 일치시켜 `@/src/...` import를 해석
+      // (예: `@/src/data` → front/src/data). 더 구체적인 `@/src`를 catch-all `@`보다 먼저 둔다.
+      '@/src': path.resolve(__dirname, './src'),
       '@': path.resolve(__dirname, './src'),
       '@/core': path.resolve(__dirname, './src/core'),
       '@/data': path.resolve(__dirname, './src/data'),
