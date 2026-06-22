@@ -66,8 +66,8 @@ export default function FadeInImage({
         overflow: 'hidden',
       }}
     >
-      {/* 스켈레톤 - 일정 시간 후에도 로딩 중일 때만 표시 (LCP priority 이미지는 제외) */}
-      {!priority && !isLoaded && showSkeleton && (
+      {/* 스켈레톤 - 일정 시간 후에도 로딩 중일 때만 표시 */}
+      {!isLoaded && showSkeleton && (
         <div
           className="skeleton-shimmer"
           style={{
