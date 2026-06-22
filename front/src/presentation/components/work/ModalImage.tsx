@@ -18,9 +18,30 @@ interface ModalImageProps {
   isLast: boolean;
   /** 커스텀 하단 마진 (optional, 기본값: var(--space-8)) */
   marginBottom?: string;
+  /**
+   * 반응형 이미지 크기 힌트 (next/image sizes).
+   * 모바일은 viewport 전체 폭, 데스크톱은 이미지 컬럼 폭(~60vw) 기준 변형을 수신
+   */
+  sizes?: string;
+  /** 우선 로딩 여부 (모달 첫 이미지 등 LCP 후보에 사용) */
+  priority?: boolean;
+  /** 이미지 품질 (next/image quality). 미지정 시 모달 기본값(72) */
+  quality?: number;
 }
 
-export default function ModalImage({ image, alt, isLast, marginBottom = 'var(--space-8)' }: ModalImageProps) {
+const DEFAULT_MODAL_IMAGE_SIZES = '(max-width: 768px) 100vw, 60vw';
+/** 모달 본문 이미지 품질 — 화질 보존 우선의 보수적 값. 줌(원본)에는 영향 없음 */
+const DEFAULT_MODAL_IMAGE_QUALITY = 72;
+
+export default function ModalImage({
+  image,
+  alt,
+  isLast,
+  marginBottom = 'var(--space-8)',
+  sizes = DEFAULT_MODAL_IMAGE_SIZES,
+  priority = false,
+  quality = DEFAULT_MODAL_IMAGE_QUALITY,
+}: ModalImageProps) {
   return (
     <div
       data-image-id={image.id}
@@ -46,6 +67,9 @@ export default function ModalImage({ image, alt, isLast, marginBottom = 'var(--s
           alt={alt}
           width={image.width}
           height={image.height}
+          sizes={sizes}
+          priority={priority}
+          quality={quality}
           style={{
             width: '100%',
             height: 'auto',

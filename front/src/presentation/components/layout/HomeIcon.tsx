@@ -48,6 +48,7 @@ const HomeIcon = memo(function HomeIcon({ defaultIconUrl, hoverIconUrl, size = 4
           src={isHovered ? hoverIconUrl : defaultIconUrl}
           alt="홈 아이콘"
           fill
+          sizes={`${size}px`}
           className="object-contain"
           priority
         />

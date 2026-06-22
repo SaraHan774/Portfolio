@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useFloatingPosition } from '@/domain';
 import { FLOATING_WINDOW_ANIMATION } from '@/core/constants';
@@ -121,16 +122,14 @@ export default function FloatingWorkWindow({ work, position, onClick }: Floating
                 }}
               />
             )}
-            <img
+            <Image
               src={thumbnailUrl}
               alt={work.title}
+              fill
+              sizes="80px"
               onLoad={() => setIsLoaded(true)}
               style={{
-                width: '100%',
-                height: 'auto',
-                maxHeight: '80px',
                 objectFit: 'contain',
-                display: 'block',
                 opacity: isLoaded ? 1 : 0,
                 transition: 'opacity 0.3s ease-in-out',
               }}

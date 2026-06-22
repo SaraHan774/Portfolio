@@ -119,6 +119,8 @@ export default function WorkModal({
   }
 
   const modalMediaItems = getMediaItems(modalWork);
+  // LCP 후보는 첫 '이미지' — 첫 미디어가 영상일 수 있으므로 영상은 건너뜀
+  const firstImageIndex = modalMediaItems.findIndex((m) => m.type === 'image');
 
   return (
     <motion.div
@@ -311,6 +313,7 @@ export default function WorkModal({
                       image={item.data}
                       alt={modalWork.title}
                       isLast={isLast}
+                      priority={index === firstImageIndex}
                     />
                   );
                 })}

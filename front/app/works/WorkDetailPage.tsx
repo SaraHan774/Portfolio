@@ -46,6 +46,17 @@ const SCROLL_CONSTANTS = {
 } as const;
 
 /**
+ * 상세 페이지 인라인 이미지의 반응형 크기 힌트.
+ * --media-width 브레이크포인트(모바일 100% / 768~1199px 60% / 데스크톱 ~50%)에 맞춰
+ * next/image가 화면 폭에 맞는 변형을 선택하도록 한다(모바일 과대 전송 방지).
+ * 줌(원본)은 ZoomableImage가 item.data.url을 직접 쓰므로 영향받지 않는다.
+ */
+const DETAIL_IMAGE_SIZES = '(max-width: 767px) 100vw, (max-width: 1199px) 60vw, 50vw';
+
+/** 인라인 본문 이미지 품질(모달 본문과 동일, 화질 보존 우선). */
+const DETAIL_IMAGE_QUALITY = 72;
+
+/**
  * Caption 내부의 작품 링크 컴포넌트
  */
 function CaptionLink({
@@ -541,6 +552,8 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
                                 width={item.data.width}
                                 height={item.data.height}
                                 priority={isFirst}
+                                sizes={DETAIL_IMAGE_SIZES}
+                                quality={DETAIL_IMAGE_QUALITY}
                                 style={{
                                   width: '100%',
                                   height: 'auto',
