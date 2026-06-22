@@ -24,7 +24,11 @@ function HomePageContent(): ReactElement {
   const searchParams = useSearchParams();
   const workId = searchParams.get('workId');
 
-  if (isLoading) {
+  // workId가 있으면 카테고리 로딩을 기다리지 않고 즉시 상세를 렌더한다.
+  // 카테고리는 레이아웃 네비용일 뿐 상세 본문/LCP 이미지와 독립적이므로,
+  // 이 게이트를 두면 상세 LCP 이미지 로딩이 카테고리 왕복 뒤로 직렬화된다.
+  // workId가 없을 때(홈)만 카테고리 로딩 스피너를 표시한다.
+  if (!workId && isLoading) {
     return <LoadingContainer size={24} />;
   }
 

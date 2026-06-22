@@ -66,8 +66,8 @@ export default function FadeInImage({
         overflow: 'hidden',
       }}
     >
-      {/* 스켈레톤 - 일정 시간 후에도 로딩 중일 때만 표시 */}
-      {!isLoaded && showSkeleton && (
+      {/* 스켈레톤 - 일정 시간 후에도 로딩 중일 때만 표시 (LCP priority 이미지는 제외) */}
+      {!priority && !isLoaded && showSkeleton && (
         <div
           className="skeleton-shimmer"
           style={{
@@ -98,8 +98,10 @@ export default function FadeInImage({
           width: '100%',
           height: '100%',
           objectFit: 'cover',
-          opacity: isLoaded ? 1 : 0,
-          transition: 'opacity 0.3s ease-in-out',
+          // LCP(priority) 이미지는 페이드 게이트 없이 즉시 표시해 paint 지연을 없앤다.
+          // 그 외 이미지는 기존 fade-in 유지.
+          opacity: priority || isLoaded ? 1 : 0,
+          transition: priority ? undefined : 'opacity 0.3s ease-in-out',
         }}
       />
     </div>
