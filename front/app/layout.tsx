@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query';
+import { queryKeys, CategoryRepository, WorkRepository } from '@/src/data';
 import { ErrorBoundary, PortfolioLayoutSimple, DebugGrid, ColorPaletteDebugger } from '@/presentation';
 import ImageZoomProvider from '@/presentation/components/layout/ImageZoomProvider';
 import { AnalyticsProvider } from '@/presentation/components/analytics/AnalyticsProvider';
@@ -13,6 +15,42 @@ import {
 } from '@/state';
 import React, { Suspense } from "react";
 import { LoadingContainer } from '@/presentation/ui';
+
+// 매 요청마다 서버에서 최신 데이터를 읽어 SSR(새 업로드 즉시 반영 보장).
+export const dynamic = 'force-dynamic';
+
+/** 서버 사전 페칭 상한(ms). 초과 시 부분 결과로 진행하고 클라이언트가 나머지를 페칭. */
+const SSR_PREFETCH_TIMEOUT_MS = 2000;
+
+/**
+ * 레이아웃에 항상 필요한 전역 데이터(카테고리 네비 + 작품 목록)를 서버에서 미리 읽어
+ * dehydrate한다. 카테고리 네비는 layout에서 렌더되므로 여기서 하이드레이션해야
+ * 초기 HTML에 콘텐츠가 담겨 JS+Firestore 왕복 없이 즉시 표시된다(CSR waterfall 단축).
+ * searchParams와 무관한 전역 데이터라 클라이언트 탐색 시 서버 왕복을 유발하지 않는다.
+ * 서버 페칭이 지연/실패해도 SSR을 막지 않도록 타임아웃을 두고, 미완료분은 클라이언트가 페칭.
+ */
+async function prefetchGlobalData() {
+  const queryClient = new QueryClient();
+  const prefetch = Promise.all([
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.categories.sentence.all(),
+      queryFn: () => CategoryRepository.getSentenceCategories(),
+    }),
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.categories.exhibition.all(),
+      queryFn: () => CategoryRepository.getExhibitionCategories(),
+    }),
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.works.published(),
+      queryFn: () => WorkRepository.getPublishedWorks(),
+    }),
+  ]);
+  await Promise.race([
+    prefetch,
+    new Promise((resolve) => setTimeout(resolve, SSR_PREFETCH_TIMEOUT_MS)),
+  ]);
+  return dehydrate(queryClient);
+}
 
 // 나눔명조(OFL)를 KS X 1001 상용 한글 2,350자 + ASCII로 직접 서브셋해 self-host.
 // next/font/google가 한글 unicode-range 청크 100여 개(=1.66MB)를 온디맨드로 받던 것을
@@ -46,11 +84,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const dehydratedState = await prefetchGlobalData();
   return (
     <html lang="ko">
       <head>
@@ -68,6 +107,7 @@ export default function RootLayout({
         <ErrorBoundary>
           <ToastProvider>
             <QueryProvider>
+              <HydrationBoundary state={dehydratedState}>
               <AnalyticsProvider>
               <CategoriesProvider>
                 <CategorySelectionProvider>
@@ -83,6 +123,7 @@ export default function RootLayout({
                 </CategorySelectionProvider>
               </CategoriesProvider>
             </AnalyticsProvider>
+              </HydrationBoundary>
           </QueryProvider>
           </ToastProvider>
         </ErrorBoundary>
