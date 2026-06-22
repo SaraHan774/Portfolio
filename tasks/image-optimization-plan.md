@@ -35,7 +35,7 @@ front는 **Vercel에 배포**되어(`vercel.json` + `next start`, `output: expor
 - [x] **Phase 0 — 계획 문서 작성**
   - `tasks/image-optimization-plan.md` 추가 (본 문서).
 
-- [ ] **Phase 1 — `next.config.ts` 이미지 옵션 강화** (설정만, 동작 무변경)
+- [x] **Phase 1 — `next.config.ts` 이미지 옵션 강화** (설정만, 동작 무변경)
   - `formats: ['image/avif', 'image/webp']` 추가 → WebP 대비 추가 20~30% 절감.
   - `deviceSizes` / `imageSizes`를 실제 브레이크포인트에 맞춰 명시 → 불필요한 대형 변형 생성 억제.
   - 기존 `remotePatterns`, `dangerouslyAllowSVG`, `unoptimized`(emulator) 그대로 유지.
