@@ -42,6 +42,7 @@ export const appConfig = {
   // 텍스트 제한
   text: {
     captionMaxLength: 1000,
+    imageCaptionMaxLength: 200,
     titleMaxLength: 200,
     descriptionMaxLength: 5000,
   },

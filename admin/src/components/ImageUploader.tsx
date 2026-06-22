@@ -1,6 +1,6 @@
 // 이미지 선택 및 관리 컴포넌트 (Storage 업로드는 부모에서 저장 시 수행)
 import { useState, useEffect, useRef } from 'react';
-import { Upload, Image, Button, Space, Card, message, Switch, Tooltip } from 'antd';
+import { Upload, Image, Button, Space, Card, message, Switch, Tooltip, Input, Modal, Typography } from 'antd';
 import { DragOutlined, CompressOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
 import {
@@ -10,8 +10,10 @@ import {
   UpOutlined,
   DownOutlined,
   BulbOutlined,
+  EditOutlined,
 } from '@ant-design/icons';
 import type { WorkImage } from '../core/types';
+import { appConfig } from '../core/constants/config';
 import './ImageUploader.css';
 
 const { Dragger } = Upload;
@@ -45,6 +47,9 @@ const ImageUploader = ({
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [compressOriginal, setCompressOriginal] = useState(true);
+  // 캡션 편집 모달 상태 (편집 중인 이미지 + 임시 입력값)
+  const [captionEditing, setCaptionEditing] = useState<{ imageId: string; index: number } | null>(null);
+  const [captionDraft, setCaptionDraft] = useState('');
 
   // value가 변경되면 images도 업데이트
   useEffect(() => {
@@ -151,6 +156,30 @@ const ImageUploader = ({
     }
 
     message.success('이미지가 목록에서 제거되었습니다.');
+  };
+
+  // 이미지 캡션 변경 (상세 화면에서 이미지 아래 표시될 텍스트)
+  const handleCaptionChange = (imageId: string, caption: string) => {
+    const newImages = images.map((img) =>
+      img.id === imageId ? { ...img, caption } : img
+    );
+    setImages(newImages);
+    onChange?.(newImages);
+  };
+
+  const openCaptionEditor = (imageId: string, index: number) => {
+    const target = images.find((img) => img.id === imageId);
+    setCaptionDraft(target?.caption ?? '');
+    setCaptionEditing({ imageId, index });
+  };
+
+  const closeCaptionEditor = () => setCaptionEditing(null);
+
+  const submitCaptionEditor = () => {
+    if (captionEditing) {
+      handleCaptionChange(captionEditing.imageId, captionDraft.trim());
+    }
+    closeCaptionEditor();
   };
 
   // 이미지 순서 변경 (위로)
@@ -320,6 +349,29 @@ const ImageUploader = ({
                   style={{ objectFit: 'cover', borderRadius: '4px' }}
                 />
               </div>
+              <div className="image-caption-area">
+                {image.caption ? (
+                  <Typography.Paragraph
+                    className="image-caption-preview"
+                    ellipsis={{ rows: 2, tooltip: image.caption }}
+                  >
+                    {image.caption}
+                  </Typography.Paragraph>
+                ) : (
+                  <span className="image-caption-empty">캡션 없음</span>
+                )}
+                <Button
+                  size="small"
+                  icon={<EditOutlined />}
+                  block
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openCaptionEditor(image.id, index);
+                  }}
+                >
+                  캡션 편집
+                </Button>
+              </div>
               <div className="image-actions">
                 <Space direction="vertical" size="small" style={{ width: '100%' }}>
                   <Space size="small" style={{ width: '100%' }}>
@@ -366,6 +418,37 @@ const ImageUploader = ({
           <BulbOutlined /> 위/아래 버튼으로 순서를 변경할 수 있습니다
         </div>
       )}
+
+      {/* 캡션 편집 모달 */}
+      <Modal
+        title={captionEditing ? `이미지 #${captionEditing.index + 1} 캡션` : '캡션'}
+        open={captionEditing !== null}
+        onOk={submitCaptionEditor}
+        onCancel={closeCaptionEditor}
+        okText="확인"
+        cancelText="취소"
+        destroyOnHidden
+      >
+        <Input.TextArea
+          autoFocus
+          placeholder="사진 캡션 (선택, 예: 사진_XXX)"
+          maxLength={appConfig.text.imageCaptionMaxLength}
+          showCount
+          autoSize={{ minRows: 3, maxRows: 8 }}
+          value={captionDraft}
+          onChange={(e) => setCaptionDraft(e.target.value)}
+          onPressEnter={(e) => {
+            // Enter=저장, Shift+Enter=줄바꿈
+            if (!e.shiftKey) {
+              e.preventDefault();
+              submitCaptionEditor();
+            }
+          }}
+        />
+        <p style={{ marginTop: 8, marginBottom: 0, color: '#8c8c8c', fontSize: 12 }}>
+          상세 화면에서 이미지 아래 우측에 표시됩니다. 비워두면 표시되지 않습니다.
+        </p>
+      </Modal>
     </div>
   );
 };

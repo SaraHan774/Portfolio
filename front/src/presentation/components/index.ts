@@ -18,4 +18,5 @@ export { default as FloatingWorkWindow } from './work/FloatingWorkWindow';
 export { default as WorkModal } from './work/WorkModal';
 export { default as WorkModalMobile } from './work/WorkModalMobile';
 export { default as CaptionWithBoundary } from './work/CaptionWithBoundary';
+export { default as ImageCaption } from './work/ImageCaption';
 export { default as MediaTimeline } from './work/MediaTimeline';
