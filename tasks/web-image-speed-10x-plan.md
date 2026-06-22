@@ -78,7 +78,7 @@
 - [x] **Phase 6 — `next.config.ts` 캐시·품질 강화** (Tier A-1, A-2)
   - `minimumCacheTTL` 명시(31일). 새 업로드=새 UUID URL이라 즉시 반영 안전(§0-1).
   - `images.qualities`에 사용할 값 등록(Next 16) + `FadeInImage`/`ModalImage`에 `quality` prop 추가, 모달 본문에 **보수적 72** 적용. **줌(`ImageZoomOverlay`) 제외 — 원본 유지.**
-- [ ] **Phase 7 — preconnect/dns-prefetch** (Tier A-3)
+- [x] **Phase 7 — preconnect/dns-prefetch** (Tier A-3)
   - `layout.tsx`에 `firebasestorage.googleapis.com` preconnect + dns-prefetch (줌·YouTube 원본 직접 로드 가속).
 - [ ] **Phase 8 — 메인 리스트/아이콘 우선순위·힌트** (Tier A-4, A-5)
   - `WorkTitleButton` 홈 첫 N개 `priority`, `HomeIcon` `sizes="48px"`.
