@@ -80,8 +80,8 @@
   - `images.qualities`에 사용할 값 등록(Next 16) + `FadeInImage`/`ModalImage`에 `quality` prop 추가, 모달 본문에 **보수적 72** 적용. **줌(`ImageZoomOverlay`) 제외 — 원본 유지.**
 - [x] **Phase 7 — preconnect/dns-prefetch** (Tier A-3)
   - `layout.tsx`에 `firebasestorage.googleapis.com` preconnect + dns-prefetch (줌·YouTube 원본 직접 로드 가속).
-- [ ] **Phase 8 — 메인 리스트/아이콘 우선순위·힌트** (Tier A-4, A-5)
-  - `WorkTitleButton` 홈 첫 N개 `priority`, `HomeIcon` `sizes="48px"`.
+- [x] **Phase 8 — 메인 리스트/아이콘 우선순위·힌트** (Tier A-4, A-5)
+  - `WorkTitleButton` 홈 첫 4개 `priority`(`WorkListScrollerFlex`에서 index 기준), `HomeIcon` `sizes={size}px`.
 - [ ] **Phase 9 — `YouTubeEmbed` 썸네일 `next/image`화** (Tier B-7)
   - **`ImageZoomOverlay`는 제외**(원본 보존, §0-3). YouTube 썸네일만 `next/image`(`loading="lazy"`).
 - [ ] **Phase 10 — 인접 이미지 prefetch** (Tier B-8)

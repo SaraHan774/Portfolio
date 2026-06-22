@@ -14,6 +14,8 @@ interface WorkTitleButtonProps {
   onClick: () => void;
   showThumbnail?: boolean;
   anyWorkHovered?: boolean;
+  /** 우선 로딩 여부 (홈 첫 화면에 보이는 썸네일에만 사용, LCP 개선) */
+  priority?: boolean;
 }
 
 /**
@@ -31,6 +33,7 @@ export default function WorkTitleButton({
   onClick,
   showThumbnail = false,
   anyWorkHovered = false,
+  priority = false,
 }: WorkTitleButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -204,6 +207,7 @@ export default function WorkTitleButton({
               alt={work.title}
               fill
               sizes="80px"
+              priority={priority}
               style={{ objectFit: 'cover' }}
               onLoad={handleImageLoad}
               onError={handleImageError}
