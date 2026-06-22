@@ -46,6 +46,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
+      <head>
+        {/* 이미지 호스트 사전 연결: 줌 원본·YouTube 썸네일 등 외부 직접 로드의 DNS+TLS 지연 제거.
+            (next/image 최적화 이미지는 same-origin이라 별도 불필요) */}
+        <link rel="preconnect" href="https://firebasestorage.googleapis.com" />
+        <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com" />
+        <link rel="preconnect" href="https://img.youtube.com" />
+        <link rel="dns-prefetch" href="https://img.youtube.com" />
+      </head>
       <body
         className={`${nanumMyeongjo.variable} antialiased`}
         style={{ fontFamily: 'var(--font-nanum-myeongjo)' }}

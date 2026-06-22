@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
   loadYouTubeAPI,
@@ -30,6 +31,8 @@ export default function YouTubeEmbed({ video, isLast = false }: YouTubeEmbedProp
   const [isApiReady, setIsApiReady] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // maxresdefault 미존재 영상은 onError 시 hqdefault로 폴백
+  const [useHqThumbnail, setUseHqThumbnail] = useState(false);
 
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
@@ -371,21 +374,14 @@ export default function YouTubeEmbed({ video, isLast = false }: YouTubeEmbedProp
           </div>
         </>
       ) : (
-        // 로딩 전 플레이스홀더 (썸네일)
-        <img
-          src={`https://img.youtube.com/vi/${pureVideoId}/maxresdefault.jpg`}
+        // 로딩 전 플레이스홀더 (썸네일) — next/image로 최적화·AVIF 변환·캐시 적용
+        <Image
+          src={`https://img.youtube.com/vi/${pureVideoId}/${useHqThumbnail ? 'hqdefault' : 'maxresdefault'}.jpg`}
           alt={video.title || 'YouTube 영상'}
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${pureVideoId}/hqdefault.jpg`;
-          }}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-          }}
+          fill
+          sizes="(max-width: 768px) 100vw, 60vw"
+          onError={() => setUseHqThumbnail(true)}
+          style={{ objectFit: 'cover' }}
         />
       )}
     </div>

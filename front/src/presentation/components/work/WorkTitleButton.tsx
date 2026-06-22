@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { useThumbnailUrl, useClickAnimationTracking } from '@/domain';
+import { useThumbnailUrl, useClickAnimationTracking, usePrefetchWork } from '@/domain';
 import { AnimatedCharacterText, DotIndicator, presets } from '@/presentation/ui';
 import ThumbnailSkeleton from './ThumbnailSkeleton';
 import type { Work } from '@/types';
@@ -14,6 +14,8 @@ interface WorkTitleButtonProps {
   onClick: () => void;
   showThumbnail?: boolean;
   anyWorkHovered?: boolean;
+  /** 우선 로딩 여부 (홈 첫 화면에 보이는 썸네일에만 사용, LCP 개선) */
+  priority?: boolean;
 }
 
 /**
@@ -31,6 +33,7 @@ export default function WorkTitleButton({
   onClick,
   showThumbnail = false,
   anyWorkHovered = false,
+  priority = false,
 }: WorkTitleButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -48,6 +51,9 @@ export default function WorkTitleButton({
   // Use hook for thumbnail URL (includes YouTube fallback)
   const thumbnailUrl = useThumbnailUrl(work);
   const hasThumbnail = !!thumbnailUrl;
+
+  // 호버 시 상세 데이터를 미리 가져와 모달 진입 시 즉시 렌더(LCP 이미지 조기 로드)
+  const prefetchWork = usePrefetchWork();
 
   // Reset loading state when thumbnail URL changes
   useEffect(() => {
@@ -118,7 +124,10 @@ export default function WorkTitleButton({
   return (
     <button
       onClick={handleClick}
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseEnter={() => {
+        setIsHovered(true);
+        prefetchWork(work.id);
+      }}
       onMouseLeave={() => setIsHovered(false)}
       style={{
         background: 'none',
@@ -204,6 +213,7 @@ export default function WorkTitleButton({
               alt={work.title}
               fill
               sizes="80px"
+              priority={priority}
               style={{ objectFit: 'cover' }}
               onLoad={handleImageLoad}
               onError={handleImageError}

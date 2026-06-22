@@ -6,6 +6,9 @@ import {useWorkListScroll} from '@/domain';
 import type {Work} from '@/types';
 import WorkTitleButton from './WorkTitleButton';
 
+/** 홈 첫 화면에 우선 로딩할 썸네일 개수 (LCP 후보 보호, 과도한 priority로 인한 대역폭 경쟁 방지) */
+const PRIORITY_THUMBNAIL_COUNT = 4;
+
 interface WorkListScrollerProps {
     works: Work[];
     selectedWorkId: string | null;
@@ -223,7 +226,7 @@ export default function WorkListScroller({
                         paddingBottom: '4px',
                     }}
                 >
-                    {works.map((w) => (
+                    {works.map((w, index) => (
                         <WorkTitleButton
                             key={w.id}
                             work={w}
@@ -231,6 +234,8 @@ export default function WorkListScroller({
                             onClick={() => onWorkSelect(w.id)}
                             showThumbnail={showThumbnail}
                             anyWorkHovered={anyWorkHovered}
+                            // 홈에서 첫 화면에 보이는 썸네일만 우선 로딩(LCP). 상세페이지(hover 노출)는 제외
+                            priority={showThumbnail && index < PRIORITY_THUMBNAIL_COUNT}
                         />
                     ))}
                 </div>
