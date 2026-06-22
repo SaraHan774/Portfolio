@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { useThumbnailUrl, useClickAnimationTracking } from '@/domain';
+import { useThumbnailUrl, useClickAnimationTracking, usePrefetchWork } from '@/domain';
 import { AnimatedCharacterText, DotIndicator, presets } from '@/presentation/ui';
 import ThumbnailSkeleton from './ThumbnailSkeleton';
 import type { Work } from '@/types';
@@ -51,6 +51,9 @@ export default function WorkTitleButton({
   // Use hook for thumbnail URL (includes YouTube fallback)
   const thumbnailUrl = useThumbnailUrl(work);
   const hasThumbnail = !!thumbnailUrl;
+
+  // 호버 시 상세 데이터를 미리 가져와 모달 진입 시 즉시 렌더(LCP 이미지 조기 로드)
+  const prefetchWork = usePrefetchWork();
 
   // Reset loading state when thumbnail URL changes
   useEffect(() => {
@@ -121,7 +124,10 @@ export default function WorkTitleButton({
   return (
     <button
       onClick={handleClick}
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseEnter={() => {
+        setIsHovered(true);
+        prefetchWork(work.id);
+      }}
       onMouseLeave={() => setIsHovered(false)}
       style={{
         background: 'none',

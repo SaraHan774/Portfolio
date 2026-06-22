@@ -84,7 +84,9 @@
   - `WorkTitleButton` 홈 첫 4개 `priority`(`WorkListScrollerFlex`에서 index 기준), `HomeIcon` `sizes={size}px`.
 - [x] **Phase 9 — `YouTubeEmbed` 썸네일 `next/image`화** (Tier B-7)
   - **`ImageZoomOverlay`는 제외**(원본 보존, §0-3). YouTube 썸네일만 `next/image`(`fill`+`sizes`), maxres→hq 폴백은 `onError` state로 전환.
-- [ ] **Phase 10 — 인접 이미지 prefetch** (Tier B-8)
+- [x] **Phase 10 — 호버 시 상세 데이터 prefetch** (Tier B-8)
+  - `usePrefetchWork` 훅 추가, `WorkTitleButton` 호버 시 `useWork` 데이터 prefetch → 모달 즉시 렌더(스피너 제거)로 LCP 이미지 조기 로드.
+  - 이미지 바이트 prefetch는 `next/image` 내부 URL 의존성·대역폭 역효과 위험으로 **제외**(Phase 11 측정 후 필요 시 도입).
 - [ ] **Phase 11 — 측정·검증**
   - Lighthouse(모바일/데스크톱) LCP, Network 탭 이미지 전송량·요청수, 옵티마이저 캐시 `x-vercel-cache` HIT/MISS 비교(전/후).
 
