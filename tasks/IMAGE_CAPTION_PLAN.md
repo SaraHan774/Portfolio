@@ -2,14 +2,14 @@
 
 > 작성일: 2026-06-22 (코드 검증 후 갱신)
 > 브랜치: `feature-image-caption`
-> 스펙 출처: 클라이언트(나혜빈) 요청 — `KakaoTalk_Photo_2026-06-22-22-20-53.jpeg`
+> 스펙 출처: 클라이언트(XXX) 요청 — `KakaoTalk_Photo_2026-06-22-22-20-53.jpeg`
 
 ---
 
 ## 1. 목표 (Goal)
 
 **카테고리(키워드)를 클릭해 진입하는 작품 상세 화면**에서, 세로로 나열되는 **각 이미지 아래에 한 줄짜리 캡션 텍스트**를 표시할 수 있게 한다.
-예: `사진_나혜빈` 같은 사진 출처/설명 문구.
+예: `사진_XXX` 같은 사진 출처/설명 문구.
 
 ### 스펙 원문 요약
 
@@ -132,7 +132,7 @@
 
 ### Phase 2 — Admin 입력 UI
 - [ ] `admin/src/components/ImageUploader.tsx`: 각 이미지 카드(`:323` 액션 영역 부근)에 단일 라인 `Input` 추가
-  - placeholder 예: `"사진 캡션 (선택, 예: 사진_나혜빈)"`, `maxLength={200}`
+  - placeholder 예: `"사진 캡션 (선택, 예: 사진_XXX)"`, `maxLength={200}`
   - `onChange` → 해당 `images[index]`의 `caption` 갱신 후 `onChange(newImages)` 호출 (PendingImage 경로 아님)
 - [ ] `admin/src/pages/WorkForm.tsx`: 변경 감지(`hasChanges`, `:111-138`)에 이미지 캡션 변경 반영
 

@@ -433,7 +433,7 @@ const ImageUploader = ({
       >
         <Input.TextArea
           autoFocus
-          placeholder="사진 캡션 (선택, 예: 사진_나혜빈)"
+          placeholder="사진 캡션 (선택, 예: 사진_XXX)"
           maxLength={appConfig.text.imageCaptionMaxLength}
           showCount
           autoSize={{ minRows: 3, maxRows: 8 }}

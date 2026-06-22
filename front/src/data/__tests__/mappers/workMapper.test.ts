@@ -69,7 +69,7 @@ describe('workMapper', () => {
       const firestoreData = {
         title: 'Test Work',
         images: [
-          { id: 'img-1', url: 'a.jpg', thumbnailUrl: 'a-t.jpg', order: 0, width: 800, height: 600, caption: '사진_나혜빈' },
+          { id: 'img-1', url: 'a.jpg', thumbnailUrl: 'a-t.jpg', order: 0, width: 800, height: 600, caption: '사진_XXX' },
           { id: 'img-2', url: 'b.jpg', thumbnailUrl: 'b-t.jpg', order: 1, width: 800, height: 600 },
         ],
         createdAt: Timestamp.fromDate(new Date()),
@@ -78,7 +78,7 @@ describe('workMapper', () => {
 
       const result = mapFirestoreToWork('work-caption', firestoreData);
 
-      expect(result.images[0].caption).toBe('사진_나혜빈');
+      expect(result.images[0].caption).toBe('사진_XXX');
       expect(result.images[1].caption).toBeUndefined();
     });
 
