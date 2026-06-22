@@ -50,7 +50,7 @@ front는 **Vercel에 배포**되어(`vercel.json` + `next start`, `output: expor
   - `ModalImage`에 `priority?: boolean` prop 추가 → `FadeInImage`로 전달.
   - `WorkModal` / `WorkModalMobile`에서 미디어 배열 **첫 항목(index 0)** 에만 `priority` 부여, 나머지는 기존 lazy 유지.
 
-- [ ] **Phase 4 — `FloatingWorkWindow` `<img>` → `next/image`**
+- [x] **Phase 4 — `FloatingWorkWindow` `<img>` → `next/image`**
   - 80×80 컨테이너에 `next/image`(`fill` + `sizes="80px"`) 사용 → Next 최적화/포맷 변환 적용.
   - 기존 스켈레톤·fade-in·`objectFit: contain` 동작 유지.
 
