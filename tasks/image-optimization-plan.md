@@ -46,7 +46,7 @@ front는 **Vercel에 배포**되어(`vercel.json` + `next start`, `output: expor
   - 모바일은 viewport 폭 기준(~640~750px), 데스크톱은 이미지 컬럼 폭 기준 변형을 수신.
   - 확대(zoom)는 별도 `ImageZoomOverlay`가 원본을 사용하므로 디테일 손실 없음.
 
-- [ ] **Phase 3 — LCP 이미지 `priority` 적용**
+- [x] **Phase 3 — LCP 이미지 `priority` 적용**
   - `ModalImage`에 `priority?: boolean` prop 추가 → `FadeInImage`로 전달.
   - `WorkModal` / `WorkModalMobile`에서 미디어 배열 **첫 항목(index 0)** 에만 `priority` 부여, 나머지는 기존 lazy 유지.
 

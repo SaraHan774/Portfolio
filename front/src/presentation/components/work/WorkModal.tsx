@@ -311,6 +311,7 @@ export default function WorkModal({
                       image={item.data}
                       alt={modalWork.title}
                       isLast={isLast}
+                      priority={index === 0}
                     />
                   );
                 })}

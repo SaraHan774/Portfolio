@@ -307,6 +307,7 @@ export default function WorkModalMobile({
                       alt={modalWork.title}
                       isLast={isLast}
                       marginBottom='var(--space-2)'
+                      priority={index === 0}
                     />
                   );
                 })}

@@ -23,6 +23,8 @@ interface ModalImageProps {
    * 모바일은 viewport 전체 폭, 데스크톱은 이미지 컬럼 폭(~60vw) 기준 변형을 수신
    */
   sizes?: string;
+  /** 우선 로딩 여부 (모달 첫 이미지 등 LCP 후보에 사용) */
+  priority?: boolean;
 }
 
 const DEFAULT_MODAL_IMAGE_SIZES = '(max-width: 768px) 100vw, 60vw';
@@ -33,6 +35,7 @@ export default function ModalImage({
   isLast,
   marginBottom = 'var(--space-8)',
   sizes = DEFAULT_MODAL_IMAGE_SIZES,
+  priority = false,
 }: ModalImageProps) {
   return (
     <div
@@ -57,6 +60,7 @@ export default function ModalImage({
           width={image.width}
           height={image.height}
           sizes={sizes}
+          priority={priority}
           style={{
             width: '100%',
             height: 'auto',
