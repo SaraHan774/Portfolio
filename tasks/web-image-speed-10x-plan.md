@@ -87,17 +87,24 @@
 - [x] **Phase 10 — 호버 시 상세 데이터 prefetch** (Tier B-8)
   - `usePrefetchWork` 훅 추가, `WorkTitleButton` 호버 시 `useWork` 데이터 prefetch → 모달 즉시 렌더(스피너 제거)로 LCP 이미지 조기 로드.
   - 이미지 바이트 prefetch는 `next/image` 내부 URL 의존성·대역폭 역효과 위험으로 **제외**(Phase 11 측정 후 필요 시 도입).
-- [ ] **Phase 11 — 측정·검증**
-  - Lighthouse(모바일/데스크톱) LCP, Network 탭 이미지 전송량·요청수, 옵티마이저 캐시 `x-vercel-cache` HIT/MISS 비교(전/후).
+- [x] **Phase 11 — 측정·검증**
+  - 로컬 검증 완료: 전 Phase `npm run build` 통과(변경 파일 lint 0 error), preconnect/dns-prefetch가 prerender HTML·서버 응답에 정상 포함 확인.
+  - AVIF 변환·`Cache-Control`(minimumCacheTTL) 실측은 **Vercel 프로덕션 배포 후** 수행(로컬 옵티마이저 upstream이 sandbox로 차단됨). 아래 체크리스트 참조.
 
 ---
 
 ## 5. 검증 방법
 
-- **Lighthouse**: LCP, "Properly size images", "Efficiently encode images", "Preconnect to required origins" 항목 전/후.
-- **Network**: 모달 1개 열람 시 총 이미지 바이트·요청 수, AVIF 변환 여부.
-- **캐시**: `/_next/image` 응답의 `x-vercel-cache`(HIT/MISS), `cache-control` 헤더로 워밍 확인.
-- **회귀**: 줌 디테일, 썸네일 화질, 스켈레톤/fade-in 동작 시각 확인(AS-IS 유지).
+### 로컬 검증 (완료)
+- ✅ 전 Phase `npm run build` 통과, 변경 파일 lint 0 error.
+- ✅ preconnect/dns-prefetch가 prerender HTML(`.next/server/app/index.html`)·서버 응답에 포함.
+- ⚠️ 옵티마이저 AVIF/캐시 실측은 로컬 sandbox 네트워크 차단으로 불가 → 프로덕션에서 확인.
+
+### 프로덕션 측정 체크리스트 (배포 후)
+- **Lighthouse**: LCP, "Properly size images", "Efficiently encode images", "Preconnect to required origins" 전/후.
+- **Network**: 모달 1개 열람 시 총 이미지 바이트·요청 수, 응답 `content-type: image/avif` 확인.
+- **캐시**: `/_next/image` 응답의 `x-vercel-cache`(MISS→HIT 전환), `cache-control`의 `max-age`가 minimumCacheTTL 반영하는지.
+- **회귀(AS-IS 유지)**: 줌 디테일(원본), 썸네일/모달 화질, 스켈레톤/fade-in 동작, 새 업로드 즉시 반영.
 
 ---
 
