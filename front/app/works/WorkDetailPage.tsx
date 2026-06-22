@@ -22,6 +22,7 @@ import {
   WorkModal,
   WorkModalMobile,
   CaptionWithBoundary,
+  ImageCaption,
   MediaTimeline,
   AnimatedCharacterText,
   ZoomableImage,
@@ -561,27 +562,8 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
                               />
                             </ZoomableImage>
 
-                            {/* 이미지 단위 캡션 — 기존 이미지 간격 안에 absolute로 표시(간격 유지), 빈 값이면 미출력 */}
-                            {item.data.caption && (
-                              <p
-                                style={{
-                                  position: 'absolute',
-                                  top: '100%',
-                                  right: 0,
-                                  marginTop: '13px',
-                                  marginBottom: 0,
-                                  maxWidth: '100%',
-                                  fontSize: 'var(--font-size-xs)',
-                                  color: 'var(--color-gray-700)',
-                                  lineHeight: 'var(--line-height-normal)',
-                                  textAlign: 'right',
-                                  whiteSpace: 'pre-wrap',
-                                  pointerEvents: 'none',
-                                }}
-                              >
-                                {item.data.caption}
-                              </p>
-                            )}
+                            {/* 이미지 단위 캡션 (간격 유지·우측 하단, 빈 값이면 미출력) */}
+                            <ImageCaption caption={item.data.caption} />
                           </div>
                         );
                       })}

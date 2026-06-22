@@ -47,6 +47,9 @@ const ImageUploader = ({
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [compressOriginal, setCompressOriginal] = useState(true);
+  // 캡션 편집 모달 상태 (편집 중인 이미지 + 임시 입력값)
+  const [captionEditing, setCaptionEditing] = useState<{ imageId: string; index: number } | null>(null);
+  const [captionDraft, setCaptionDraft] = useState('');
 
   // value가 변경되면 images도 업데이트
   useEffect(() => {
@@ -163,10 +166,6 @@ const ImageUploader = ({
     setImages(newImages);
     onChange?.(newImages);
   };
-
-  // 캡션 편집 모달 상태 (편집 중인 이미지 + 임시 입력값)
-  const [captionEditing, setCaptionEditing] = useState<{ imageId: string; index: number } | null>(null);
-  const [captionDraft, setCaptionDraft] = useState('');
 
   const openCaptionEditor = (imageId: string, index: number) => {
     const target = images.find((img) => img.id === imageId);
@@ -355,7 +354,6 @@ const ImageUploader = ({
                   <Typography.Paragraph
                     className="image-caption-preview"
                     ellipsis={{ rows: 2, tooltip: image.caption }}
-                    title={image.caption}
                   >
                     {image.caption}
                   </Typography.Paragraph>
