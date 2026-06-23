@@ -23,6 +23,13 @@ interface FadeInImageProps {
   sizes?: string;
   /** 이미지 품질 (next/image quality). 미지정 시 Next 기본값(75) */
   quality?: number;
+  /**
+   * LQIP 블러 플레이스홀더 (base64 data URL).
+   * 제공되면 next/image `placeholder="blur"`로 첫 형상을 즉시 표시하고,
+   * 커스텀 스켈레톤/페이드 게이트는 비활성화한다.
+   * 없으면 기존 동작(스켈레톤 + fade) 유지.
+   */
+  blurDataURL?: string;
   /** 추가 스타일 */
   style?: React.CSSProperties;
 }
@@ -38,15 +45,20 @@ export default function FadeInImage({
   priority = false,
   sizes,
   quality,
+  blurDataURL,
   style = {},
 }: FadeInImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(false);
   const aspectRatio = height / width;
 
-  // 일정 시간 후에도 로딩 중이면 스켈레톤 표시
+  // LQIP 블러가 있으면 next/image가 자체 블러로 첫 형상을 즉시 표시하므로
+  // 커스텀 스켈레톤·페이드 게이트는 사용하지 않는다.
+  const hasBlur = Boolean(blurDataURL);
+
+  // 일정 시간 후에도 로딩 중이면 스켈레톤 표시 (블러 미사용 시에만)
   useEffect(() => {
-    if (isLoaded) return;
+    if (hasBlur || isLoaded) return;
 
     const timer = setTimeout(() => {
       if (!isLoaded) {
@@ -55,7 +67,7 @@ export default function FadeInImage({
     }, SKELETON_DELAY_MS);
 
     return () => clearTimeout(timer);
-  }, [isLoaded]);
+  }, [hasBlur, isLoaded]);
 
   return (
     <div
@@ -66,8 +78,8 @@ export default function FadeInImage({
         overflow: 'hidden',
       }}
     >
-      {/* 스켈레톤 - 일정 시간 후에도 로딩 중일 때만 표시 */}
-      {!isLoaded && showSkeleton && (
+      {/* 스켈레톤 - 블러 미사용 + 일정 시간 후에도 로딩 중일 때만 표시 */}
+      {!hasBlur && !isLoaded && showSkeleton && (
         <div
           className="skeleton-shimmer"
           style={{
@@ -90,6 +102,7 @@ export default function FadeInImage({
         priority={priority}
         sizes={sizes}
         quality={quality}
+        {...(hasBlur ? { placeholder: 'blur' as const, blurDataURL } : {})}
         onLoad={() => setIsLoaded(true)}
         style={{
           position: 'absolute',
@@ -98,10 +111,11 @@ export default function FadeInImage({
           width: '100%',
           height: '100%',
           objectFit: 'cover',
-          // LCP(priority) 이미지는 페이드 게이트 없이 즉시 표시해 paint 지연을 없앤다.
+          // 블러(LQIP) 사용 시: next/image가 자체 블러로 즉시 첫 형상을 그리므로 페이드 게이트 없음.
+          // LCP(priority) 이미지도 페이드 게이트 없이 즉시 표시.
           // 그 외 이미지는 기존 fade-in 유지.
-          opacity: priority || isLoaded ? 1 : 0,
-          transition: priority ? undefined : 'opacity 0.3s ease-in-out',
+          opacity: hasBlur || priority || isLoaded ? 1 : 0,
+          transition: hasBlur || priority ? undefined : 'opacity 0.3s ease-in-out',
         }}
       />
     </div>

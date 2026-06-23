@@ -12,13 +12,14 @@ const tempImage = (id: string, caption?: string): WorkImage => ({
   ...(caption !== undefined ? { caption } : {}),
 });
 
-const uploadedImage = (id: string): WorkImage => ({
+const uploadedImage = (id: string, blurDataURL?: string): WorkImage => ({
   id,
   url: `https://cdn/${id}.jpg`,
   thumbnailUrl: `https://cdn/${id}-t.jpg`,
   order: 1,
   width: 800,
   height: 600,
+  ...(blurDataURL !== undefined ? { blurDataURL } : {}),
 });
 
 describe('mergeUploadedImages', () => {
@@ -62,6 +63,18 @@ describe('mergeUploadedImages', () => {
     expect(images).toHaveLength(1);
     expect(images[0].caption).toBe('A');
     expect(images[0].order).toBe(1);
+  });
+
+  it('업로드 결과의 blurDataURL(LQIP)이 병합 후에도 보존된다', () => {
+    const temp = tempImage('pending-1', 'cap');
+    const real = uploadedImage('real-1', 'data:image/webp;base64,AAAA');
+    const uploadedMap = new Map([['pending-1', real]]);
+
+    const { images } = mergeUploadedImages([temp], uploadedMap, new Set(), 'pending-1');
+
+    expect(images[0].blurDataURL).toBe('data:image/webp;base64,AAAA');
+    // caption도 동시에 승계되는지 회귀 확인
+    expect(images[0].caption).toBe('cap');
   });
 
   it('썸네일이 temp였다면 실제 ID로 교체된다', () => {

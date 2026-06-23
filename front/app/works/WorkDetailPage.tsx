@@ -555,6 +555,7 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
                                 priority={isFirst}
                                 sizes={DETAIL_IMAGE_SIZES}
                                 quality={DETAIL_IMAGE_QUALITY}
+                                blurDataURL={item.data.blurDataURL}
                                 style={{
                                   width: '100%',
                                   height: 'auto',

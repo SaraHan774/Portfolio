@@ -71,6 +71,7 @@ export default function ModalImage({
           sizes={sizes}
           priority={priority}
           quality={quality}
+          blurDataURL={image.blurDataURL}
           style={{
             width: '100%',
             height: 'auto',
