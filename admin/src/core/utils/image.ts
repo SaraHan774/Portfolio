@@ -21,6 +21,11 @@ export interface ProcessImageResult {
   thumbnail: Blob;
   medium?: Blob;
   original?: Blob;
+  /**
+   * LQIP 블러 플레이스홀더 (base64 data URL, 가로 ~20px).
+   * 생성 실패 시 빈 문자열.
+   */
+  blurDataURL: string;
 }
 
 /** Default allowed image MIME types */
@@ -190,6 +195,57 @@ const canvasToBlob = (
   });
 };
 
+/** LQIP 블러 플레이스홀더 가로 기준(px) */
+const LQIP_WIDTH = 20;
+/** LQIP data URL 길이 상한 — Firestore 인라인 저장 부담 방지 (~2KB) */
+const LQIP_MAX_DATAURL_LENGTH = 2048;
+/** 상한 초과 시 재시도할 (가로, 품질) 조합 */
+const LQIP_FALLBACK_STEPS: ReadonlyArray<{ width: number; quality: number }> = [
+  { width: 16, quality: 0.4 },
+  { width: 12, quality: 0.3 },
+];
+
+/**
+ * LQIP 블러 플레이스홀더(base64 data URL)를 생성한다.
+ * - 가로 ~20px(비율 유지)로 축소 후 WebP(미지원 시 JPEG)로 인코딩.
+ * - data URL 길이가 상한을 초과하면 가로·품질을 낮춰 재시도.
+ * - 끝까지 상한을 못 맞추거나 오류가 나면 빈 문자열 반환(graceful, throw 금지).
+ */
+const generateBlurDataURL = (img: HTMLImageElement): string => {
+  const mimeType = supportsWebP() ? 'image/webp' : 'image/jpeg';
+
+  const encode = (targetWidth: number, quality: number): string => {
+    const srcWidth = img.width || targetWidth;
+    const srcHeight = img.height || targetWidth;
+    const ratio = targetWidth / srcWidth;
+    const width = Math.max(1, Math.round(srcWidth * ratio));
+    const height = Math.max(1, Math.round(srcHeight * ratio));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+    ctx.drawImage(img, 0, 0, width, height);
+    return canvas.toDataURL(mimeType, quality);
+  };
+
+  try {
+    let dataURL = encode(LQIP_WIDTH, 0.5);
+    if (dataURL.length <= LQIP_MAX_DATAURL_LENGTH) return dataURL;
+
+    for (const step of LQIP_FALLBACK_STEPS) {
+      dataURL = encode(step.width, step.quality);
+      if (dataURL.length <= LQIP_MAX_DATAURL_LENGTH) return dataURL;
+    }
+
+    // 끝까지 상한을 못 맞추면 생성 실패로 처리
+    return '';
+  } catch {
+    return '';
+  }
+};
+
 /**
  * 이미지를 한 번만 디코딩하여 dimensions + 여러 변형을 한꺼번에 생성
  */
@@ -243,8 +299,11 @@ export const processImage = (
           }
         }
 
+        // LQIP 블러 플레이스홀더 생성 (실패해도 빈 문자열로 graceful)
+        const blurDataURL = generateBlurDataURL(img);
+
         cleanup();
-        resolve({ dimensions, thumbnail, medium, original });
+        resolve({ dimensions, thumbnail, medium, original, blurDataURL });
       } catch (error) {
         cleanup();
         reject(error instanceof Error ? error : new Error('이미지 처리 중 오류 발생'));
