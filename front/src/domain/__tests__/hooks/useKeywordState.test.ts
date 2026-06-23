@@ -41,7 +41,9 @@ describe('useKeywordState', () => {
     expect(result.current).toBe('hover');
   });
 
-  it('should return "disabled" when keyword has no common works with selected category', () => {
+  it('should return "clickable" even when keyword has no common works with selected category', () => {
+    // 'disabled' 상태는 내비게이션 버그(다른 카테고리 선택 후 첫 전시 카테고리가
+    // 클릭 불가가 되는 문제) 때문에 의도적으로 제거됨. 이제 항상 'clickable' 반환.
     const keyword = createMockKeyword({
       workOrders: [{ workId: 'work-1', order: 1 }],
     });
@@ -55,7 +57,7 @@ describe('useKeywordState', () => {
       })
     );
 
-    expect(result.current).toBe('disabled');
+    expect(result.current).toBe('clickable');
   });
 
   it('should return "clickable" when keyword has common works with selected category', () => {

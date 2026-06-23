@@ -11,45 +11,57 @@ const STORAGE_KEY = 'debug-color-palette';
  *
  * CSS 변수를 실시간으로 조절하고 로컬스토리지에 저장합니다.
  */
+/** 기본 색상 맵 생성 */
+function buildDefaultColors(): Record<string, string> {
+  const defaultColors: Record<string, string> = {};
+  COLOR_PALETTE.forEach((color) => {
+    defaultColors[color.cssVar] = color.defaultValue;
+  });
+  return defaultColors;
+}
+
+/** 로컬스토리지에서 저장된 색상을 읽고, 없거나 파싱 실패 시 기본값 반환 */
+function loadInitialColors(): Record<string, string> {
+  if (typeof window === 'undefined') {
+    return buildDefaultColors();
+  }
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      return JSON.parse(saved) as Record<string, string>;
+    } catch (e) {
+      console.error('Failed to parse saved colors', e);
+    }
+  }
+  return buildDefaultColors();
+}
+
 export function ColorPaletteDebugger() {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ x: 20, y: 80 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [colors, setColors] = useState<Record<string, string>>({});
+  // 로컬스토리지(외부 시스템)에서 lazy 초기화 — effect 내 setState 회피
+  const [colors, setColors] = useState<Record<string, string>>(loadInitialColors);
   const [previewVar, setPreviewVar] = useState<string | null>(null);
   const [hardcodedColors, setHardcodedColors] = useState<Array<{ element: string; color: string }>>([]);
 
-  // 초기 색상 로드 (로컬스토리지 또는 기본값)
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setColors(parsed);
-        // CSS 변수 적용
-        Object.entries(parsed).forEach(([cssVar, value]) => {
-          document.documentElement.style.setProperty(cssVar, value as string);
-        });
-      } catch (e) {
-        console.error('Failed to parse saved colors', e);
-        resetColors();
-      }
-    } else {
-      resetColors();
-    }
-  }, []);
-
   // 색상 초기화
   const resetColors = useCallback(() => {
-    const defaultColors: Record<string, string> = {};
-    COLOR_PALETTE.forEach((color) => {
-      defaultColors[color.cssVar] = color.defaultValue;
-      document.documentElement.style.setProperty(color.cssVar, color.defaultValue);
+    const defaultColors = buildDefaultColors();
+    Object.entries(defaultColors).forEach(([cssVar, value]) => {
+      document.documentElement.style.setProperty(cssVar, value);
     });
     setColors(defaultColors);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultColors));
   }, []);
+
+  // 현재 colors 상태를 CSS 변수에 동기화 (외부 시스템 = DOM 업데이트)
+  useEffect(() => {
+    Object.entries(colors).forEach(([cssVar, value]) => {
+      document.documentElement.style.setProperty(cssVar, value);
+    });
+  }, [colors]);
 
   // 색상 변경
   const handleColorChange = useCallback((cssVar: string, value: string) => {

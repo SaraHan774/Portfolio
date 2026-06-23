@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { PINCH_ZOOM } from '@/core/constants/ui.constants';
 
 export interface UsePinchZoomOptions {
@@ -59,10 +59,16 @@ export function usePinchZoom(
     lastPanPosition: { x: 0, y: 0 },
   });
 
+  // 이벤트 핸들러에서 최신 scale/position 값을 읽기 위한 ref
+  // (렌더 중 ref를 변경하면 react-hooks/refs 규칙 위반이므로 effect에서 동기화)
   const scaleRef = useRef(scale);
   const positionRef = useRef(position);
-  scaleRef.current = scale;
-  positionRef.current = position;
+  useEffect(() => {
+    scaleRef.current = scale;
+  }, [scale]);
+  useEffect(() => {
+    positionRef.current = position;
+  }, [position]);
 
   const cleanupRef = useRef<(() => void) | null>(null);
 

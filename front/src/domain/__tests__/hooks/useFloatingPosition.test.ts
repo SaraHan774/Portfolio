@@ -23,7 +23,7 @@ describe('useFloatingPosition', () => {
     global.window = originalWindow;
   });
 
-  it('should center-align element below position by default', () => {
+  it('should left-align element below position by default (x = position.x + offsetX)', () => {
     const { result } = renderHook(() =>
       useFloatingPosition({
         position: { x: 500, y: 300 },
@@ -31,11 +31,12 @@ describe('useFloatingPosition', () => {
       })
     );
 
-    // x should be centered: 500 - 200/2 = 400
-    // y should be below with default offset: 300 + 8 = 308
+    // x is left-aligned with offsetX (default offsetX=0): 500 + 0 = 500
+    // y is positioned ABOVE the target by default (enough space above):
+    //   300 - height(100) - offsetY(8) = 192
     expect(result.current).toEqual({
-      x: 400,
-      y: 308,
+      x: 500,
+      y: 192,
     });
   });
 
@@ -49,8 +50,8 @@ describe('useFloatingPosition', () => {
     );
 
     expect(result.current).toEqual({
-      x: 400, // Center alignment, offset.x not used for x positioning
-      y: 315, // 300 + 15
+      x: 520, // Left alignment with offsetX: 500 + 20
+      y: 185, // Positioned above: 300 - height(100) - offsetY(15)
     });
   });
 
@@ -135,8 +136,8 @@ describe('useFloatingPosition', () => {
     rerender({ position: { x: 600, y: 400 } });
 
     expect(result.current).not.toEqual(initialPosition);
-    expect(result.current.x).toBe(500); // 600 - 200/2
-    expect(result.current.y).toBe(408); // 400 + 8
+    expect(result.current.x).toBe(600); // 600 + offsetX(0) — left aligned
+    expect(result.current.y).toBe(292); // Positioned above: 400 - height(100) - offsetY(8)
   });
 
   it('should handle window resize events', async () => {

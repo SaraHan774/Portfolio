@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useMemo, useEffect, CSSProperties } from 'react';
+import { useState, useMemo, CSSProperties } from 'react';
 import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 import { useSwipeGesture } from '@/domain/hooks/useSwipeGesture';
+import { useHydrated } from '@/domain/hooks/useHydrated';
 import { MobileCategorySlider } from './MobileCategorySlider';
 import ScrollableCategoryList from '../category/ScrollableCategoryList';
 import SentenceCategory from '../category/SentenceCategory';
@@ -44,10 +45,7 @@ export const MobileSwipeableCategories: React.FC<MobileSwipeableCategoriesProps>
   const [hoveredExhibitionCategoryId, setHoveredExhibitionCategoryId] = useState<string | null>(null);
 
   // Hydration safety: mounted state prevents SSR/client mismatch
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useHydrated();
 
   // Debug mode (development only)
   const isDebugMode = IS_DEBUG_LAYOUT_ENABLED;
