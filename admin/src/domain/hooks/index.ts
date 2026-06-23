@@ -78,3 +78,7 @@ export {
   usePageStats,
   useRealtimeUsers,
 } from './useAnalytics';
+
+// Blur Backfill Hook (기존 이미지 LQIP 백필)
+export { useBlurBackfill } from './useBlurBackfill';
+export type { BlurBackfillProgress } from './useBlurBackfill';

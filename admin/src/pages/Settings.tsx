@@ -32,6 +32,7 @@ import {
   settingsCacheKeys,
 } from '../data/repository';
 import BackupManager from '../components/BackupManager';
+import BlurBackfillManager from '../components/BlurBackfillManager';
 import HomeIconManager from '../components/HomeIconManager';
 import './Settings.css';
 
@@ -252,6 +253,9 @@ const Settings = () => {
         onDeleteHomeIconHover={handleDeleteHomeIconHover}
         onUpdateIconSize={handleUpdateIconSize}
       />
+
+      {/* 이미지 성능 섹션 — 기존 이미지 블러(LQIP) 백필 */}
+      <BlurBackfillManager />
 
       {/* 데이터 관리 섹션 */}
       <BackupManager />

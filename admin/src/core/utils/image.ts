@@ -246,6 +246,54 @@ const generateBlurDataURL = (img: HTMLImageElement): string => {
   }
 };
 
+/** 백필 시 원격 이미지 로드 타임아웃 (ms) */
+const BACKFILL_LOAD_TIMEOUT_MS = 15000;
+
+/**
+ * 이미 업로드된 이미지 URL로부터 LQIP 블러 data URL을 생성한다 (기존 데이터 백필용).
+ *
+ * - `crossOrigin='anonymous'`로 로드해 Canvas에서 픽셀을 읽는다.
+ *   → 대상 버킷(Firebase Storage)에 CORS 설정이 되어 있어야 한다.
+ *     미설정 시 tainted canvas가 되어 `toDataURL`이 실패하고 빈 문자열을 반환한다.
+ * - 로드 실패 / 타임아웃 / CORS 오류 / 인코딩 실패는 모두 빈 문자열 반환(graceful, throw 금지).
+ *
+ * @param url 원본(또는 썸네일) 이미지 URL
+ */
+export const generateBlurDataURLFromUrl = (
+  url: string,
+  timeoutMs: number = BACKFILL_LOAD_TIMEOUT_MS
+): Promise<string> => {
+  return new Promise((resolve) => {
+    if (!url) {
+      resolve('');
+      return;
+    }
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    let settled = false;
+    const finish = (value: string) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(value);
+    };
+
+    const timer = setTimeout(() => finish(''), timeoutMs);
+
+    img.onload = () => {
+      try {
+        finish(generateBlurDataURL(img));
+      } catch {
+        finish('');
+      }
+    };
+    img.onerror = () => finish('');
+    img.src = url;
+  });
+};
+
 /**
  * 이미지를 한 번만 디코딩하여 dimensions + 여러 변형을 한꺼번에 생성
  */
