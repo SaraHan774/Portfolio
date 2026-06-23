@@ -17,6 +17,9 @@ describe('settingsMapper', () => {
         browserDescription: '여백의 미를 살린 미니멀한 디지털 갤러리',
         footerText: '나혜빈, hyebinnaa@gmail.com, 82)10-8745-1728',
         faviconUrl: undefined,
+        homeIconUrl: undefined,
+        homeIconHoverUrl: undefined,
+        homeIconSize: 48,
       });
     });
   });
@@ -39,6 +42,9 @@ describe('settingsMapper', () => {
         browserDescription: 'Custom Description',
         footerText: 'Custom Footer',
         faviconUrl: 'http://example.com/favicon.ico',
+        homeIconUrl: undefined,
+        homeIconHoverUrl: undefined,
+        homeIconSize: 48,
         updatedAt: new Date('2024-01-15T10:30:00Z'),
       });
     });

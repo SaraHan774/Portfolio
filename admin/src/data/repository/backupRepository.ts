@@ -1,7 +1,7 @@
 // 백업/복원 Repository
 import { doc, setDoc, writeBatch, Timestamp } from 'firebase/firestore';
 import DOMPurify from 'dompurify';
-import { db } from '../../config/firebase';
+import { db } from '../api/client';
 import { createBackup, validateBackupData, downloadBackupFile } from '../api/backupApi';
 import { ValidationError } from '../../core/errors';
 import type { BackupData, RestoreOptions, Work, SentenceCategory, ExhibitionCategory, SiteSettings } from '../../core/types';
