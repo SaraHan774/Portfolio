@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { useThumbnailUrl, useClickAnimationTracking, usePrefetchWork } from '@/domain';
+import { useThumbnailUrl, useClickAnimationTracking, usePrefetchWork, usePrefetchFirstImage } from '@/domain';
 import { AnimatedCharacterText, DotIndicator, presets } from '@/presentation/ui';
 import ThumbnailSkeleton from './ThumbnailSkeleton';
 import type { Work } from '@/types';
@@ -39,6 +39,8 @@ export default function WorkTitleButton({
   const [imageLoaded, setImageLoaded] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(false);
   const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // 강한 인텐트(호버 유지) 판정용 타이머
+  const imagePrefetchTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 클릭 애니메이션 추적 (Works는 항상 클릭 가능)
   const { hasBeenClickedBefore: wasSelectedBefore, justClicked: justSelected, handleClick } = useClickAnimationTracking({
@@ -54,6 +56,20 @@ export default function WorkTitleButton({
 
   // 호버 시 상세 데이터를 미리 가져와 모달 진입 시 즉시 렌더(LCP 이미지 조기 로드)
   const prefetchWork = usePrefetchWork();
+
+  // 강한 인텐트 시 첫 이미지 바이트 prefetch(첫 1장·중복차단·saveData 가드)
+  const prefetchFirstImage = usePrefetchFirstImage();
+
+  // 호버 인텐트 타이머 정리
+  const clearImagePrefetchTimer = useCallback(() => {
+    if (imagePrefetchTimerRef.current) {
+      clearTimeout(imagePrefetchTimerRef.current);
+      imagePrefetchTimerRef.current = null;
+    }
+  }, []);
+
+  // 언마운트 시 인텐트 타이머 정리
+  useEffect(() => clearImagePrefetchTimer, [clearImagePrefetchTimer]);
 
   // Reset loading state when thumbnail URL changes
   useEffect(() => {
@@ -127,8 +143,21 @@ export default function WorkTitleButton({
       onMouseEnter={() => {
         setIsHovered(true);
         prefetchWork(work.id);
+        // 스쳐 지나간 호버는 제외하고, 180ms 유지 시에만 첫 이미지 prefetch 발사
+        clearImagePrefetchTimer();
+        imagePrefetchTimerRef.current = setTimeout(() => {
+          prefetchFirstImage(work);
+          imagePrefetchTimerRef.current = null;
+        }, 180);
       }}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        clearImagePrefetchTimer();
+      }}
+      onTouchStart={() => {
+        // 모바일: 탭 직전 즉시 발사
+        prefetchFirstImage(work);
+      }}
       style={{
         background: 'none',
         border: 'none',

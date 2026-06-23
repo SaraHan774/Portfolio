@@ -33,6 +33,7 @@ vi.mock('@/domain', () => ({
     mockUseImageTracker(ref, work, id);
     return { currentImageId: null, setCurrentImageId: vi.fn() };
   },
+  usePrefetchFirstImageByWorkId: () => vi.fn(),
 }));
 
 vi.mock('body-scroll-lock', () => ({

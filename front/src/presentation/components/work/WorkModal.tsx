@@ -8,7 +8,7 @@
 import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { disableBodyScroll, enableBodyScroll, clearAllBodyScrollLocks } from 'body-scroll-lock';
-import { useWork, useCaptionHoverEvents, useModalLinkHandler, useImageTracker } from '@/domain';
+import { useWork, useCaptionHoverEvents, useModalLinkHandler, useImageTracker, usePrefetchFirstImageByWorkId } from '@/domain';
 import { getMediaItems } from '@/core/utils';
 import { Spinner } from '@/presentation';
 import { YouTubeEmbed } from '../media';
@@ -44,12 +44,15 @@ export default function WorkModal({
 }: WorkModalProps) {
   const { data: modalWork, isLoading, isError } = useWork(workId);
 
+  const prefetchFirstImageByWorkId = usePrefetchFirstImageByWorkId();
+
   const { hoveredWorkId, hoverPosition, clearHover } = useCaptionHoverEvents({
     containerSelector: '[data-is-modal="true"]',
     hoverDelay: 400,
     hideDelay: 200,
     currentWorkId: modalWork?.id,
     dependencies: [modalWork],
+    onLinkHoverIntent: prefetchFirstImageByWorkId,
   });
 
   const { data: hoveredWork } = useWork(hoveredWorkId || '');

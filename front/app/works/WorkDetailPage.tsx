@@ -30,7 +30,7 @@ import {
 } from '@/presentation';
 import { getMediaItems, hasMedia } from '@/core/utils';
 import { useCategorySelection } from '@/state';
-import { useWork, useCaptionHoverEvents } from '@/domain';
+import { useWork, useCaptionHoverEvents, usePrefetchFirstImageByWorkId } from '@/domain';
 
 /**
  * 스크롤 감지 상수
@@ -220,6 +220,9 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
   // Fetch work data
   const { data: work, isLoading } = useWork(workId);
 
+  // 캡션 링크 강한 인텐트 시 첫 이미지 prefetch
+  const prefetchFirstImageByWorkId = usePrefetchFirstImageByWorkId();
+
   // Caption hover events 설정
   const { hoveredWorkId, hoverPosition, clearHover } = useCaptionHoverEvents({
     containerSelector: '[data-caption-container-id]',
@@ -227,6 +230,7 @@ export default function WorkDetailPage({ workId }: WorkDetailPageProps) {
     hideDelay: 200,
     currentWorkId: work?.id,
     dependencies: [work, renderCaption],
+    onLinkHoverIntent: prefetchFirstImageByWorkId,
   });
 
   // Hover 중인 작업 데이터
