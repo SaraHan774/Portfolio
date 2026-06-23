@@ -13,7 +13,11 @@
 import { useSearchParams } from 'next/navigation';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
+import {
+  IS_DEBUG_LAYOUT_ENABLED,
+  DETAIL_IMAGE_SIZES,
+  DETAIL_IMAGE_QUALITY,
+} from '@/core/constants';
 import {
   Spinner,
   FloatingWorkWindow,
@@ -46,16 +50,8 @@ const SCROLL_CONSTANTS = {
   CENTER_SCORE_BASE: 1000,
 } as const;
 
-/**
- * 상세 페이지 인라인 이미지의 반응형 크기 힌트.
- * --media-width 브레이크포인트(모바일 100% / 768~1199px 60% / 데스크톱 ~50%)에 맞춰
- * next/image가 화면 폭에 맞는 변형을 선택하도록 한다(모바일 과대 전송 방지).
- * 줌(원본)은 ZoomableImage가 item.data.url을 직접 쓰므로 영향받지 않는다.
- */
-const DETAIL_IMAGE_SIZES = '(max-width: 767px) 100vw, (max-width: 1199px) 60vw, 50vw';
-
-/** 인라인 본문 이미지 품질(모달 본문과 동일, 화질 보존 우선). */
-const DETAIL_IMAGE_QUALITY = 72;
+// DETAIL_IMAGE_SIZES / DETAIL_IMAGE_QUALITY 는 SSR preload 링크(app/page.tsx)와
+// 동일해야 하므로 @/core/constants 에서 공유 import 한다.
 
 /**
  * Caption 내부의 작품 링크 컴포넌트
