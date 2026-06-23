@@ -15,6 +15,11 @@ export interface UseCaptionHoverEventsOptions {
   currentWorkId?: string;
   /** DOM이 변경되었음을 알리는 의존성 배열 */
   dependencies?: React.DependencyList;
+  /**
+   * 링크 hover 인텐트(hoverDelay 경과)가 확정된 시점에 호출되는 콜백.
+   * 강한 인텐트 신호이므로 첫 이미지 prefetch 등 부수 작업에 사용한다.
+   */
+  onLinkHoverIntent?: (workId: string) => void;
 }
 
 export interface UseCaptionHoverEventsReturn {
@@ -71,6 +76,7 @@ export const useCaptionHoverEvents = ({
   safeZoneMargin = 20,
   currentWorkId,
   dependencies = [],
+  onLinkHoverIntent,
 }: UseCaptionHoverEventsOptions): UseCaptionHoverEventsReturn => {
   // Hover 상태
   const [hoveredWorkId, setHoveredWorkId] = useState<string | null>(null);
@@ -89,6 +95,12 @@ export const useCaptionHoverEvents = ({
 
   // MutationObserver
   const observerRef = useRef<MutationObserver | null>(null);
+
+  // 인텐트 콜백을 ref로 보관 (리스너 effect 재실행 방지, 항상 최신 참조 사용)
+  const onLinkHoverIntentRef = useRef(onLinkHoverIntent);
+  useEffect(() => {
+    onLinkHoverIntentRef.current = onLinkHoverIntent;
+  }, [onLinkHoverIntent]);
 
   // Hover 상태 초기화
   const clearHover = useCallback(() => {
@@ -252,6 +264,9 @@ export const useCaptionHoverEvents = ({
             const y = rect.top;
 
             isInSafeZoneRef.current = true;
+
+            // 강한 인텐트 확정: 첫 이미지 prefetch 등 부수 작업 트리거
+            onLinkHoverIntentRef.current?.(linkWorkId);
 
             setHoverPosition({ x, y });
             setHoveredWorkId(linkWorkId);

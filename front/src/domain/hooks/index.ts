@@ -23,6 +23,7 @@ export * from './useModalLinkHandler';
 export * from './useImageTracker';
 export * from './useOptimizedResize';
 export * from './useImageZoom';
+export * from './usePrefetchFirstImage';
 
 // Mobile hooks
 export * from './useMobileDetection';
