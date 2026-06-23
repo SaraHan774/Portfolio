@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, ReactNode, useEffect, CSSProperties, ReactElement } from 'react';
+import { useCallback, useMemo, ReactNode, useEffect, CSSProperties, ReactElement } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
 import StaticCategorySidebar from './StaticCategorySidebar';
@@ -10,7 +10,7 @@ import Footer from './Footer';
 import { DebugGrid } from './DebugGrid';
 import HomeIcon from './HomeIcon';
 import { useCategories, useCategorySelection } from '@/state';
-import { useFilteredWorks, useMobileDetection, useSiteSettings } from '@/domain';
+import { useFilteredWorks, useMobileDetection, useSiteSettings, useHydrated } from '@/domain';
 import { LayoutStabilityProvider } from '@/presentation/contexts/LayoutStabilityContext';
 
 interface PortfolioLayoutSimpleProps {
@@ -46,10 +46,7 @@ export default function PortfolioLayoutSimple({ children }: PortfolioLayoutSimpl
   const isMobile = useMobileDetection();
 
   // Client-side mount state (for hydration safety)
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useHydrated();
 
   // Fetch works (선택된 카테고리에 해당하는 작품 목록)
   const { works, hasData } = useFilteredWorks(

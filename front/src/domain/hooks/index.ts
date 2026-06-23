@@ -22,6 +22,7 @@ export * from './useScrollLock';
 export * from './useModalLinkHandler';
 export * from './useImageTracker';
 export * from './useOptimizedResize';
+export * from './useHydrated';
 export * from './useImageZoom';
 
 // Mobile hooks

@@ -31,6 +31,8 @@ interface MediaTimelineProps {
 interface MediaBounds {
   firstTop: number;
   lastBottom: number;
+  /** Page 모드에서 containerRef의 offsetTop (상대 위치 변환용) */
+  containerOffsetTop: number;
 }
 
 export default function MediaTimeline({
@@ -78,6 +80,7 @@ export default function MediaTimeline({
           const bounds = {
             firstTop: firstElement.offsetTop,
             lastBottom: lastElement.offsetTop + lastElement.offsetHeight,
+            containerOffsetTop: 0, // modal 모드에서는 상대 변환 불필요
           };
           setMediaBounds(bounds);
 
@@ -100,10 +103,15 @@ export default function MediaTimeline({
         if (firstElement && lastElement) {
           const firstTop = getElementOffset(firstElement);
           const lastTop = getElementOffset(lastElement);
+          // containerRef의 offsetTop을 effect 내에서 계산 (렌더 중 ref 접근 회피)
+          const containerOffsetTop = containerRef?.current
+            ? getElementOffset(containerRef.current)
+            : 0;
 
           const bounds = {
             firstTop,
             lastBottom: lastTop + lastElement.offsetHeight,
+            containerOffsetTop,
           };
           setMediaBounds(bounds);
 
@@ -376,9 +384,8 @@ export default function MediaTimeline({
     // Page 렌더링 - 미디어 범위만 그리기
     const timelineHeight = mediaBounds.lastBottom - mediaBounds.firstTop;
 
-    // containerRef의 offsetTop을 빼서 상대 위치로 변환
-    const containerOffsetTop = containerRef?.current ? getElementOffset(containerRef.current) : 0;
-    const relativeTop = mediaBounds.firstTop - containerOffsetTop;
+    // containerRef의 offsetTop을 빼서 상대 위치로 변환 (effect에서 미리 계산된 값 사용)
+    const relativeTop = mediaBounds.firstTop - mediaBounds.containerOffsetTop;
 
     // 전체 페이지 스크롤 비율 계산
     const documentHeight = typeof document !== 'undefined'
