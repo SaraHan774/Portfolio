@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query';
-import { queryKeys, CategoryRepository } from '@/src/data';
+import { queryKeys, CategoryRepository, fetchSiteSettings } from '@/src/data';
 import { ErrorBoundary, PortfolioLayoutSimple, DebugGrid, ColorPaletteDebugger } from '@/presentation';
 import ImageZoomProvider from '@/presentation/components/layout/ImageZoomProvider';
 import { AnalyticsProvider } from '@/presentation/components/analytics/AnalyticsProvider';
@@ -72,14 +72,21 @@ export const viewport = {
   viewportFit: 'cover',
 };
 
-// 기본 메타데이터 (하드코딩)
-export const metadata: Metadata = {
-  title: "hyebinna",
-  description: "여백의 미를 살린 미니멀한 디지털 갤러리",
-  icons: {
-    icon: '/favicon.ico',
-  },
-};
+// 메타데이터를 서버에서 동적으로 생성한다.
+// 검색 엔진은 SSR된 HTML <head>의 description을 읽으므로, admin에서 수정한 소개 글
+// (browserDescription)이 검색 결과 스니펫에 반영되려면 여기(서버)에서 출력해야 한다.
+// force-dynamic이라 매 요청 최신값을 읽고, 조회 실패 시 기본값으로 폴백한다(graceful).
+// (title/favicon은 변경 범위 밖이라 기존 하드코딩 유지)
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await fetchSiteSettings();
+  return {
+    title: "hyebinna",
+    description: settings.browserDescription,
+    icons: {
+      icon: '/favicon.ico',
+    },
+  };
+}
 
 export default async function RootLayout({
   children,

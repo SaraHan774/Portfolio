@@ -11,6 +11,7 @@ import {
   message,
   notification,
   Spin,
+  Alert,
 } from 'antd';
 import {
   UserOutlined,
@@ -58,6 +59,7 @@ const Settings = () => {
         const settings = await getSiteSettings();
         siteForm.setFieldsValue({
           footerText: settings.footerText,
+          browserDescription: settings.browserDescription,
         });
         setSiteSettings({
           footerText: settings.footerText,
@@ -94,11 +96,12 @@ const Settings = () => {
 
       await updateSiteSettings({
         footerText: values.footerText,
+        browserDescription: values.browserDescription,
       });
 
       notification.success({
         message: '저장 완료',
-        description: '푸터 텍스트가 성공적으로 저장되었습니다.',
+        description: '사이트 설정이 성공적으로 저장되었습니다.',
         placement: 'topRight',
       });
     } catch (error) {
@@ -217,8 +220,46 @@ const Settings = () => {
           layout="vertical"
           initialValues={{
             footerText: '나혜빈, hyebinnaa@gmail.com, 82)10-8745-1728',
+            browserDescription: '여백의 미를 살린 미니멀한 디지털 갤러리',
           }}
         >
+          <Form.Item
+            name="browserDescription"
+            label="사이트 소개 글 (검색 노출)"
+            rules={[{ required: true, message: '사이트 소개 글을 입력하세요' }]}
+            extra="구글 등 검색 결과에 노출되는 사이트 소개 글입니다. (메타 설명, 권장 70~160자)"
+          >
+            <Input.TextArea
+              rows={3}
+              maxLength={200}
+              showCount
+              placeholder="여백의 미를 살린 미니멀한 디지털 갤러리"
+            />
+          </Form.Item>
+
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: '24px' }}
+            message="구글 검색 결과에는 바로 반영되지 않습니다"
+            description={
+              <div style={{ lineHeight: 1.7 }}>
+                저장하면 <b>사이트 자체</b>에는 즉시 새 소개 글이 적용됩니다. 다만{' '}
+                <b>구글 검색 결과 화면</b>에 보이는 글은, 구글이 사이트를 다시 방문해
+                재색인한 뒤에야 바뀌며 보통 <b>며칠~몇 주</b>가 걸립니다. (검색엔진 구조상
+                즉시 반영은 불가능합니다.)
+                <br />
+                <br />
+                · 더 빨리 반영하려면 <b>Google Search Console</b>의 "URL 검사 → 색인 생성
+                요청"을 이용하세요.
+                <br />
+                · 구글은 이 소개 글을 항상 그대로 쓰지 않고, 검색어에 따라 본문에서 더
+                적절한 문장을 골라 스니펫을 자동 생성하기도 합니다. (소개 글은 강한
+                힌트이지 강제값이 아닙니다.)
+              </div>
+            }
+          />
+
           <Form.Item
             name="footerText"
             label="푸터 텍스트"
