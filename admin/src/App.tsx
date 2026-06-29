@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, MutationCache } from '@tanstack/react-query';
+import { triggerFrontRevalidation } from './data/api/revalidate';
 import { ConfigProvider, Spin, App as AntdApp } from 'antd';
 import koKR from 'antd/locale/ko_KR';
 import MainLayout from './layouts/MainLayout';
@@ -15,6 +16,13 @@ import './App.css';
 
 // React Query 클라이언트 설정
 const queryClient = new QueryClient({
+  // 모든 콘텐츠 변경(작품/카테고리/사이트설정 등) 성공 후 프론트 ISR 셸을 on-demand 재검증.
+  // env(VITE_FRONT_REVALIDATE_URL/SECRET) 미설정 시 no-op, 실패해도 무시(fire-and-forget).
+  mutationCache: new MutationCache({
+    onSuccess: () => {
+      void triggerFrontRevalidation();
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // 5분
