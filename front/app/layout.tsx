@@ -16,8 +16,10 @@ import {
 import React, { Suspense } from "react";
 import { LoadingContainer } from '@/presentation/ui';
 
-// 매 요청마다 서버에서 최신 데이터를 읽어 SSR(새 업로드 즉시 반영 보장).
-export const dynamic = 'force-dynamic';
+// [ISR] force-dynamic 제거 → 셸이 엣지에서 캐시 서빙되어 한국 사용자의 미국 함수 왕복 제거.
+// 카테고리/사이트설정은 빌드·재검증 시 읽어 캐시하고, 변경 시 on-demand revalidation으로 즉시 반영.
+// (작품 목록/상세는 CSR이라 셸 캐시와 무관하게 항상 최신)
+export const revalidate = 300;
 
 /** 서버 사전 페칭 상한(ms). 초과 시 부분 결과로 진행하고 클라이언트가 나머지를 페칭. */
 const SSR_PREFETCH_TIMEOUT_MS = 2000;
