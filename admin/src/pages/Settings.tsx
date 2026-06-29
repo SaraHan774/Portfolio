@@ -58,6 +58,7 @@ const Settings = () => {
         const settings = await getSiteSettings();
         siteForm.setFieldsValue({
           footerText: settings.footerText,
+          browserDescription: settings.browserDescription,
         });
         setSiteSettings({
           footerText: settings.footerText,
@@ -94,11 +95,12 @@ const Settings = () => {
 
       await updateSiteSettings({
         footerText: values.footerText,
+        browserDescription: values.browserDescription,
       });
 
       notification.success({
         message: '저장 완료',
-        description: '푸터 텍스트가 성공적으로 저장되었습니다.',
+        description: '사이트 설정이 성공적으로 저장되었습니다.',
         placement: 'topRight',
       });
     } catch (error) {
@@ -217,8 +219,23 @@ const Settings = () => {
           layout="vertical"
           initialValues={{
             footerText: '나혜빈, hyebinnaa@gmail.com, 82)10-8745-1728',
+            browserDescription: '여백의 미를 살린 미니멀한 디지털 갤러리',
           }}
         >
+          <Form.Item
+            name="browserDescription"
+            label="사이트 소개 글 (검색 노출)"
+            rules={[{ required: true, message: '사이트 소개 글을 입력하세요' }]}
+            extra="구글 등 검색 결과에 노출되는 사이트 소개 글입니다. (메타 설명, 권장 70~160자)"
+          >
+            <Input.TextArea
+              rows={3}
+              maxLength={200}
+              showCount
+              placeholder="여백의 미를 살린 미니멀한 디지털 갤러리"
+            />
+          </Form.Item>
+
           <Form.Item
             name="footerText"
             label="푸터 텍스트"
