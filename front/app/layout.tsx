@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query';
-import { queryKeys, CategoryRepository } from '@/src/data';
+import { queryKeys } from '@/src/data';
+import {
+  getSentenceCategoriesForSSR,
+  getExhibitionCategoriesForSSR,
+} from '@/data/api/categoriesServerApi';
 import { ErrorBoundary, PortfolioLayoutSimple, DebugGrid, ColorPaletteDebugger } from '@/presentation';
 import ImageZoomProvider from '@/presentation/components/layout/ImageZoomProvider';
 import { AnalyticsProvider } from '@/presentation/components/analytics/AnalyticsProvider';
@@ -35,11 +39,12 @@ async function prefetchGlobalData() {
   const prefetch = Promise.all([
     queryClient.prefetchQuery({
       queryKey: queryKeys.categories.sentence.all(),
-      queryFn: () => CategoryRepository.getSentenceCategories(),
+      // REST(캐시) 우선, 실패 시 클라이언트 SDK 폴백 — 서버 WebChannel 핸드셰이크 제거로 TTFB 단축
+      queryFn: () => getSentenceCategoriesForSSR(),
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.categories.exhibition.all(),
-      queryFn: () => CategoryRepository.getExhibitionCategories(),
+      queryFn: () => getExhibitionCategoriesForSSR(),
     }),
   ]);
   await Promise.race([
