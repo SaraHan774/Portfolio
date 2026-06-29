@@ -9,6 +9,9 @@ export { cacheKeys, cacheConfig } from './cacheKeys';
 // Works Repository
 export * from './worksRepository';
 
+// Storage Repository (이미지 업로드/삭제)
+export * from './storageRepository';
+
 // Categories Repository
 export * from './categoriesRepository';
 
@@ -17,3 +20,6 @@ export * from './settingsRepository';
 
 // Auth Repository
 export * from './authRepository';
+
+// Analytics Repository
+export * from './analyticsRepository';
