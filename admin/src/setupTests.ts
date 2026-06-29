@@ -96,6 +96,19 @@ vi.mock('./data/repository', () => ({
   },
   settingsCacheConfig: { staleTime: 300000 },
 
+  // Analytics
+  getDailyVisitors: vi.fn().mockResolvedValue({ dailyStats: [], summary: {} }),
+  getPageStats: vi.fn().mockResolvedValue({ pageStats: [] }),
+  getRealtimeUsers: vi.fn().mockResolvedValue({ activeUsers: 0 }),
+  analyticsCacheKeys: {
+    all: ['analytics'],
+    dailyVisitors: (days: number) => ['analytics', 'dailyVisitors', days],
+    pageStats: (days: number, limit: number) => ['analytics', 'pageStats', days, limit],
+    realtimeUsers: () => ['analytics', 'realtimeUsers'],
+  },
+  analyticsCacheConfig: { staleTime: 300000, gcTime: 1800000 },
+  realtimeCacheConfig: { staleTime: 0, gcTime: 300000 },
+
   // Cache config
   cacheKeys: {
     works: { all: () => ['works'], detail: (id: string) => ['works', 'detail', id] },

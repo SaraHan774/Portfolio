@@ -1,16 +1,25 @@
-// Analytics hooks using React Query
-
+/**
+ * Analytics Domain Hook - GA4 통계 관련 비즈니스 로직
+ * Repository 레이어를 통해 데이터 접근
+ */
 import { useQuery } from '@tanstack/react-query';
-import { getDailyVisitors, getPageStats, getRealtimeUsers } from '../../data/api/analyticsApi';
+import {
+  getDailyVisitors,
+  getPageStats,
+  getRealtimeUsers,
+  analyticsCacheKeys,
+  analyticsCacheConfig,
+  realtimeCacheConfig,
+} from '../../data/repository';
 
 /**
  * 일일 방문자 통계 조회 Hook
  */
 export const useDailyVisitors = (days: number = 7) => {
   return useQuery({
-    queryKey: ['analytics', 'dailyVisitors', days],
+    queryKey: analyticsCacheKeys.dailyVisitors(days),
     queryFn: () => getDailyVisitors(days),
-    staleTime: 5 * 60 * 1000, // 5분
+    ...analyticsCacheConfig,
     retry: 2,
   });
 };
@@ -20,9 +29,9 @@ export const useDailyVisitors = (days: number = 7) => {
  */
 export const usePageStats = (days: number = 7, limit: number = 10) => {
   return useQuery({
-    queryKey: ['analytics', 'pageStats', days, limit],
+    queryKey: analyticsCacheKeys.pageStats(days, limit),
     queryFn: () => getPageStats(days, limit),
-    staleTime: 5 * 60 * 1000, // 5분
+    ...analyticsCacheConfig,
     retry: 2,
   });
 };
@@ -32,10 +41,10 @@ export const usePageStats = (days: number = 7, limit: number = 10) => {
  */
 export const useRealtimeUsers = () => {
   return useQuery({
-    queryKey: ['analytics', 'realtimeUsers'],
+    queryKey: analyticsCacheKeys.realtimeUsers(),
     queryFn: getRealtimeUsers,
+    ...realtimeCacheConfig,
     refetchInterval: 30 * 1000, // 30초마다 갱신
-    staleTime: 0, // 항상 최신 데이터
     retry: 2,
   });
 };

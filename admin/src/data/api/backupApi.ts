@@ -1,6 +1,6 @@
 // 데이터 백업 및 복원 API
 import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { db } from './client';
 import type { Work, SentenceCategory, ExhibitionCategory, SiteSettings, BackupData } from '../../core/types';
 
 /**

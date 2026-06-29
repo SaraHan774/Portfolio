@@ -5,7 +5,7 @@
 import * as worksApi from '../api/worksApi';
 import * as storageApi from '../api/storageApi';
 import { cacheKeys, cacheConfig } from './cacheKeys';
-import type { Work, WorkImage, PaginatedResult } from '../../core/types';
+import type { Work, PaginatedResult } from '../../core/types';
 
 /**
  * 캐시 키 및 설정 export (React Query에서 사용)
@@ -88,39 +88,4 @@ export const deleteWork = async (id: string): Promise<void> => {
  */
 export const incrementViewCount = async (id: string): Promise<void> => {
   return worksApi.incrementViewCount(id);
-};
-
-/**
- * 이미지 업로드
- */
-export const uploadImage = async (
-  file: File,
-  onProgress?: (progress: number) => void,
-  options?: { compressOriginal?: boolean }
-): Promise<WorkImage> => {
-  return storageApi.uploadImage(file, onProgress, options);
-};
-
-/**
- * 여러 이미지 업로드
- */
-export const uploadImages = async (
-  files: File[],
-  onProgress?: (fileIndex: number, progress: number) => void
-): Promise<WorkImage[]> => {
-  return storageApi.uploadImages(files, onProgress);
-};
-
-/**
- * 이미지 삭제
- */
-export const deleteImage = async (imageId: string, extension?: string): Promise<void> => {
-  return storageApi.deleteImage(imageId, extension);
-};
-
-/**
- * 작업의 모든 이미지 삭제
- */
-export const deleteWorkImages = async (images: WorkImage[]): Promise<void> => {
-  return storageApi.deleteWorkImages(images);
 };

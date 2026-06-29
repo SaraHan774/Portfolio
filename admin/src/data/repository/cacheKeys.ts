@@ -49,6 +49,16 @@ export const cacheKeys = {
     all: ['auth'] as const,
     user: () => [...cacheKeys.auth.all, 'user'] as const,
   },
+
+  // Analytics (GA4 통계)
+  analytics: {
+    all: ['analytics'] as const,
+    dailyVisitors: (days: number) =>
+      [...cacheKeys.analytics.all, 'dailyVisitors', days] as const,
+    pageStats: (days: number, limit: number) =>
+      [...cacheKeys.analytics.all, 'pageStats', days, limit] as const,
+    realtimeUsers: () => [...cacheKeys.analytics.all, 'realtimeUsers'] as const,
+  },
 } as const;
 
 /**
