@@ -1,11 +1,17 @@
-name: Admin Preview Deploy
+name: Admin Deploy
 
-# admin/** 변경이 포함된 PR이 열리면 admin을 빌드/검증하고
-# Firebase Hosting 프리뷰 채널(테스트 환경)에 배포한 뒤 PR에 임시 URL을 코멘트한다.
-# 프로덕션(live) 채널은 이 워크플로에서 건드리지 않는다.
+# admin/** 변경에 대해 빌드/검증(lint·test·build) 후 Firebase Hosting에 배포한다.
+#  - PR(pull_request)         → 프리뷰 채널(테스트 환경, 임시 URL). PR에 URL 코멘트.
+#  - main 푸시(merge 포함)     → live 채널(프로덕션).
+#  - 수동 실행(workflow_dispatch) → live 채널(프로덕션).
 
 on:
   pull_request:
+    paths:
+      - 'admin/**'
+      - '.github/workflows/admin-preview-deploy.yml'
+  push:
+    branches: [main]
     paths:
       - 'admin/**'
       - '.github/workflows/admin-preview-deploy.yml'
@@ -13,7 +19,7 @@ on:
 
 # 같은 PR/브랜치에서 새 푸시가 오면 진행 중이던 실행을 취소
 concurrency:
-  group: admin-preview-${{ github.event.pull_request.number || github.ref }}
+  group: admin-deploy-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -22,7 +28,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  build-and-preview:
+  build-and-deploy:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -59,7 +65,9 @@ jobs:
           VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
           VITE_FUNCTIONS_BASE_URL: ${{ secrets.VITE_FUNCTIONS_BASE_URL }}
 
+      # PR → 프리뷰 채널(임시). channelId 미지정 시 action이 PR별 프리뷰 채널을 만들고 URL을 코멘트한다.
       - name: Deploy to Firebase Hosting preview channel
+        if: github.event_name == 'pull_request'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
@@ -69,3 +77,14 @@ jobs:
           entryPoint: ./admin
           # 프리뷰 채널 URL 유효기간
           expires: 7d
+
+      # main 푸시(merge) 또는 수동 실행 → live 채널(프로덕션)
+      - name: Deploy to Firebase Hosting live channel
+        if: github.event_name != 'pull_request'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PORTFOLIO_NHB }}
+          projectId: portfolio-nhb
+          entryPoint: ./admin
+          channelId: live
