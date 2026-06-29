@@ -16,8 +16,9 @@ import {
 import React, { Suspense } from "react";
 import { LoadingContainer } from '@/presentation/ui';
 
-// 매 요청마다 서버에서 최신 데이터를 읽어 SSR(새 업로드 즉시 반영 보장).
-export const dynamic = 'force-dynamic';
+// [실험] 루트 force-dynamic 제거 → 자식 라우트가 ISR/정적 캐시 가능.
+// 홈 '/'는 page.tsx에 자체 force-dynamic이 있어 그대로 동적. 신선도는 on-demand
+// revalidation으로 대체(force-dynamic 없이 "캐시로 빠름 + 변경 즉시 반영").
 
 /** 서버 사전 페칭 상한(ms). 초과 시 부분 결과로 진행하고 클라이언트가 나머지를 페칭. */
 const SSR_PREFETCH_TIMEOUT_MS = 2000;
