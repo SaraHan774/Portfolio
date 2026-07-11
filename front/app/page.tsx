@@ -34,7 +34,15 @@ export default async function HomePage({
   const rawWorkId = params.workId;
   const workId = Array.isArray(rawWorkId) ? rawWorkId[0] : rawWorkId;
 
-  const preloadImage = workId ? await fetchFirstImageForPreload(workId) : null;
+  // 에뮬레이터 모드에선 next.config가 images.unoptimized=true라 next/image가 원본 src를
+  // 그대로 렌더한다(=/_next/image 변형 없음). 이때 /_next/image preload는 실제 요청과
+  // 불일치해 낭비/404가 되므로 preload를 생략한다(로컬 전용이라 성능 영향 없음).
+  const isImageOptimizationDisabled =
+    process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true';
+  const preloadImage =
+    workId && !isImageOptimizationDisabled
+      ? await fetchFirstImageForPreload(workId)
+      : null;
 
   return (
     <>
