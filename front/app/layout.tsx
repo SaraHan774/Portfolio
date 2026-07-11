@@ -77,7 +77,8 @@ export const viewport = {
 // 메타데이터를 서버에서 동적으로 생성한다.
 // 검색 엔진은 SSR된 HTML <head>의 description을 읽으므로, admin에서 수정한 소개 글
 // (browserDescription)이 검색 결과 스니펫에 반영되려면 여기(서버)에서 출력해야 한다.
-// force-dynamic이라 매 요청 최신값을 읽고, 조회 실패 시 기본값으로 폴백한다(graceful).
+// 셸은 ISR(layout revalidate=300 + admin on-demand revalidation)이므로 재검증 시점에
+// 최신값을 읽고, 조회 실패 시 기본값으로 폴백한다(graceful).
 // (title/favicon은 변경 범위 밖이라 기존 하드코딩 유지)
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await fetchSiteSettings();
