@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, MutationCache } from '@tanstack/react-query';
+import { triggerFrontRevalidation } from './data/api/revalidate';
 import { ConfigProvider, Spin, App as AntdApp } from 'antd';
 import koKR from 'antd/locale/ko_KR';
 import MainLayout from './layouts/MainLayout';
@@ -15,6 +16,17 @@ import './App.css';
 
 // React Query 클라이언트 설정
 const queryClient = new QueryClient({
+  // 프론트 ISR 셸(카테고리 + 사이트설정)에 영향을 주는 mutation만 on-demand 재검증한다.
+  // 셸에 없는 mutation(이미지 업로드/백업/권한 등)까지 매번 재검증하면 불필요한 셸 재생성
+  // (+Firebase read)이 발생하므로, `meta.revalidateShell: true`로 명시한 것만 트리거한다.
+  // env(VITE_FRONT_REVALIDATE_URL/SECRET) 미설정 시 no-op, 실패해도 무시(fire-and-forget).
+  mutationCache: new MutationCache({
+    onSuccess: (_data, _variables, _context, mutation) => {
+      if (mutation.meta?.revalidateShell) {
+        void triggerFrontRevalidation();
+      }
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // 5분

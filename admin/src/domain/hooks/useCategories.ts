@@ -20,6 +20,10 @@ import {
 } from '../../data/repository';
 import type { SentenceCategory, ExhibitionCategory } from '../../core/types';
 
+// 프론트 ISR 셸(카테고리)에 영향을 주는 mutation임을 표시.
+// admin App.tsx의 MutationCache.onSuccess가 이 meta를 보고 on-demand 재검증을 트리거한다.
+const REVALIDATE_SHELL_META = { revalidateShell: true } as const;
+
 // ============ Shared Utilities ============
 
 /**
@@ -78,6 +82,7 @@ export const useCreateSentenceCategory = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: REVALIDATE_SHELL_META,
     mutationFn: (category: Omit<SentenceCategory, 'id' | 'createdAt' | 'updatedAt'>) =>
       createSentenceCategory(category),
     onSuccess: () => {
@@ -95,6 +100,7 @@ export const useUpdateSentenceCategory = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: REVALIDATE_SHELL_META,
     mutationFn: ({
       id,
       updates,
@@ -120,6 +126,7 @@ export const useDeleteSentenceCategory = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: REVALIDATE_SHELL_META,
     mutationFn: deleteSentenceCategory,
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -174,6 +181,7 @@ export const useCreateExhibitionCategory = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: REVALIDATE_SHELL_META,
     mutationFn: (category: Omit<ExhibitionCategory, 'id' | 'createdAt' | 'updatedAt'>) =>
       createExhibitionCategory(category),
     onSuccess: () => {
@@ -191,6 +199,7 @@ export const useUpdateExhibitionCategory = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: REVALIDATE_SHELL_META,
     mutationFn: ({
       id,
       updates,
@@ -216,6 +225,7 @@ export const useDeleteExhibitionCategory = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: REVALIDATE_SHELL_META,
     mutationFn: deleteExhibitionCategory,
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -234,6 +244,7 @@ export const useUpdateCategoryOrders = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: REVALIDATE_SHELL_META,
     mutationFn: ({
       type,
       orders,
@@ -262,6 +273,7 @@ export const useToggleCategoryActive = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: REVALIDATE_SHELL_META,
     mutationFn: async ({
       type,
       id,
