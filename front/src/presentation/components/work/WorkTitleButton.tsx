@@ -55,6 +55,12 @@ export default function WorkTitleButton({
   // 호버 시 상세 데이터를 미리 가져와 모달 진입 시 즉시 렌더(LCP 이미지 조기 로드)
   const prefetchWork = usePrefetchWork();
 
+  // 진입 인텐트(데스크톱 호버 / 모바일 터치)에서 상세 데이터 prefetch.
+  // 동일 키는 React Query가 dedupe하고 staleTime 내 재요청하지 않으므로 과호출 안전.
+  const handlePrefetchIntent = useCallback(() => {
+    prefetchWork(work.id);
+  }, [prefetchWork, work.id]);
+
   // Reset loading state when thumbnail URL changes
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
@@ -126,9 +132,11 @@ export default function WorkTitleButton({
       onClick={handleClick}
       onMouseEnter={() => {
         setIsHovered(true);
-        prefetchWork(work.id);
+        handlePrefetchIntent();
       }}
       onMouseLeave={() => setIsHovered(false)}
+      // 모바일: 호버가 없으므로 터치 시작(탭 인텐트)에 prefetch
+      onTouchStart={handlePrefetchIntent}
       style={{
         background: 'none',
         border: 'none',

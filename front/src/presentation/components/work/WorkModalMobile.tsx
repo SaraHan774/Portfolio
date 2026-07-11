@@ -9,7 +9,7 @@
 import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { disableBodyScroll, enableBodyScroll, clearAllBodyScrollLocks } from 'body-scroll-lock';
-import { useWork, useCaptionHoverEvents, useModalLinkHandler, useImageTracker } from '@/domain';
+import { useWork, useCaptionHoverEvents, useModalLinkHandler, useImageTracker, usePrefetchWork } from '@/domain';
 import { getMediaItems } from '@/core/utils';
 import { Spinner } from '@/presentation';
 import { YouTubeEmbed } from '../media';
@@ -39,11 +39,15 @@ export default function WorkModalMobile({
 }: WorkModalMobileProps) {
   const { data: modalWork, isLoading, isError } = useWork(workId);
 
+  // 캡션 링크 hover 인텐트 시 해당 작품 상세를 미리 가져와 클릭 시 즉시 렌더
+  const prefetchWork = usePrefetchWork();
+
   const { hoveredWorkId, hoverPosition, clearHover } = useCaptionHoverEvents({
     containerSelector: '[data-is-modal="true"]',
     hoverDelay: 400,
     hideDelay: 200,
     currentWorkId: modalWork?.id,
+    onLinkHoverIntent: prefetchWork,
     dependencies: [modalWork],
   });
 
