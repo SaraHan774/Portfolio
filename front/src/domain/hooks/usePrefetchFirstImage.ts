@@ -25,11 +25,22 @@ const DETAIL_IMAGE_SIZES = '(max-width: 767px) 100vw, (max-width: 1199px) 60vw, 
 const DETAIL_IMAGE_QUALITY = 72;
 
 /**
- * prefetch에 사용할 deviceSizes 부분집합.
- * next.config의 deviceSizes=[384,640,750,828,1080,1200,1920] 중
- * 상세 화면에서 실제로 선택될 법한 대표 폭만 추려 imagesrcset을 만든다.
+ * prefetch imagesrcset 후보 폭.
+ *
+ * next/image는 `sizes`가 지정되면 srcset 후보를 (deviceSizes ∪ imageSizes) 중
+ * `deviceSizes[0] * 최소vw` 이상인 폭 전체로 emit한다. 후보를 임의 부분집합으로
+ * 줄이면(기존 [640,828,1080,1200]) 데스크톱 750·1920 등 실제 선택 폭을 놓쳐,
+ * 브라우저가 prefetch에 없는 변형을 다운로드 → 이중 다운로드(비용↑, 캐시 미스)가 된다.
+ * imagesrcset은 그중 단 1개만 실제로 받으므로 후보를 넓혀도 여전히 작품당 1장만 받는다.
+ * (next.config: deviceSizes / imageSizes / DETAIL_IMAGE_SIZES 최소 vw=50%)
  */
-const PREFETCH_WIDTHS = [640, 828, 1080, 1200] as const;
+const NEXT_DEVICE_SIZES = [384, 640, 750, 828, 1080, 1200, 1920];
+const NEXT_IMAGE_SIZES = [48, 80, 96, 160, 256, 300];
+const PREFETCH_MIN_VW_RATIO =
+  Math.min(...[...DETAIL_IMAGE_SIZES.matchAll(/(\d+)vw/g)].map((m) => Number(m[1]))) * 0.01;
+const PREFETCH_WIDTHS: readonly number[] = [...NEXT_IMAGE_SIZES, ...NEXT_DEVICE_SIZES]
+  .filter((w) => w >= NEXT_DEVICE_SIZES[0] * PREFETCH_MIN_VW_RATIO)
+  .sort((a, b) => a - b);
 
 /** 단일 대표 폭(imagesrcset 미지원 환경 폴백용, 모바일 100vw 기준). */
 const FALLBACK_WIDTH = 1080;
@@ -92,10 +103,15 @@ export function usePrefetchFirstImage(): (work: Work) => void {
     prefetchedKeys.add(src);
 
     const link = document.createElement('link');
-    link.setAttribute('rel', 'prefetch');
+    // `rel="prefetch" + imagesrcset` 조합은 스펙상 무효라 Chromium/Firefox에서 바이트를
+    // 받지 않는다(no-op). imagesrcset/imagesizes는 `rel="preload" as="image"`에서만
+    // 동작하므로 preload를 쓰고, 현재 페이지 리소스와 경쟁하지 않도록 fetchpriority=low로
+    // 낮춘다. (SPA 클라 네비게이션이라 곧 같은 문서에서 사용됨 → 미사용 경고 없음)
+    link.setAttribute('rel', 'preload');
     link.setAttribute('as', 'image');
+    link.setAttribute('fetchpriority', 'low');
 
-    // imagesrcset/imagesizes 지원 시 sizes 분기를 유지한 채 prefetch.
+    // imagesrcset/imagesizes 지원 시 sizes 분기를 유지한 채 preload.
     const supportsImageSrcSet = 'imageSrcset' in HTMLLinkElement.prototype;
     if (supportsImageSrcSet) {
       link.setAttribute('imagesrcset', buildNextImageSrcSet(src, [...PREFETCH_WIDTHS], DETAIL_IMAGE_QUALITY));

@@ -30,15 +30,15 @@ function makeWork(id: string, images: Array<{ id: string; url: string; order: nu
   };
 }
 
-/** document.head 의 prefetch link 개수 */
+/** document.head 의 preload image link 개수 (rel=preload as=image) */
 function countPrefetchLinks(): number {
-  return document.head.querySelectorAll('link[rel="prefetch"][as="image"]').length;
+  return document.head.querySelectorAll('link[rel="preload"][as="image"]').length;
 }
 
 describe('usePrefetchFirstImage', () => {
   beforeEach(() => {
     __resetPrefetchedKeysForTest();
-    document.head.querySelectorAll('link[rel="prefetch"]').forEach((l) => l.remove());
+    document.head.querySelectorAll('link[rel="preload"][as="image"]').forEach((l) => l.remove());
     // 기본: 네트워크 제약 없음
     Object.defineProperty(navigator, 'connection', {
       configurable: true,
@@ -60,7 +60,7 @@ describe('usePrefetchFirstImage', () => {
     result.current(work);
 
     expect(countPrefetchLinks()).toBe(1);
-    const link = document.head.querySelector('link[rel="prefetch"][as="image"]');
+    const link = document.head.querySelector('link[rel="preload"][as="image"]');
     const srcset = link?.getAttribute('imagesrcset') ?? link?.getAttribute('href') ?? '';
     // order 최소(a.jpg)가 선택되고 q=72로 next/image 요청과 일치해야 한다
     expect(srcset).toContain(encodeURIComponent('https://cdn/a.jpg'));
