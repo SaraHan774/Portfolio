@@ -43,7 +43,11 @@ function isSecretValid(provided: string | null, expected: string): boolean {
 // revalidatePath로 셸 재생성을 강제해 ISR 이득을 무력화(+Firebase read 비용)할 수 있다.
 // revalidatePath는 멱등이므로 짧은 창 내 호출은 1회로 합친다. 놓친 변경은 layout의
 // revalidate=300 안전망이 커버한다. (서버리스 인스턴스 로컬 — 단일 인스턴스 스팸 루프 완화)
-const REVALIDATE_MIN_INTERVAL_MS = 5000;
+//
+// 창을 1s로 둔 이유: 단일 저장이 동기적으로 여러 mutation을 발생시키는 버스트(예: 폼 저장
+// 시 카테고리+설정 동시 변경, 대량 복원)는 여전히 1회로 합치되, 사용자가 초 단위로 잇따라
+// 수동 편집하는 경우엔 각 변경이 곧바로 반영되도록 신선도를 우선한다.
+const REVALIDATE_MIN_INTERVAL_MS = 1000;
 let lastRevalidateAt = 0;
 
 export function OPTIONS() {
