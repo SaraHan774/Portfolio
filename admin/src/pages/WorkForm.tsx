@@ -30,20 +30,10 @@ import CaptionEditor from '../components/CaptionEditor';
 import { deleteWorkImages, uploadImage } from '../data/repository';
 import { getErrorDisplayInfo, logErrorForDev } from '../core/utils/errorMessages';
 import { mergeUploadedImages } from '../core/utils/imageUploadMerge';
+import { removeUndefinedValues } from '../core/utils/object';
 import './WorkForm.css';
 
 const { Title } = Typography;
-
-// Firebase에 저장하기 전에 undefined 값을 제거하는 유틸리티 함수
-const removeUndefinedValues = <T extends object>(obj: T): T => {
-  const result = {} as T;
-  for (const key of Object.keys(obj) as Array<keyof T>) {
-    if (obj[key] !== undefined) {
-      result[key] = obj[key];
-    }
-  }
-  return result;
-};
 
 const WorkForm = () => {
   const navigate = useNavigate();

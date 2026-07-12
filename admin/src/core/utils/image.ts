@@ -1,5 +1,6 @@
 // 이미지 관련 순수 유틸리티 함수
 import type { ImageResizeOptions, ImageDimensions } from '../types';
+import { appConfig } from '../constants/config';
 
 /** processImage()에서 생성할 변형 옵션 */
 export interface ProcessImageVariant {
@@ -155,6 +156,39 @@ export const getOutputExtension = (): string =>
   supportsWebP() ? 'webp' : 'jpg';
 
 /**
+ * 비율을 유지하며 img를 (maxWidth, maxHeight) 이내로 그린 canvas를 반환한다 (내부 공유 primitive).
+ * - 원본이 이미 상자 안이면 원본 크기 그대로.
+ * - 원본 dimensions가 유효하지 않으면(0/NaN — 손상 디코드 등) null 반환 → 호출부가 실패 처리.
+ * - Canvas context 생성 실패 시에도 null.
+ */
+const drawResizedToCanvas = (
+  img: HTMLImageElement,
+  maxWidth: number,
+  maxHeight: number
+): HTMLCanvasElement | null => {
+  let { width, height } = img;
+
+  // 0/NaN 차원은 유효한 소스가 아니다(폭 값을 높이에 대입하는 등의 왜곡을 만들지 않도록 조기 반환).
+  if (!width || !height) return null;
+
+  if (width > maxWidth || height > maxHeight) {
+    const ratio = Math.min(maxWidth / width, maxHeight / height);
+    width = Math.round(width * ratio);
+    height = Math.round(height * ratio);
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, width);
+  canvas.height = Math.max(1, height);
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas;
+};
+
+/**
  * 캔버스에서 지정 크기로 리사이즈된 Blob 생성 (내부 헬퍼)
  * WebP를 지원하는 브라우저에서는 WebP로 출력 (~30% 더 작음)
  */
@@ -165,25 +199,12 @@ const canvasToBlob = (
   quality: number
 ): Promise<Blob> => {
   return new Promise((resolve, reject) => {
-    let { width, height } = img;
-
-    if (width > maxWidth || height > maxHeight) {
-      const ratio = Math.min(maxWidth / width, maxHeight / height);
-      width = Math.round(width * ratio);
-      height = Math.round(height * ratio);
-    }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
+    const canvas = drawResizedToCanvas(img, maxWidth, maxHeight);
+    if (!canvas) {
       reject(new Error('Canvas context 생성 실패'));
       return;
     }
 
-    ctx.drawImage(img, 0, 0, width, height);
     canvas.toBlob(
       (blob) => {
         if (blob) resolve(blob);
@@ -195,51 +216,40 @@ const canvasToBlob = (
   });
 };
 
-/** LQIP 블러 플레이스홀더 가로 기준(px) */
-const LQIP_WIDTH = 20;
-/** LQIP data URL 길이 상한 — Firestore 인라인 저장 부담 방지 (~2KB) */
-const LQIP_MAX_DATAURL_LENGTH = 2048;
-/** 상한 초과 시 재시도할 (가로, 품질) 조합 */
-const LQIP_FALLBACK_STEPS: ReadonlyArray<{ width: number; quality: number }> = [
-  { width: 16, quality: 0.4 },
-  { width: 12, quality: 0.3 },
-];
+/**
+ * 지정 크기(정사각 상자) 이내로 축소한 뒤 data URL로 인코딩한다.
+ * 유효하지 않은 소스(0 차원 등)나 context 실패 시 빈 문자열.
+ */
+const encodeToDataURL = (
+  img: HTMLImageElement,
+  maxSize: number,
+  quality: number
+): string => {
+  const canvas = drawResizedToCanvas(img, maxSize, maxSize);
+  if (!canvas) return '';
+  return canvas.toDataURL(getOutputMimeType(), quality);
+};
 
 /**
  * LQIP 블러 플레이스홀더(base64 data URL)를 생성한다.
- * - 가로 ~20px(비율 유지)로 축소 후 WebP(미지원 시 JPEG)로 인코딩.
- * - data URL 길이가 상한을 초과하면 가로·품질을 낮춰 재시도.
- * - 끝까지 상한을 못 맞추거나 오류가 나면 빈 문자열 반환(graceful, throw 금지).
+ * - 가로/세로 ~20px 상자 이내(비율 유지)로 축소 후 WebP(미지원 시 JPEG)로 인코딩.
+ * - data URL 길이가 상한을 초과하면 크기·품질을 낮춰 재시도(appConfig.image.lqip).
+ * - 소스가 유효하지 않거나(0 차원) 끝까지 상한을 못 맞추거나 오류가 나면
+ *   빈 문자열 반환(graceful, throw 금지).
  */
 const generateBlurDataURL = (img: HTMLImageElement): string => {
-  const mimeType = supportsWebP() ? 'image/webp' : 'image/jpeg';
-
-  const encode = (targetWidth: number, quality: number): string => {
-    const srcWidth = img.width || targetWidth;
-    const srcHeight = img.height || targetWidth;
-    const ratio = targetWidth / srcWidth;
-    const width = Math.max(1, Math.round(srcWidth * ratio));
-    const height = Math.max(1, Math.round(srcHeight * ratio));
-
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return '';
-    ctx.drawImage(img, 0, 0, width, height);
-    return canvas.toDataURL(mimeType, quality);
-  };
+  const { width, quality, maxDataUrlLength, fallbackSteps } = appConfig.image.lqip;
 
   try {
-    let dataURL = encode(LQIP_WIDTH, 0.5);
-    if (dataURL.length <= LQIP_MAX_DATAURL_LENGTH) return dataURL;
+    let dataURL = encodeToDataURL(img, width, quality);
+    if (dataURL && dataURL.length <= maxDataUrlLength) return dataURL;
 
-    for (const step of LQIP_FALLBACK_STEPS) {
-      dataURL = encode(step.width, step.quality);
-      if (dataURL.length <= LQIP_MAX_DATAURL_LENGTH) return dataURL;
+    for (const step of fallbackSteps) {
+      dataURL = encodeToDataURL(img, step.width, step.quality);
+      if (dataURL && dataURL.length <= maxDataUrlLength) return dataURL;
     }
 
-    // 끝까지 상한을 못 맞추면 생성 실패로 처리
+    // 소스 무효 또는 끝까지 상한을 못 맞추면 생성 실패로 처리
     return '';
   } catch {
     return '';
@@ -277,6 +287,11 @@ export const generateBlurDataURLFromUrl = (
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      // 진행 중이던 로드/디코드를 중단하고 핸들러를 해제해 Image·리스너 누수를 방지한다
+      // (특히 타임아웃으로 조기 종료할 때).
+      img.onload = null;
+      img.onerror = null;
+      img.src = '';
       resolve(value);
     };
 

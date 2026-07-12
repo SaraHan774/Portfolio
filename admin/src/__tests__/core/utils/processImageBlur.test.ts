@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { processImage } from '../../../core/utils/image';
+import { processImage, getOutputExtension } from '../../../core/utils/image';
 
 /**
  * processImage의 LQIP(blurDataURL) 생성 경로 테스트.
@@ -48,6 +48,11 @@ beforeEach(() => {
   ) {
     cb(new Blob(['x'], { type: 'image/webp' }));
   } as HTMLCanvasElement['toBlob']);
+
+  // supportsWebP()의 모듈 캐시(_supportsWebP)를 정상 toDataURL로 미리 확정한다.
+  // 이렇게 하지 않으면, toDataURL을 throw로 덮어쓰는 테스트가 '먼저' 실행될 때
+  // webp 프로브까지 실패해 무관한 경로가 깨지는 순서 의존이 생긴다.
+  getOutputExtension();
 });
 
 afterEach(() => {
@@ -68,6 +73,28 @@ describe('processImage - blurDataURL(LQIP)', () => {
 
     expect(result.blurDataURL).toBe(dataURLValue);
     expect(result.blurDataURL.length).toBeLessThanOrEqual(2048);
+  });
+
+  it('LQIP를 ~20px 상자로 축소해 인코딩한다(비율 유지, WebP, quality 0.5)', async () => {
+    dataURLValue = 'data:image/webp;base64,' + 'A'.repeat(300);
+    const calls: Array<{ w: number; h: number; type: unknown; quality: unknown }> = [];
+    vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockImplementation(function (
+      this: HTMLCanvasElement,
+      type?: unknown,
+      quality?: unknown
+    ) {
+      calls.push({ w: this.width, h: this.height, type, quality });
+      return dataURLValue;
+    } as unknown as HTMLCanvasElement['toDataURL']);
+
+    // MockImage는 1600x1200 → 20px 상자에 비율 유지 축소 시 20x15
+    await processImage(createFile(), baseOptions);
+
+    const lqip = calls.find((c) => c.quality === 0.5);
+    expect(lqip).toBeDefined();
+    expect(lqip!.w).toBe(20);
+    expect(lqip!.h).toBe(15);
+    expect(lqip!.type).toBe('image/webp');
   });
 
   it('data URL이 상한을 항상 초과하면 빈 문자열로 graceful 처리한다', async () => {

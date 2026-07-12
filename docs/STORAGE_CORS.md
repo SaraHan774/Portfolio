@@ -8,13 +8,16 @@ canvas가 tainted 되어 블러 생성이 실패한다(해당 이미지는 "실�
 
 ## 적용 방법
 
-1. 버킷 이름 확인 (예: `portfolio-nhb.appspot.com` 또는 `portfolio-nhb.firebasestorage.app`).
+1. 버킷 이름 확인. **이 프로젝트의 실제 버킷은 `portfolio-nhb.firebasestorage.app`**
+   (admin `VITE_FIREBASE_STORAGE_BUCKET` 값, 이미지 다운로드 URL이 실제로 서빙되는 버킷).
+   > 레거시 `*.appspot.com` 버킷이 아니라 `*.firebasestorage.app`에 설정해야 한다.
+   > 엉뚱한 버킷에 적용하면 canvas 읽기가 계속 tainted 되어 백필이 전부 실패한다.
 2. 저장소 루트의 [`storage.cors.json`](../storage.cors.json)의 `origin`을 실제 admin 도메인에 맞게 확인/수정.
 3. `gsutil`로 적용:
 
 ```bash
 gsutil cors set storage.cors.json gs://<버킷이름>
-# 예: gsutil cors set storage.cors.json gs://portfolio-nhb.appspot.com
+# 예: gsutil cors set storage.cors.json gs://portfolio-nhb.firebasestorage.app
 ```
 
 4. 적용 확인:

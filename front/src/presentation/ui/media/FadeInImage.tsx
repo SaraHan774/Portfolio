@@ -103,7 +103,9 @@ export default function FadeInImage({
         sizes={sizes}
         quality={quality}
         {...(hasBlur ? { placeholder: 'blur' as const, blurDataURL } : {})}
-        onLoad={() => setIsLoaded(true)}
+        // 블러가 있으면 isLoaded는 렌더에 영향을 주지 않으므로(스켈레톤·페이드 게이트 비활성)
+        // 불필요한 상태 갱신/리렌더를 피하기 위해 onLoad를 생략한다.
+        onLoad={hasBlur ? undefined : () => setIsLoaded(true)}
         style={{
           position: 'absolute',
           top: 0,

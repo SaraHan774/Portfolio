@@ -38,6 +38,18 @@ export const appConfig = {
       maxHeight: 1920,
       quality: 0.9,
     },
+    // LQIP(저해상도 블러 플레이스홀더) 생성 설정.
+    // width/quality로 1차 생성 후, data URL 길이가 maxDataUrlLength를 넘으면
+    // fallbackSteps를 순서대로 시도한다(모두 실패하면 빈 문자열 → graceful).
+    lqip: {
+      width: 20,
+      quality: 0.5,
+      maxDataUrlLength: 2048,
+      fallbackSteps: [
+        { width: 16, quality: 0.4 },
+        { width: 12, quality: 0.3 },
+      ],
+    },
   },
   // 텍스트 제한
   text: {

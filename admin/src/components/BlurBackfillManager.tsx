@@ -40,8 +40,17 @@ const BlurBackfillManager = () => {
       message.error(`백필 실패: ${error}`);
     } else if (isDone) {
       notifiedRef.current = true;
-      if (progress.imagesUpdated === 0 && progress.imagesFailed === 0) {
+      if (
+        progress.imagesUpdated === 0 &&
+        progress.imagesFailed === 0 &&
+        progress.worksFailed === 0
+      ) {
         message.info('블러를 생성할 기존 이미지가 없습니다. 모두 최신 상태입니다.');
+      } else if (progress.worksFailed > 0) {
+        // 저장(쓰기) 실패 — CORS가 아니라 네트워크/권한 문제이므로 별도 안내(재실행 유도).
+        message.warning(
+          `백필 완료: ${progress.imagesUpdated}장 생성, 작품 ${progress.worksFailed}건 저장 실패(잠시 후 다시 실행하세요)`
+        );
       } else if (progress.imagesFailed > 0) {
         message.warning(
           `백필 완료: ${progress.imagesUpdated}장 생성, ${progress.imagesFailed}장 실패(CORS 설정 확인 필요)`
@@ -50,7 +59,15 @@ const BlurBackfillManager = () => {
         message.success(`백필 완료: 이미지 ${progress.imagesUpdated}장에 블러 생성`);
       }
     }
-  }, [isRunning, isDone, error, progress.imagesUpdated, progress.imagesFailed, message]);
+  }, [
+    isRunning,
+    isDone,
+    error,
+    progress.imagesUpdated,
+    progress.imagesFailed,
+    progress.worksFailed,
+    message,
+  ]);
 
   const percent =
     progress.totalWorks === 0
@@ -108,7 +125,12 @@ const BlurBackfillManager = () => {
               </Descriptions.Item>
               <Descriptions.Item label="갱신된 작품">{progress.worksUpdated}</Descriptions.Item>
               <Descriptions.Item label="블러 생성">{progress.imagesUpdated}장</Descriptions.Item>
-              <Descriptions.Item label="실패">{progress.imagesFailed}장</Descriptions.Item>
+              <Descriptions.Item label="생성 실패">{progress.imagesFailed}장</Descriptions.Item>
+              {progress.worksFailed > 0 && (
+                <Descriptions.Item label="저장 실패" span={2}>
+                  작품 {progress.worksFailed}건 (재실행 필요)
+                </Descriptions.Item>
+              )}
               {isRunning && progress.currentTitle && (
                 <Descriptions.Item label="현재 작품" span={2}>
                   <Text ellipsis>{progress.currentTitle}</Text>

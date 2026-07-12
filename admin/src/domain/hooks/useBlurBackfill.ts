@@ -12,7 +12,11 @@
 import { useCallback, useRef, useState } from 'react';
 import { getWorks, updateWork } from '../../data/repository';
 import { generateBlurDataURLFromUrl } from '../../core/utils/image';
+import { removeUndefinedValues } from '../../core/utils/object';
 import type { WorkImage } from '../../core/types';
+
+/** 이미지 로드/블러 생성 동시 실행 수 (한 번에 여러 원격 이미지를 병렬 처리) */
+const BACKFILL_CONCURRENCY = 4;
 
 export interface BlurBackfillProgress {
   /** 전체 작품 수 */
@@ -23,11 +27,35 @@ export interface BlurBackfillProgress {
   worksUpdated: number;
   /** 블러가 새로 생성·저장된 이미지 수 */
   imagesUpdated: number;
-  /** 블러 생성/저장에 실패한 이미지 수 */
+  /** 블러 생성에 실패한 이미지 수 (CORS/로드/인코딩 실패) */
   imagesFailed: number;
+  /** 저장(쓰기)에 실패한 작품 수 — 블러는 생성됐으나 Firestore 저장이 실패 */
+  worksFailed: number;
   /** 현재 처리 중인 작품 제목 */
   currentTitle: string;
 }
+
+/**
+ * items를 최대 limit개씩 동시 실행하며 fn을 적용하고, 입력 순서대로 결과를 반환한다.
+ * (백필처럼 순서 보존이 필요한 독립 작업의 병렬화용)
+ */
+const mapWithConcurrency = async <T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>
+): Promise<R[]> => {
+  const results = new Array<R>(items.length);
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (true) {
+      const index = cursor++;
+      if (index >= items.length) return;
+      results[index] = await fn(items[index], index);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+};
 
 interface UseBlurBackfillResult {
   isRunning: boolean;
@@ -43,6 +71,7 @@ const INITIAL_PROGRESS: BlurBackfillProgress = {
   worksUpdated: 0,
   imagesUpdated: 0,
   imagesFailed: 0,
+  worksFailed: 0,
   currentTitle: '',
 };
 
@@ -82,25 +111,27 @@ export const useBlurBackfill = (): UseBlurBackfillResult => {
           continue;
         }
 
-        let updatedCount = 0;
-        let failedCount = 0;
-        const nextImages: WorkImage[] = [];
+        // 이미지들을 제한된 동시성으로 병렬 처리하되 원래 순서는 보존한다.
+        const processed = await mapWithConcurrency(
+          images,
+          BACKFILL_CONCURRENCY,
+          async (img): Promise<{ image: WorkImage; generated: boolean; failed: boolean }> => {
+            if (!needsBlur(img)) {
+              return { image: img, generated: false, failed: false };
+            }
+            const source = img.thumbnailUrl || img.url;
+            const blur = await generateBlurDataURLFromUrl(source);
+            if (blur) {
+              return { image: { ...img, blurDataURL: blur }, generated: true, failed: false };
+            }
+            return { image: img, generated: false, failed: true };
+          }
+        );
 
-        for (const img of images) {
-          if (!needsBlur(img)) {
-            nextImages.push(img);
-            continue;
-          }
-          const source = img.thumbnailUrl || img.url;
-          const blur = await generateBlurDataURLFromUrl(source);
-          if (blur) {
-            nextImages.push({ ...img, blurDataURL: blur });
-            updatedCount += 1;
-          } else {
-            nextImages.push(img);
-            failedCount += 1;
-          }
-        }
+        // Firestore는 undefined 값을 거부하므로 저장 직전 정제(WorkForm 저장 경로와 동일).
+        const nextImages = processed.map((r) => removeUndefinedValues(r.image));
+        const updatedCount = processed.filter((r) => r.generated).length;
+        const failedCount = processed.filter((r) => r.failed).length;
 
         if (updatedCount > 0) {
           try {
@@ -113,10 +144,12 @@ export const useBlurBackfill = (): UseBlurBackfillResult => {
               processedWorks: p.processedWorks + 1,
             }));
           } catch {
-            // 저장 실패: 생성했던 것까지 실패로 집계
+            // 저장(쓰기) 실패: 블러 생성은 성공했으므로 생성 실패(imagesFailed)와 구분해
+            // worksFailed로 집계한다. (재실행 시 해당 작품만 다시 시도됨)
             setProgress((p) => ({
               ...p,
-              imagesFailed: p.imagesFailed + updatedCount + failedCount,
+              imagesFailed: p.imagesFailed + failedCount,
+              worksFailed: p.worksFailed + 1,
               processedWorks: p.processedWorks + 1,
             }));
           }
