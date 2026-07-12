@@ -7,8 +7,9 @@ import { LoadingContainer } from '@/presentation/ui';
 import { useCategories } from '@/state';
 import WorkDetailPage from './works/WorkDetailPage';
 
-// Disable static generation for this page (uses useSearchParams)
-export const dynamic = 'force-dynamic';
+// [ISR] 세그먼트 설정(revalidate)은 server인 layout.tsx에서 관리(이 파일은 'use client').
+// force-dynamic 제거로 엣지 캐시 가능. useSearchParams는 아래 <Suspense> 안이라 정적 셸로
+// 프리렌더되고, workId 기반 상세/모달은 클라이언트에서 처리된다.
 
 /**
  * 홈페이지 (Single Page Application)

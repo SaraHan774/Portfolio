@@ -25,8 +25,11 @@ const mockUseImageTracker = vi.fn((_ref: unknown, _work: unknown, _id: unknown) 
   setCurrentImageId: vi.fn(),
 }));
 
+const mockPrefetchWork = vi.fn();
+
 vi.mock('@/domain', () => ({
   useWork: (id: string) => mockUseWork(id),
+  usePrefetchWork: () => mockPrefetchWork,
   useCaptionHoverEvents: (opts: unknown) => mockUseCaptionHoverEvents(opts),
   useModalLinkHandler: (onWorkClick: unknown, clearHover: unknown) =>
     mockUseModalLinkHandler(onWorkClick, clearHover),
@@ -34,6 +37,7 @@ vi.mock('@/domain', () => ({
     mockUseImageTracker(ref, work, id);
     return { currentImageId: null, setCurrentImageId: vi.fn() };
   },
+  usePrefetchFirstImageByWorkId: () => vi.fn(),
 }));
 
 vi.mock('body-scroll-lock', () => ({

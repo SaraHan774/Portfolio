@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { useThumbnailUrl, useClickAnimationTracking, usePrefetchWork } from '@/domain';
+import { useThumbnailUrl, useClickAnimationTracking, usePrefetchWork, usePrefetchFirstImage } from '@/domain';
 import { AnimatedCharacterText, DotIndicator, presets } from '@/presentation/ui';
 import ThumbnailSkeleton from './ThumbnailSkeleton';
 import type { Work } from '@/types';
@@ -39,6 +39,8 @@ export default function WorkTitleButton({
   const [imageLoaded, setImageLoaded] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(false);
   const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // 강한 인텐트(호버 유지) 판정용 타이머
+  const imagePrefetchTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 클릭 애니메이션 추적 (Works는 항상 클릭 가능)
   const { hasBeenClickedBefore: wasSelectedBefore, justClicked: justSelected, handleClick } = useClickAnimationTracking({
@@ -54,6 +56,26 @@ export default function WorkTitleButton({
 
   // 호버 시 상세 데이터를 미리 가져와 모달 진입 시 즉시 렌더(LCP 이미지 조기 로드)
   const prefetchWork = usePrefetchWork();
+
+  // 진입 인텐트(데스크톱 호버 / 모바일 터치)에서 상세 데이터 prefetch.
+  // 동일 키는 React Query가 dedupe하고 staleTime 내 재요청하지 않으므로 과호출 안전.
+  const handlePrefetchIntent = useCallback(() => {
+    prefetchWork(work.id);
+  }, [prefetchWork, work.id]);
+
+  // 강한 인텐트 시 첫 이미지 바이트 prefetch(첫 1장·중복차단·saveData 가드)
+  const prefetchFirstImage = usePrefetchFirstImage();
+
+  // 호버 인텐트 타이머 정리
+  const clearImagePrefetchTimer = useCallback(() => {
+    if (imagePrefetchTimerRef.current) {
+      clearTimeout(imagePrefetchTimerRef.current);
+      imagePrefetchTimerRef.current = null;
+    }
+  }, []);
+
+  // 언마운트 시 인텐트 타이머 정리
+  useEffect(() => clearImagePrefetchTimer, [clearImagePrefetchTimer]);
 
   // Reset loading state when thumbnail URL changes
   useEffect(() => {
@@ -126,9 +148,24 @@ export default function WorkTitleButton({
       onClick={handleClick}
       onMouseEnter={() => {
         setIsHovered(true);
-        prefetchWork(work.id);
+        // 데이터 prefetch는 즉시(값싼 Firestore 1회), 첫 이미지 바이트는 스쳐 지나감을
+        // 제외하고 180ms 유지 시에만 발사(Storage egress 보호).
+        handlePrefetchIntent();
+        clearImagePrefetchTimer();
+        imagePrefetchTimerRef.current = setTimeout(() => {
+          prefetchFirstImage(work);
+          imagePrefetchTimerRef.current = null;
+        }, 180);
       }}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        clearImagePrefetchTimer();
+      }}
+      // 모바일: 호버가 없으므로 터치 시작(탭 인텐트)에 데이터+첫 이미지 prefetch
+      onTouchStart={() => {
+        handlePrefetchIntent();
+        prefetchFirstImage(work);
+      }}
       style={{
         background: 'none',
         border: 'none',

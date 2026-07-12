@@ -13,6 +13,10 @@ import {
 } from '../../data/repository';
 import type { SiteSettings } from '../../core/types';
 
+// 프론트 ISR 셸(사이트설정)에 영향을 주는 mutation임을 표시.
+// admin App.tsx의 MutationCache.onSuccess가 이 meta를 보고 on-demand 재검증을 트리거한다.
+const REVALIDATE_SHELL_META = { revalidateShell: true } as const;
+
 /**
  * 사이트 설정 조회
  */
@@ -31,6 +35,7 @@ export const useUpdateSiteSettings = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: REVALIDATE_SHELL_META,
     mutationFn: (updates: Partial<Omit<SiteSettings, 'id' | 'updatedAt'>>) =>
       updateSiteSettings(updates),
     onSuccess: (data) => {
@@ -46,6 +51,7 @@ export const useUploadFavicon = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: REVALIDATE_SHELL_META,
     mutationFn: uploadFavicon,
     onSuccess: (faviconUrl) => {
       // 캐시된 설정에 새 파비콘 URL 반영
@@ -64,6 +70,7 @@ export const useDeleteFavicon = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: REVALIDATE_SHELL_META,
     mutationFn: deleteFavicon,
     onSuccess: () => {
       // 캐시된 설정에서 파비콘 URL 제거
@@ -82,6 +89,7 @@ export const useUpdateBrowserTitle = () => {
   const { mutateAsync } = useUpdateSiteSettings();
 
   return useMutation({
+    meta: REVALIDATE_SHELL_META,
     mutationFn: (browserTitle: string) => mutateAsync({ browserTitle }),
   });
 };
@@ -93,6 +101,7 @@ export const useUpdateFooterText = () => {
   const { mutateAsync } = useUpdateSiteSettings();
 
   return useMutation({
+    meta: REVALIDATE_SHELL_META,
     mutationFn: (footerText: string) => mutateAsync({ footerText }),
   });
 };

@@ -13,8 +13,21 @@ export interface UseCaptionHoverEventsOptions {
   safeZoneMargin?: number;
   /** 현재 표시 중인 작업 ID (hover 대상에서 제외) */
   currentWorkId?: string;
+  /**
+   * 링크 hover 인텐트가 확정된 시점에 호출되는 콜백.
+   * FloatingWorkWindow 표시 직전에 작품 상세 데이터를 prefetch하기 위해 사용한다
+   * (예: usePrefetchWork()의 반환 콜백 주입). hoverDelay를 기다리지 않고
+   * 인텐트 확정 즉시 호출되어 Firestore 왕복을 클릭 전으로 옮긴다.
+   */
+  onLinkHoverIntent?: (workId: string) => void;
   /** DOM이 변경되었음을 알리는 의존성 배열 */
   dependencies?: React.DependencyList;
+  /**
+   * 링크 hover 인텐트가 hoverDelay까지 유지돼 "강한 인텐트"로 확정된 시점에 호출되는 콜백.
+   * 이른 인텐트(onLinkHoverIntent)보다 늦게, 스쳐 지나간 호버를 배제한 뒤 발사되므로
+   * 비용이 큰 부수 작업(첫 이미지 바이트 prefetch 등)에 사용한다(#61).
+   */
+  onLinkStrongIntent?: (workId: string) => void;
 }
 
 export interface UseCaptionHoverEventsReturn {
@@ -70,6 +83,8 @@ export const useCaptionHoverEvents = ({
   hideDelay = 200,
   safeZoneMargin = 20,
   currentWorkId,
+  onLinkHoverIntent,
+  onLinkStrongIntent,
   dependencies = [],
 }: UseCaptionHoverEventsOptions): UseCaptionHoverEventsReturn => {
   // Hover 상태
@@ -86,6 +101,17 @@ export const useCaptionHoverEvents = ({
   // Ref for closure access
   const hoveredWorkIdRef = useRef<string | null>(null);
   const hoverPositionRef = useRef<{ x: number; y: number } | null>(null);
+
+  // 최신 prefetch 콜백을 ref로 보관 (이벤트 리스너 effect 재부착 방지, 항상 최신 참조 사용)
+  const onLinkHoverIntentRef = useRef(onLinkHoverIntent);
+  useEffect(() => {
+    onLinkHoverIntentRef.current = onLinkHoverIntent;
+  }, [onLinkHoverIntent]);
+
+  const onLinkStrongIntentRef = useRef(onLinkStrongIntent);
+  useEffect(() => {
+    onLinkStrongIntentRef.current = onLinkStrongIntent;
+  }, [onLinkStrongIntent]);
 
   // MutationObserver
   const observerRef = useRef<MutationObserver | null>(null);
@@ -236,6 +262,9 @@ export const useCaptionHoverEvents = ({
 
         // 현재 작업과 동일한 링크는 hover 무시
         if (linkWorkId && linkWorkId !== currentWorkId) {
+          // 인텐트 확정 즉시 prefetch (hoverDelay를 기다리지 않음)
+          onLinkHoverIntentRef.current?.(linkWorkId);
+
           if (hoverLinkTimeoutRef.current) {
             clearTimeout(hoverLinkTimeoutRef.current);
             hoverLinkTimeoutRef.current = null;
@@ -252,6 +281,9 @@ export const useCaptionHoverEvents = ({
             const y = rect.top;
 
             isInSafeZoneRef.current = true;
+
+            // 강한 인텐트 확정: 첫 이미지 prefetch 등 비용 큰 부수 작업 트리거
+            onLinkStrongIntentRef.current?.(linkWorkId);
 
             setHoverPosition({ x, y });
             setHoveredWorkId(linkWorkId);
