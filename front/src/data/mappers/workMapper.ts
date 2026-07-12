@@ -13,6 +13,9 @@ export const mapFirestoreToWork = (id: string, data: Record<string, unknown>): W
   shortDescription: data.shortDescription as string | undefined,
   fullDescription: (data.fullDescription as string) || '',
   thumbnailImageId: (data.thumbnailImageId as string) || '',
+  // 이미지는 통째로 pass-through한다 — WorkImage의 모든 필드(blurDataURL(LQIP), webpUrl,
+  // caption 등)가 그대로 실려와야 한다. 개별 필드로 풀어 매핑하도록 바꾸면 blurDataURL이
+  // 조용히 누락돼 LQIP 블러가 전역적으로 사라질 수 있으니 주의(컴파일 에러로 잡히지 않음).
   images: (data.images as WorkImage[]) || [],
   videos: (data.videos as WorkVideo[]) || [],
   caption: data.caption as string | undefined,

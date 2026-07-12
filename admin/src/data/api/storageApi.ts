@@ -65,7 +65,7 @@ export const uploadImage = async (
 
   try {
     // 1회 디코딩: dimensions + thumbnail + (선택적) 압축 원본 생성
-    const { dimensions, thumbnail, original: compressedOriginal } = await processImage(file, {
+    const { dimensions, thumbnail, original: compressedOriginal, blurDataURL } = await processImage(file, {
       thumbnail: appConfig.image.thumbnail,
       original: shouldCompress ? appConfig.image.original : undefined,
     });
@@ -113,6 +113,8 @@ export const uploadImage = async (
       height: dimensions.height,
       fileSize: file.size,
       uploadedFrom: 'desktop',
+      // LQIP 블러 플레이스홀더 — 생성 성공 시에만 포함(빈 문자열은 저장하지 않음)
+      ...(blurDataURL ? { blurDataURL } : {}),
     };
   } catch (error) {
     logger.error('이미지 업로드 실패', error, { action: 'uploadImage', fileName });
