@@ -51,3 +51,8 @@ firebase-export-*/
 # Firebase Service Account Keys (CRITICAL: Never commit!)
 *serviceAccountKey*.json
 oval-replica-*.json
+
+# Lighthouse benchmark artifacts (local only)
+lh-*.report.*
+lh-mobile.html
+docs/plans/**/lh-runs/
