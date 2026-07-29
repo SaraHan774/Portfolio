@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { IS_DEBUG_LAYOUT_ENABLED } from '@/core/constants';
+import { useHydrated } from '@/domain';
 import { useLayoutStability } from '@/presentation/contexts/LayoutStabilityContext';
 
 interface CaptionWithBoundaryProps {
@@ -38,10 +39,7 @@ export default function CaptionWithBoundary({
   const { isLayoutStable, contentPaddingTop } = useLayoutStability();
 
   // Client-side mount state (for hydration-safe debug labels)
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useHydrated();
 
   // Debug mode (development only)
   const isDebugMode = IS_DEBUG_LAYOUT_ENABLED;

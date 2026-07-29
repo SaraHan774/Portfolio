@@ -20,14 +20,20 @@ export function useImageTracker(
   const [currentImageId, setCurrentImageId] = useState<string | null>(null);
 
   // modalWork 또는 workId 변경 시 첫 번째 미디어 ID로 초기화
-  useEffect(() => {
+  // (effect에서 setState 하는 대신, 렌더 중 직전 prop을 state로 추적해 동기적으로 재설정 —
+  //  React 공식 "prop 변경 시 state 조정" 패턴: https://react.dev/reference/react/useState)
+  const [prevWork, setPrevWork] = useState<Work | undefined>(undefined);
+  const [prevWorkId, setPrevWorkId] = useState<string | undefined>(undefined);
+  if (prevWork !== modalWork || prevWorkId !== workId) {
+    setPrevWork(modalWork);
+    setPrevWorkId(workId);
     if (modalWork) {
       const mediaItems = getMediaItems(modalWork);
       if (mediaItems.length > 0) {
         setCurrentImageId(mediaItems[0].data.id);
       }
     }
-  }, [modalWork, workId]);
+  }
 
   // IntersectionObserver + scroll 이벤트로 현재 미디어 추적
   useEffect(() => {
